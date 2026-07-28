@@ -14,6 +14,8 @@ interface GlyphItem {
   height: number;
   hasEOL: boolean;
   fontName?: string;
+  /** pdf.js reading direction of the run: 'ltr' | 'rtl' | 'ttb'. */
+  dir?: string;
 }
 
 function isGlyph(item: unknown): item is GlyphItem {
@@ -175,6 +177,28 @@ function glyphBox(item: GlyphItem, vp: Viewport): Box {
   return normalizeUserBox(vp, originX, baselineY - descent, originX + item.width, topPdf);
 }
 
+/**
+ * The user-space horizontal extent [left, right] a match occupies within a run.
+ * pdf.js reorders RTL runs (item.str is logical order while the transform/width
+ * describe visual layout), so measuring the substring left-to-right lands the
+ * box on the wrong side; for an RTL run cover the whole run instead — an
+ * over-cover that is always safe. LTR runs use the measured sub-extent, clamped
+ * inside the run so a box never reaches into an adjacent word. Exported for test.
+ */
+export function matchExtentX(
+  item: GlyphItem,
+  preW: number,
+  matchW: number,
+  safetyX: number
+): [number, number] {
+  const originX = item.transform[4];
+  if (item.dir === 'rtl') return [originX, originX + item.width];
+  return [
+    Math.max(originX, originX + preW - safetyX),
+    Math.min(originX + item.width, originX + preW + matchW + safetyX),
+  ];
+}
+
 /** Do two axis-aligned top-left boxes overlap at all? Exported for direct test. */
 export function overlaps(a: Box, b: Box): boolean {
   const apart = a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y;
@@ -229,7 +253,7 @@ export async function searchPageRects(
       const to = Math.min(matchEnd, runEnd);
       if (from >= to) continue; // this run isn't part of the match
 
-      const { originX, baselineY, fontH, topPdf } = glyphMetrics(item);
+      const { baselineY, fontH, topPdf } = glyphMetrics(item);
       // Tighter than glyphMetrics' 0.28 so the box hugs the line: still clears
       // descenders (g/y/p), without reaching into the row below.
       const descent = fontH * 0.22;
@@ -245,13 +269,10 @@ export async function searchPageRects(
       const preW = ctx.measureText(item.str.slice(0, localStart)).width * scale;
       const matchW = ctx.measureText(item.str.slice(localStart, to - runStart)).width * scale;
 
-      // Work in user-space points along the baseline, clamping the match inside
-      // the run's own extent so a box can never reach into an adjacent word (a
-      // separate run); the measurement keeps it off same-run neighbours. The
-      // final box is mapped through the viewport transform so rotated pages land
-      // the box over the on-screen glyphs.
-      const xL = Math.max(originX, originX + preW - safetyX);
-      const xR = Math.min(originX + item.width, originX + preW + matchW + safetyX);
+      // Work in user-space points along the baseline (RTL runs cover the whole
+      // run; LTR runs use the measured, run-clamped sub-extent), then map the box
+      // through the viewport transform so rotated pages land over the glyphs.
+      const [xL, xR] = matchExtentX(item, preW, matchW, safetyX);
       const box = normalizeUserBox(vp, xL, baselineY - descent - padY, xR, topPdf + padY);
       rects.push({
         page: page.pageNumber,

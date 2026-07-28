@@ -5,6 +5,7 @@ import {
   documentHasText,
   extractAllText,
   extractPageText,
+  matchExtentX,
   overlaps,
   pageHasText,
   searchDocumentRects,
@@ -138,6 +139,24 @@ describe('textlayer', () => {
     expect(terms.some((t) => t.includes('123-45-6789'))).toBe(true);
     expect(terms.some((t) => t.includes('Appendix'))).toBe(false); // page 2 text not covered
     expect(await collectRedactedText(doc, [])).toEqual([]);
+  });
+
+  it('covers the whole run for an RTL match but measures LTR matches', () => {
+    // A synthetic pdf.js-shaped run at user-space x=100, width 60.
+    const base = {
+      str: 'ABC',
+      transform: [1, 0, 0, 1, 100, 700],
+      width: 60,
+      height: 12,
+      hasEOL: false,
+    };
+    // RTL is bidi-reordered, so a left-to-right measurement is wrong — cover the
+    // full run [originX, originX + width] instead.
+    expect(matchExtentX({ ...base, dir: 'rtl' }, 10, 20, 0.5)).toEqual([100, 160]);
+    // LTR uses the measured sub-extent, padded and clamped inside the run.
+    const [l, r] = matchExtentX({ ...base, dir: 'ltr' }, 10, 20, 0.5);
+    expect(l).toBeCloseTo(109.5); // 100 + preW(10) - safetyX(0.5)
+    expect(r).toBeCloseTo(130.5); // 100 + preW(10) + matchW(20) + safetyX(0.5)
   });
 
   it('detects box overlap in every separation direction', () => {
