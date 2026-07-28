@@ -40,6 +40,16 @@ export class RedactorPage {
     await this.page.mouse.up();
   }
 
+  /** Author a redaction box using only the keyboard (Enter, arrows, Enter). */
+  async drawBoxByKeyboard(): Promise<void> {
+    await this.overlay.focus();
+    await this.page.keyboard.press('Enter'); // start a box at page center
+    await this.page.keyboard.press('ArrowRight'); // move
+    await this.page.keyboard.press('ArrowDown');
+    await this.page.keyboard.press('Shift+ArrowRight'); // grow width
+    await this.page.keyboard.press('Enter'); // place it
+  }
+
   async export(): Promise<void> {
     await this.page.getByRole('button', { name: 'Export' }).click();
   }

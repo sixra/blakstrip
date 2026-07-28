@@ -95,6 +95,8 @@
   let drawing = $state(false);
   let preview = $state<RedactionRect | null>(null);
   let startPt = { x: 0, y: 0 };
+  let kbAuthoring = $state(false);
+  const KB_STEP = 0.02;
 
   function commit(next: RedactionRect[]) {
     past = [...past, rects];
@@ -133,6 +135,7 @@
     noMatches = false;
     searching = false;
     drawing = false;
+    kbAuthoring = false;
     preview = null;
     verifyResult = null;
     pendingBytes = null;
@@ -224,6 +227,7 @@
   }
   function onPointerDown(e: PointerEvent) {
     if (!overlayEl || !pageRendered) return; // ignore drags before the page is drawn
+    kbAuthoring = false; // a mouse drag cancels any in-progress keyboard box
     startPt = fractionsFromEvent(e);
     drawing = true;
     preview = { page: currentPage, x: startPt.x, y: startPt.y, w: 0, h: 0 };
@@ -247,6 +251,62 @@
       commit([...rects, preview]);
     }
     preview = null;
+  }
+
+  // Keyboard authoring: focus the overlay, Enter starts a box, arrow keys move
+  // it, Shift+arrow keys resize it, Enter places it, Escape cancels. Lets
+  // keyboard and switch users redact scans, where the search path is disabled.
+  function onOverlayKey(e: KeyboardEvent) {
+    if (!pageRendered) return;
+    if (!kbAuthoring) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        drawing = false;
+        kbAuthoring = true;
+        preview = { page: currentPage, x: 0.4, y: 0.45, w: 0.2, h: 0.1 };
+      }
+      return;
+    }
+    if (!preview) return;
+    const p = preview;
+    switch (e.key) {
+      case 'Escape':
+        e.preventDefault();
+        kbAuthoring = false;
+        preview = null;
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (p.w > 0.005 && p.h > 0.005) commit([...rects, p]);
+        kbAuthoring = false;
+        preview = null;
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        preview = e.shiftKey
+          ? { ...p, w: Math.max(0.01, p.w - KB_STEP) }
+          : { ...p, x: Math.max(0, p.x - KB_STEP) };
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        preview = e.shiftKey
+          ? { ...p, w: Math.min(1 - p.x, p.w + KB_STEP) }
+          : { ...p, x: Math.min(1 - p.w, p.x + KB_STEP) };
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        preview = e.shiftKey
+          ? { ...p, h: Math.max(0.01, p.h - KB_STEP) }
+          : { ...p, y: Math.max(0, p.y - KB_STEP) };
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        preview = e.shiftKey
+          ? { ...p, h: Math.min(1 - p.y, p.h + KB_STEP) }
+          : { ...p, y: Math.min(1 - p.h, p.y + KB_STEP) };
+        break;
+    }
   }
 
   function goTo(n: number) {
@@ -463,7 +523,7 @@
             This file is hiding {auditReport.findings.length} thing{auditReport.findings.length ===
             1
               ? ''
-              : 's'}. All of it is removed on export:
+              : 's'}:
           </h2>
           <ul class="mt-2 space-y-1">
             {#each auditReport.findings as f (f.id)}
@@ -522,15 +582,26 @@
             bind:this={pageCanvas}
             class="block max-w-full rounded shadow-md ring-1 ring-neutral-200"
           ></canvas>
+          <!-- Intentional: role="application" drawing surface with a documented keyboard model (see #redact-kb-help). -->
+          <!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
           <div
             bind:this={overlayEl}
-            class="absolute inset-0 cursor-crosshair touch-none"
+            class="absolute inset-0 cursor-crosshair touch-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:outline-none"
             data-page-ready={pageRendered}
             data-testid="redact-overlay"
+            role="application"
+            tabindex="0"
+            aria-label="Redaction area"
+            aria-describedby="redact-kb-help"
             onpointerdown={onPointerDown}
             onpointermove={onPointerMove}
             onpointerup={onPointerUp}
+            onkeydown={onOverlayKey}
           ></div>
+          <p id="redact-kb-help" class="sr-only">
+            Press Enter to start a redaction box, arrow keys to move it, Shift plus arrow keys to
+            resize it, Enter to place it, and Escape to cancel.
+          </p>
           <div class="pointer-events-none absolute inset-0">
             {#each pageRects as r (r)}
               <div

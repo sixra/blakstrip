@@ -21,3 +21,13 @@ test('audits on load, redacts a box, and verifies a clean export', async ({ page
     timeout: 15_000,
   });
 });
+
+test('authors a redaction box with the keyboard', async ({ page }) => {
+  const redactor = new RedactorPage(page);
+  await redactor.goto();
+  await redactor.uploadTextFixture();
+
+  // No mouse: focus the overlay and drive it with Enter + arrow keys.
+  await redactor.drawBoxByKeyboard();
+  await expect(page.getByText('1 redaction')).toBeVisible();
+});
