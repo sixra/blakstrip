@@ -1,0 +1,35 @@
+---
+import Header from '../components/Header.astro';
+import Redactor from '../components/Redactor.svelte';
+import Base from '../layouts/Base.astro';
+
+const appSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'blakstrip · PDF redactor',
+  applicationCategory: 'UtilitiesApplication',
+  operatingSystem: 'Any modern web browser',
+  browserRequirements: 'Requires JavaScript',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  description:
+    'Drop in a PDF and redact it in your browser. Draw boxes or search a term to remove every match for good, strip metadata, and verify before download.',
+  url: 'https://blakstrip.com/pdf-redact',
+  isPartOf: { '@type': 'WebSite', name: 'blakstrip', url: 'https://blakstrip.com' },
+};
+const jsonLd = JSON.stringify(appSchema).replace(/</g, '\\u003c');
+---
+
+<Base
+  title="Redact a PDF Online, Free and Private · blakstrip"
+  description="Drop in a PDF and redact it in your browser. Draw boxes or search a term to remove every match for good, strip metadata, and verify before download."
+>
+  <main id="main" class="mx-auto w-full max-w-6xl px-4 py-10">
+    <header class="mb-8">
+      <Header />
+      <p class="mt-8 text-center text-xs text-neutral-600">Your file never leaves your device</p>
+    </header>
+    <Redactor client:only="svelte" />
+  </main>
+
+  <script type="application/ld+json" set:html={jsonLd} />
+</Base>

@@ -1,0 +1,76 @@
+@import 'tailwindcss';
+
+/* Design tokens — blakstrip is a black-on-light redaction brand. */
+@theme {
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+
+  --color-canvas: #f4f4f4; /* page background */
+  --color-paper: #ffffff; /* raised surfaces (cards, panels, dialogs) */
+  --color-ink: #0a0a0a; /* near-black body text */
+  --color-redact: #000000; /* the load-bearing black of a redaction mark */
+}
+
+/* Smooth in-page anchor scrolling (disabled under reduced-motion, below). */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Install affordance: bold near-black text with a soft light sheen sweeping
+   through the letters (background-clip: text), like the language switcher. Falls
+   back to solid black; the reduced-motion block below keeps it static. */
+.install-shimmer-text {
+  color: var(--color-ink);
+}
+
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  @media (prefers-reduced-motion: no-preference) {
+    .install-shimmer-text {
+      background-image: linear-gradient(
+        100deg,
+        var(--color-ink) 42%,
+        #9a9a9a 50%,
+        var(--color-ink) 58%
+      );
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: install-shimmer 3.2s ease-in-out infinite alternate;
+    }
+  }
+}
+
+@keyframes install-shimmer {
+  from {
+    background-position: 0% 0;
+  }
+  to {
+    background-position: 100% 0;
+  }
+}
+
+/* File-picker prompt: say "click" on a mouse, "tap" on a touch screen. */
+.pp-tap {
+  display: none;
+}
+@media (pointer: coarse) {
+  .pp-click {
+    display: none;
+  }
+  .pp-tap {
+    display: inline;
+  }
+}
+
+/* Respect reduced-motion for every transition/animation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

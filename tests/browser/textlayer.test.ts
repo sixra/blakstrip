@@ -1,0 +1,124 @@
+import { describe, expect, it } from 'vitest';
+import { loadPdf } from '../../src/lib/pdf/render';
+import {
+  collectRedactedText,
+  documentHasText,
+  extractAllText,
+  extractPageText,
+  overlaps,
+  pageHasText,
+  searchDocumentRects,
+  searchPageRects,
+} from '../../src/lib/pdf/textlayer';
+import { makeMixedRunPdf, makeScanLikePdf, makeSplitRunPdf, makeTextPdf } from '../support/testpdf';
+
+describe('textlayer', () => {
+  it('extracts text across all pages', async () => {
+    const doc = await loadPdf(await makeTextPdf());
+    const text = await extractAllText(doc);
+    expect(text).toContain('123-45-6789');
+    expect(text).toContain('Jane Author');
+  });
+
+  it('extracts a single page', async () => {
+    const doc = await loadPdf(await makeTextPdf());
+    const t = await extractPageText(await doc.getPage(1));
+    expect(t).toContain('SSN');
+    expect(t).not.toContain('Appendix');
+  });
+
+  it('detects a text layer vs a scan', async () => {
+    const textDoc = await loadPdf(await makeTextPdf());
+    expect(await documentHasText(textDoc)).toBe(true);
+    expect(await pageHasText(await textDoc.getPage(1))).toBe(true);
+    const scan = await loadPdf(await makeScanLikePdf());
+    expect(await documentHasText(scan)).toBe(false);
+  });
+
+  it('finds every instance of a term as normalized rects', async () => {
+    const doc = await loadPdf(await makeTextPdf());
+    const rects = await searchDocumentRects(doc, 'Jane Author');
+    expect(rects.length).toBeGreaterThanOrEqual(2);
+    for (const r of rects) {
+      expect(r.x).toBeGreaterThanOrEqual(0);
+      expect(r.y).toBeGreaterThanOrEqual(0);
+      expect(r.w).toBeLessThanOrEqual(1);
+      expect(r.h).toBeLessThanOrEqual(1);
+      expect(r.term).toBe('Jane Author'); // exact query travels with the rect
+    }
+  });
+
+  it('returns nothing for an empty term or no match', async () => {
+    const doc = await loadPdf(await makeTextPdf());
+    expect(await searchDocumentRects(doc, '')).toEqual([]);
+    expect(await searchPageRects(await doc.getPage(1), 'zzzznotpresent')).toEqual([]);
+  });
+
+  it('is case-insensitive by default, case-sensitive on request', async () => {
+    const page = await (await loadPdf(await makeTextPdf())).getPage(1);
+    expect((await searchPageRects(page, 'jane author')).length).toBeGreaterThan(0);
+    expect(await searchPageRects(page, 'jane author', { caseSensitive: true })).toEqual([]);
+  });
+
+  it('finds a term that spans two text runs', async () => {
+    const doc = await loadPdf(await makeSplitRunPdf());
+    // "CONFIDENTIAL" is drawn as two adjacent items; a per-run search would miss it.
+    const rects = await searchDocumentRects(doc, 'CONFIDENTIAL');
+    expect(rects.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('boxes only the matched part of a mixed-width run (measured, not averaged)', async () => {
+    const page = await (await loadPdf(await makeMixedRunPdf())).getPage(1);
+
+    // "Berlin" inside "10827 Berlin." must sit right of "10827" and exclude ".".
+    const berlin = await searchPageRects(page, 'Berlin');
+    const num = await searchPageRects(page, '10827');
+    const line = await searchPageRects(page, '10827 Berlin.');
+    expect(berlin.length).toBe(1);
+    expect(num.length).toBe(1);
+    // No overlap with the leading number, and short of the trailing period.
+    expect(num[0].x + num[0].w).toBeLessThanOrEqual(berlin[0].x + 0.01);
+    expect(berlin[0].x + berlin[0].w).toBeLessThan(line[0].x + line[0].w);
+
+    // "621" inside "621412" is the first half — not five of the six digits.
+    const p = await searchPageRects(page, '621');
+    const all = await searchPageRects(page, '621412');
+    expect(p.length).toBe(1);
+    expect(p[0].w).toBeLessThan(all[0].w * 0.65);
+    expect(p[0].x).toBeCloseTo(all[0].x, 2);
+  });
+
+  it('clamps a mid-run match inside its run and stays in bounds', async () => {
+    const doc = await loadPdf(await makeTextPdf());
+    // 'Jane' sits mid-run inside "Employee: Jane Author", so both edges are the
+    // estimated (padded, clamped) path rather than an exact run boundary.
+    const rects = await searchDocumentRects(doc, 'Jane');
+    expect(rects.length).toBeGreaterThan(0);
+    for (const r of rects) {
+      expect(r.x).toBeGreaterThanOrEqual(0);
+      expect(r.w).toBeGreaterThan(0);
+      expect(r.x + r.w).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('collects the text sitting under redaction rects', async () => {
+    const doc = await loadPdf(await makeTextPdf());
+    const terms = await collectRedactedText(doc, [
+      { page: 1, x: 0, y: 0, w: 1, h: 1 }, // covers every run on page 1
+      { page: 1, x: 0, y: 0, w: 0.01, h: 0.01 }, // second rect on the same page
+      { page: 2, x: 0.9, y: 0.9, w: 0.05, h: 0.05 }, // empty corner — covers nothing
+    ]);
+    expect(terms.some((t) => t.includes('123-45-6789'))).toBe(true);
+    expect(terms.some((t) => t.includes('Appendix'))).toBe(false); // page 2 text not covered
+    expect(await collectRedactedText(doc, [])).toEqual([]);
+  });
+
+  it('detects box overlap in every separation direction', () => {
+    const box = { x: 0.4, y: 0.4, w: 0.2, h: 0.2 };
+    expect(overlaps(box, { x: 0.5, y: 0.5, w: 0.2, h: 0.2 })).toBe(true); // intersecting
+    expect(overlaps(box, { x: 0.7, y: 0.4, w: 0.1, h: 0.2 })).toBe(false); // to the right
+    expect(overlaps(box, { x: 0.1, y: 0.4, w: 0.1, h: 0.2 })).toBe(false); // to the left
+    expect(overlaps(box, { x: 0.4, y: 0.7, w: 0.2, h: 0.1 })).toBe(false); // below
+    expect(overlaps(box, { x: 0.4, y: 0.1, w: 0.2, h: 0.1 })).toBe(false); // above
+  });
+});

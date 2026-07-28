@@ -1,0 +1,12 @@
+---
+// Shared site header: brand logo (links home) + the quiet install affordance.
+// Used by every page so the logo and install button stay identical.
+import InstallButton from './InstallButton.svelte';
+---
+
+<div class="flex items-center justify-between">
+  <a href="/" aria-label="blakstrip home">
+    <img src="/logo.png" alt="blakstrip" width="656" height="342" class="h-9 w-auto" />
+  </a>
+  <InstallButton client:only="svelte" />
+</div>

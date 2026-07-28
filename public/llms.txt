@@ -1,0 +1,18 @@
+# blakstrip
+
+> A private, in-browser PDF redactor that removes content instead of covering it. Everything runs locally, nothing is uploaded, and it verifies the result before you download.
+
+blakstrip renders your PDF in the browser with pdf.js and rasterizes the pages you redact, so the underlying text, vectors, and hidden layers are gone rather than sitting behind a black box. Before export it audits what is hiding in the file (author metadata, XMP, annotations, form-field values, embedded JavaScript, attachments) and strips all of it; after export it re-inspects the output and shows you exactly what is still recoverable. A strict Content-Security-Policy (`connect-src 'none'`) blocks all network egress, verifiable in devtools, and the app works fully offline as a PWA.
+
+## Tools
+
+- [Redact a PDF](https://blakstrip.com/pdf-redact): Drop a PDF, draw boxes or search a term and redact every instance, then export a cleaned file. Audits hidden data on load and verifies the output before download.
+
+## About
+
+- [Home](https://blakstrip.com/): What blakstrip is, and why removing content is different from covering it.
+
+## Notes
+
+- All processing is client-side. No files are uploaded, and no analytics are collected.
+- Redacted pages are rasterized (their text becomes an image); untouched pages keep selectable text.

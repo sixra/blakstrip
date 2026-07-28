@@ -1,0 +1,82 @@
+// @ts-check
+import process from 'node:process';
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+import svelte from '@astrojs/svelte';
+import tailwindcss from '@tailwindcss/vite';
+import AstroPWA from '@vite-pwa/astro';
+
+// Vite's HMR needs a websocket in dev; production locks network egress to nothing.
+const isDev = process.argv.includes('dev');
+
+// https://astro.build/config
+export default defineConfig({
+  site: 'https://blakstrip.com',
+  trailingSlash: 'never',
+  build: { format: 'file', inlineStylesheets: 'always' },
+  prefetch: { prefetchAll: false, defaultStrategy: 'viewport' },
+  // No markdown yet, and Shiki's inline styles violate the strict CSP.
+  markdown: { syntaxHighlight: false },
+
+  // Provable privacy: no network egress. Astro auto-hashes bundled script/style;
+  // these directives are merged into the generated <meta> CSP on every static page.
+  security: {
+    csp: {
+      directives: [
+        "default-src 'self'",
+        isDev ? "connect-src 'self' ws: wss:" : "connect-src 'none'",
+        "worker-src 'self' blob:", // service worker + pdf.js worker
+        "img-src 'self' data: blob:", // canvas raster + icons
+        "font-src 'self'",
+        "manifest-src 'self'",
+        "object-src 'none'",
+        "base-uri 'none'",
+        "form-action 'none'",
+      ],
+    },
+  },
+
+  integrations: [
+    svelte(),
+    sitemap({
+      // Home ranks highest; each tool page is a primary surface. No lastmod —
+      // avoids false freshness signals on rarely-changing static pages.
+      serialize(item) {
+        item.priority = item.url === 'https://blakstrip.com/' ? 1.0 : 0.8;
+        return item;
+      },
+    }),
+    AstroPWA({
+      registerType: 'autoUpdate',
+      // We register the SW from a bundled <script> in Base.astro so Astro hashes it
+      // under the strict CSP (an injected inline script would be blocked).
+      injectRegister: false,
+      manifest: {
+        name: 'blakstrip · private PDF redactor',
+        short_name: 'blakstrip',
+        description: 'Remove content from PDFs entirely, in your browser, nothing uploaded.',
+        theme_color: '#f4f4f4',
+        background_color: '#f4f4f4',
+        display: 'standalone',
+        start_url: '/',
+        icons: [
+          { src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
+          {
+            src: '/android-chrome-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+      },
+    }),
+  ],
+
+  vite: {
+    plugins: [tailwindcss()],
+  },
+});

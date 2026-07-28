@@ -1,0 +1,10 @@
+# Security response headers (Cloudflare Pages / Netlify read this file).
+# These cannot be expressed in the <meta> CSP: frame-ancestors and X-Frame-Options
+# are ignored when a policy is delivered via <meta>, so a clickjacking defense for a
+# tool that handles sensitive documents has to be a real response header.
+/*
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
