@@ -5,7 +5,12 @@ import { loadPdf } from '../../src/lib/pdf/render';
 import { collectRedactedText, extractAllText } from '../../src/lib/pdf/textlayer';
 import type { RedactionRect } from '../../src/lib/pdf/types';
 import { verifyExport } from '../../src/lib/pdf/verify';
-import { makeAnnotatedPdf, makeRepeatedRunPdf, makeTextPdf } from '../support/testpdf';
+import {
+  makeAnnotatedPdf,
+  makeEncryptedLikePdf,
+  makeRepeatedRunPdf,
+  makeTextPdf,
+} from '../support/testpdf';
 
 const wholePage1: RedactionRect = { page: 1, x: 0, y: 0, w: 1, h: 1 };
 
@@ -19,6 +24,12 @@ describe('redact + export + verify', () => {
       { page: 1, x: 0.1, y: 0.2, w: 0.4, h: 0.05 },
     ]);
     expect(out.getPageCount()).toBe(2);
+  });
+
+  it('refuses to build from a password/permission protected PDF', async () => {
+    const pristine = await makeEncryptedLikePdf();
+    const doc = await loadPdf(await makeTextPdf());
+    await expect(buildRedactedPdf(pristine, doc, [])).rejects.toThrow(/protected/i);
   });
 
   it('makes redacted text unrecoverable while preserving untouched pages', async () => {

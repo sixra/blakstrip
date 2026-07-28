@@ -87,6 +87,19 @@ export async function makeMixedRunPdf(): Promise<ArrayBuffer> {
   return toArrayBuffer(await doc.save());
 }
 
+/**
+ * A PDF whose trailer carries an /Encrypt dictionary, so pdf-lib reports it as
+ * encrypted. pdf-lib cannot produce real encryption, but its `isEncrypted` flag
+ * keys off the trailer entry alone — which is exactly what our guards check.
+ */
+export async function makeEncryptedLikePdf(): Promise<ArrayBuffer> {
+  const doc = await PDFDocument.create();
+  doc.addPage([612, 792]);
+  const encrypt = doc.context.obj({ Filter: 'Standard', V: 1, R: 2 });
+  doc.context.trailerInfo.Encrypt = doc.context.register(encrypt);
+  return toArrayBuffer(await doc.save());
+}
+
 /** Single-page PDF with graphics but no text — looks like a scan. */
 export async function makeScanLikePdf(): Promise<ArrayBuffer> {
   const doc = await PDFDocument.create();

@@ -42,7 +42,14 @@ export async function buildRedactedPdf(
   pdfjsDoc: PDFDocumentProxy,
   rects: RedactionRect[]
 ): Promise<PDFDocument> {
-  const src = await PDFDocument.load(pristine);
+  // ignoreEncryption lets load() succeed on a protected file so we can detect it;
+  // pdf-lib cannot actually decrypt, so copying its pages would emit ciphertext.
+  const src = await PDFDocument.load(pristine, { ignoreEncryption: true });
+  if (src.isEncrypted) {
+    throw new Error(
+      'This PDF is password or permission protected. Remove the protection (re-save it or print to PDF), then open it again.'
+    );
+  }
   const out = await PDFDocument.create();
   const byPage = groupByPage(rects);
   const pageCount = src.getPageCount();

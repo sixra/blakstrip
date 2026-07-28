@@ -59,6 +59,19 @@ describe('inspectStructure', () => {
     expect(findings).toEqual([]);
   });
 
+  it('flags a protected PDF and skips structural listing', async () => {
+    const doc = await PDFDocument.create();
+    doc.addPage([612, 792]);
+    doc.setAuthor('Should Not Be Listed');
+    const encrypt = doc.context.obj({ Filter: 'Standard', V: 1, R: 2 });
+    doc.context.trailerInfo.Encrypt = doc.context.register(encrypt);
+    const findings = await inspectStructure(await doc.save());
+    expect(findings).toHaveLength(1);
+    expect(findings[0].id).toBe('encrypted');
+    expect(findings[0].category).toBe('structure');
+    expect(findings[0].severity).toBe('high');
+  });
+
   it('skips non-dictionary objects and flags a bare /JS action', async () => {
     const doc = await PDFDocument.create();
     doc.addPage([612, 792]);

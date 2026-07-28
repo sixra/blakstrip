@@ -23,8 +23,25 @@ function nameEq(dict: PDFDict, key: string, value: string): boolean {
  */
 export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
   // updateMetadata:false — otherwise pdf-lib stamps its own Producer at load
-  // time and we'd report our own inspection as a finding.
-  const doc = await PDFDocument.load(bytes, { updateMetadata: false });
+  // time and we'd report our own inspection as a finding. ignoreEncryption so a
+  // protected PDF is detected rather than throwing (pdf-lib can't decrypt).
+  const doc = await PDFDocument.load(bytes, { updateMetadata: false, ignoreEncryption: true });
+
+  // An encrypted document's strings/streams are ciphertext to pdf-lib, so listing
+  // its metadata would be garbage. Report the protection itself and stop.
+  if (doc.isEncrypted) {
+    return [
+      {
+        id: 'encrypted',
+        severity: 'high',
+        category: 'structure',
+        title: 'Password or permission protected',
+        detail:
+          'This PDF is encrypted, so its hidden data cannot be listed. Remove the protection before redacting.',
+      },
+    ];
+  }
+
   const findings: Finding[] = [];
 
   const info: Record<string, string | undefined> = {
