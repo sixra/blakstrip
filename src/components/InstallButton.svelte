@@ -44,6 +44,25 @@
     deferred = null;
   }
 
+  let containerEl = $state<HTMLDivElement>();
+  // Let the iOS hint popover be dismissed the ways users expect: Escape and a
+  // click anywhere outside it.
+  $effect(() => {
+    if (!iosHintOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') iosHintOpen = false;
+    };
+    const onClick = (e: MouseEvent) => {
+      if (containerEl && !containerEl.contains(e.target as Node)) iosHintOpen = false;
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('click', onClick);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('click', onClick);
+    };
+  });
+
   const btn = 'install-shimmer-text cursor-pointer text-sm font-semibold';
 </script>
 
@@ -52,12 +71,18 @@
     Install app
   </button>
 {:else if showIOS}
-  <div class="relative">
-    <button class={btn} aria-expanded={iosHintOpen} onclick={() => (iosHintOpen = !iosHintOpen)}>
+  <div class="relative" bind:this={containerEl}>
+    <button
+      class={btn}
+      aria-expanded={iosHintOpen}
+      aria-controls="ios-install-hint"
+      onclick={() => (iosHintOpen = !iosHintOpen)}
+    >
       Install app
     </button>
     {#if iosHintOpen}
       <div
+        id="ios-install-hint"
         role="note"
         class="absolute top-full right-0 z-20 mt-2 w-60 rounded-lg border border-neutral-200 bg-white p-3 text-left text-xs text-neutral-600 shadow-lg"
       >

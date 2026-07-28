@@ -267,6 +267,32 @@
     };
   });
 
+  let dialogEl = $state<HTMLDivElement>();
+  // Move focus into the verify dialog on open and restore it on close, and keep
+  // Tab focus trapped inside while it is open (modal focus management).
+  $effect(() => {
+    if (!verifyResult) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    dialogEl?.focus();
+    return () => previouslyFocused?.focus?.();
+  });
+  function trapTab(e: KeyboardEvent) {
+    if (e.key !== 'Tab' || !dialogEl) return;
+    const focusable = dialogEl.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
   async function exportPdf() {
     if (!doc || !pristine || rects.length === 0) return;
     exporting = true;
@@ -442,8 +468,16 @@
           <ul class="mt-2 space-y-1">
             {#each auditReport.findings as f (f.id)}
               <li class="flex items-start gap-2 text-sm text-neutral-700">
-                <span class={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${sevClass(f.severity)}`}></span>
-                <span><span class="font-medium text-neutral-900">{f.title}:</span> {f.detail}</span>
+                <span
+                  class={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${sevClass(f.severity)}`}
+                  aria-hidden="true"
+                ></span>
+                <span
+                  ><span class="sr-only"
+                    >{f.severity === 'high' ? 'High' : 'Medium'} severity:
+                  </span><span class="font-medium text-neutral-900">{f.title}:</span>
+                  {f.detail}</span
+                >
               </li>
             {/each}
           </ul>
@@ -565,8 +599,12 @@
     role="dialog"
     aria-modal="true"
     aria-labelledby="verify-title"
+    tabindex="-1"
+    onkeydown={trapTab}
   >
     <div
+      bind:this={dialogEl}
+      tabindex="-1"
       class="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-6"
     >
       <h2 id="verify-title" class="text-lg font-semibold text-neutral-900">
