@@ -81,7 +81,7 @@ describe('inspectStructure', () => {
     ]);
     // A JPEG with no APP1 EXIF segment.
     const noExif = new Uint8Array([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x08, 1, 2, 3, 4, 5, 6]);
-    const mk = (filter: unknown, bytes: Uint8Array): PDFRef =>
+    const mk = (filter: string | string[], bytes: Uint8Array): PDFRef =>
       doc.context.register(
         PDFRawStream.of(
           doc.context.obj({
@@ -109,6 +109,14 @@ describe('inspectStructure', () => {
     expect(exif).toBeDefined();
     expect(exif?.category).toBe('metadata');
     expect(exif?.detail).toContain('2'); // only the two EXIF-bearing images
+  });
+
+  it('flags optional-content (OCG) layers via the catalog', async () => {
+    const doc = await PDFDocument.create();
+    doc.addPage([612, 792]);
+    doc.catalog.set(PDFName.of('OCProperties'), doc.context.obj({ OCGs: [], D: { Order: [] } }));
+    const findings = await inspectStructure(await doc.save());
+    expect(findings.some((f) => f.id === 'ocg')).toBe(true);
   });
 
   it('skips non-dictionary objects and flags a bare /JS action', async () => {

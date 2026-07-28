@@ -172,5 +172,19 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
       detail: 'Private editable content (/PieceInfo) left by an authoring app.',
     });
 
+  // Optional-content groups (layers). A layer hidden by default is still in the
+  // file and can be extracted or switched back on; pdf-lib also can't carry the
+  // /OCProperties visibility config into the output, so we can't clean it —
+  // surface it (and, via verify, withhold the clean verdict) instead.
+  if (doc.catalog.get(PDFName.of('OCProperties')) !== undefined)
+    findings.push({
+      id: 'ocg',
+      severity: 'medium',
+      category: 'structure',
+      title: 'Optional content layers',
+      detail:
+        'This document uses layers (optional content). A layer hidden by default can still be extracted or turned back on, so content you cannot see may remain in the file.',
+    });
+
   return findings;
 }
