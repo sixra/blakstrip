@@ -10,7 +10,13 @@ import {
   searchDocumentRects,
   searchPageRects,
 } from '../../src/lib/pdf/textlayer';
-import { makeMixedRunPdf, makeScanLikePdf, makeSplitRunPdf, makeTextPdf } from '../support/testpdf';
+import {
+  makeMixedRunPdf,
+  makeRotatedPdf,
+  makeScanLikePdf,
+  makeSplitRunPdf,
+  makeTextPdf,
+} from '../support/testpdf';
 
 describe('textlayer', () => {
   it('extracts text across all pages', async () => {
@@ -99,6 +105,27 @@ describe('textlayer', () => {
       expect(r.w).toBeGreaterThan(0);
       expect(r.x + r.w).toBeLessThanOrEqual(1);
     }
+  });
+
+  it('places the box over the on-screen glyphs on a rotated (/Rotate 90) page', async () => {
+    const doc = await loadPdf(await makeRotatedPdf());
+    const page = await doc.getPage(1);
+    const rects = await searchPageRects(page, 'ROTATEDSECRET');
+    expect(rects.length).toBe(1);
+    const r = rects[0];
+    // Stays on the page.
+    expect(r.x).toBeGreaterThanOrEqual(0);
+    expect(r.y).toBeGreaterThanOrEqual(0);
+    expect(r.x + r.w).toBeLessThanOrEqual(1.001);
+    expect(r.y + r.h).toBeLessThanOrEqual(1.001);
+    // A horizontal run rendered under /Rotate 90 reads vertically on screen, so
+    // the box must be taller than it is wide — proof the rotation was applied
+    // (the old divide-by-viewport geometry produced a wide, mislocated box).
+    expect(r.h).toBeGreaterThan(r.w);
+    // Round-trip: the same rect, overlap-tested in the same coordinate system,
+    // recovers the covered text — search and collect agree on where the glyph is.
+    const covered = await collectRedactedText(doc, rects);
+    expect(covered.some((t) => t.includes('ROTATEDSECRET'))).toBe(true);
   });
 
   it('collects the text sitting under redaction rects', async () => {

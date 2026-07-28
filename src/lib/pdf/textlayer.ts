@@ -20,6 +20,56 @@ function isGlyph(item: unknown): item is GlyphItem {
   return typeof (item as { str?: unknown }).str === 'string';
 }
 
+/** An axis-aligned rect in normalized top-left page fractions. */
+interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * The subset of a pdf.js PageViewport we need: the rotation-aware transform from
+ * PDF user space to on-screen device space, the device dimensions, and the
+ * user-space page box (for scaling pads into user-space points).
+ */
+interface Viewport {
+  transform: number[];
+  width: number;
+  height: number;
+  viewBox: number[];
+}
+
+/**
+ * Map an axis-aligned box given in PDF user-space points (origin bottom-left,
+ * y-up) to a normalized top-left rect on the rendered page. All four corners are
+ * pushed through the viewport transform and the axis-aligned bounds taken, so a
+ * page's `/Rotate` (90/180/270) lands the box in the correct on-screen quadrant.
+ * For an unrotated page the transform is a plain scale + y-flip, reducing this to
+ * the divide-by-page-size the geometry used before.
+ */
+function normalizeUserBox(vp: Viewport, x0: number, y0: number, x1: number, y1: number): Box {
+  const t = vp.transform;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const [ux, uy] of [
+    [x0, y0],
+    [x1, y0],
+    [x1, y1],
+    [x0, y1],
+  ]) {
+    const nx = (ux * t[0] + uy * t[2] + t[4]) / vp.width;
+    const ny = (ux * t[1] + uy * t[3] + t[5]) / vp.height;
+    if (nx < minX) minX = nx;
+    if (nx > maxX) maxX = nx;
+    if (ny < minY) minY = ny;
+    if (ny > maxY) maxY = ny;
+  }
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+}
+
 /** Concatenate a page's text as it reads, inserting newlines at EOL markers. */
 export async function extractPageText(page: PDFPageProxy): Promise<string> {
   const content = await page.getTextContent();
@@ -120,25 +170,13 @@ function glyphMetrics(item: GlyphItem): {
 }
 
 /** The run's bounding box in normalized top-left fractions of the page. */
-function glyphBox(
-  item: GlyphItem,
-  pw: number,
-  ph: number
-): { x: number; y: number; w: number; h: number } {
-  const { originX, fontH, descent, topPdf } = glyphMetrics(item);
-  return {
-    x: originX / pw,
-    y: (ph - topPdf) / ph,
-    w: item.width / pw,
-    h: (fontH + descent) / ph,
-  };
+function glyphBox(item: GlyphItem, vp: Viewport): Box {
+  const { originX, baselineY, descent, topPdf } = glyphMetrics(item);
+  return normalizeUserBox(vp, originX, baselineY - descent, originX + item.width, topPdf);
 }
 
 /** Do two axis-aligned top-left boxes overlap at all? Exported for direct test. */
-export function overlaps(
-  a: { x: number; y: number; w: number; h: number },
-  b: { x: number; y: number; w: number; h: number }
-): boolean {
+export function overlaps(a: Box, b: Box): boolean {
   const apart = a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y;
   return !apart;
 }
@@ -158,7 +196,13 @@ export async function searchPageRects(
   opts: { caseSensitive?: boolean } = {}
 ): Promise<RedactionRect[]> {
   if (!term) return [];
-  const { width: pw, height: ph } = page.getViewport({ scale: 1 });
+  const vp = page.getViewport({ scale: 1 });
+  // Page dimensions in user space (pre-rotation), used to scale the normalized
+  // pads into user-space points so they apply along the baseline, not the screen.
+  const uw = vp.viewBox[2] - vp.viewBox[0];
+  const uh = vp.viewBox[3] - vp.viewBox[1];
+  const safetyX = SAFETY_X * uw;
+  const padY = PAD_Y * uh;
   const needle = opts.caseSensitive ? term : term.toLowerCase();
   const content = await page.getTextContent();
   const styles = content.styles as Record<string, { fontFamily?: string }>;
@@ -185,7 +229,7 @@ export async function searchPageRects(
       const to = Math.min(matchEnd, runEnd);
       if (from >= to) continue; // this run isn't part of the match
 
-      const { originX, fontH, topPdf } = glyphMetrics(item);
+      const { originX, baselineY, fontH, topPdf } = glyphMetrics(item);
       // Tighter than glyphMetrics' 0.28 so the box hugs the line: still clears
       // descenders (g/y/p), without reaching into the row below.
       const descent = fontH * 0.22;
@@ -201,22 +245,20 @@ export async function searchPageRects(
       const preW = ctx.measureText(item.str.slice(0, localStart)).width * scale;
       const matchW = ctx.measureText(item.str.slice(localStart, to - runStart)).width * scale;
 
-      // Clamp to the run's own extent so a box can never reach into an adjacent
-      // word (a separate run); the measurement keeps it off same-run neighbours.
-      const runLeft = originX / pw;
-      const runRight = (originX + item.width) / pw;
-      const nLeft = Math.max(runLeft, (originX + preW) / pw - SAFETY_X);
-      const nRight = Math.min(runRight, (originX + preW + matchW) / pw + SAFETY_X);
-
-      // pdf.js user space is bottom-left; convert the vertical box to top-left.
-      const y = (ph - topPdf) / ph - PAD_Y;
-      const h = (fontH + descent) / ph + PAD_Y * 2;
+      // Work in user-space points along the baseline, clamping the match inside
+      // the run's own extent so a box can never reach into an adjacent word (a
+      // separate run); the measurement keeps it off same-run neighbours. The
+      // final box is mapped through the viewport transform so rotated pages land
+      // the box over the on-screen glyphs.
+      const xL = Math.max(originX, originX + preW - safetyX);
+      const xR = Math.min(originX + item.width, originX + preW + matchW + safetyX);
+      const box = normalizeUserBox(vp, xL, baselineY - descent - padY, xR, topPdf + padY);
       rects.push({
         page: page.pageNumber,
-        x: Math.max(0, nLeft),
-        y: Math.max(0, y),
-        w: Math.min(1, nRight - nLeft),
-        h: Math.min(1, h),
+        x: Math.max(0, box.x),
+        y: Math.max(0, box.y),
+        w: Math.min(1, box.w),
+        h: Math.min(1, box.h),
         term, // the exact query, so verify can confirm it survives nowhere
       });
     }
@@ -239,12 +281,12 @@ export async function collectRedactedText(
   const terms = new Set<string>();
   for (const [pageNum, pageRects] of byPage) {
     const page = await doc.getPage(pageNum);
-    const { width: pw, height: ph } = page.getViewport({ scale: 1 });
+    const vp = page.getViewport({ scale: 1 });
     const content = await page.getTextContent();
     for (const item of content.items) {
       /* v8 ignore next -- marked-content / empty-run items don't occur in our text PDFs */
       if (!isGlyph(item) || item.str.trim().length === 0) continue;
-      const box = glyphBox(item, pw, ph);
+      const box = glyphBox(item, vp);
       if (pageRects.some((r) => overlaps(box, r))) terms.add(item.str.trim());
     }
   }

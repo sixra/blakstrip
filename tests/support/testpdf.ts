@@ -1,5 +1,5 @@
 // In-browser PDF fixtures for engine tests (pdf-lib runs in the browser).
-import { PDFDocument, PDFName, PDFString, StandardFonts } from 'pdf-lib';
+import { degrees, PDFDocument, PDFName, PDFString, StandardFonts } from 'pdf-lib';
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
@@ -97,6 +97,20 @@ export async function makeEncryptedLikePdf(): Promise<ArrayBuffer> {
   doc.addPage([612, 792]);
   const encrypt = doc.context.obj({ Filter: 'Standard', V: 1, R: 2 });
   doc.context.trailerInfo.Encrypt = doc.context.register(encrypt);
+  return toArrayBuffer(await doc.save());
+}
+
+/**
+ * A page carrying `/Rotate 90`, with a horizontal run drawn in user space that
+ * therefore renders vertically. Exercises the viewport-transform geometry: the
+ * search box must land over the on-screen glyphs, not in the unrotated quadrant.
+ */
+export async function makeRotatedPdf(): Promise<ArrayBuffer> {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const page = doc.addPage([612, 792]);
+  page.setRotation(degrees(90));
+  page.drawText('ROTATEDSECRET', { x: 80, y: 700, size: 24, font });
   return toArrayBuffer(await doc.save());
 }
 
