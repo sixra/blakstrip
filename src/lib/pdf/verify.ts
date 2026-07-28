@@ -42,7 +42,6 @@ export async function verifyExport(
   return {
     clean: remaining.length === 0 && leakedTerms.length === 0,
     recoverableStrings: strings,
-    removed: [],
     remaining,
     leakedTerms,
   };

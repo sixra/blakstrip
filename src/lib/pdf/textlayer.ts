@@ -43,6 +43,17 @@ export async function extractAllText(doc: PDFDocumentProxy): Promise<string> {
   return parts.join('\n');
 }
 
+/** Bucket rects by their 1-based page number, preserving order within a page. */
+export function groupRectsByPage(rects: RedactionRect[]): Map<number, RedactionRect[]> {
+  const byPage = new Map<number, RedactionRect[]>();
+  for (const r of rects) {
+    const arr = byPage.get(r.page);
+    if (arr) arr.push(r);
+    else byPage.set(r.page, [r]);
+  }
+  return byPage;
+}
+
 /** Does this page expose any non-whitespace text? (vs a pure scan.) */
 export async function pageHasText(page: PDFPageProxy): Promise<boolean> {
   const content = await page.getTextContent();
@@ -58,10 +69,10 @@ export async function documentHasText(doc: PDFDocumentProxy): Promise<boolean> {
   return false;
 }
 
+// Callers guarantee a non-empty needle (searchPageRects returns early on an
+// empty term), so no empty-needle guard is needed here.
 function indicesOf(haystack: string, needle: string): number[] {
   const out: number[] = [];
-  /* v8 ignore next -- unreachable: searchPageRects guards against an empty term */
-  if (!needle) return out;
   let from = 0;
   for (;;) {
     const at = haystack.indexOf(needle, from);
@@ -223,12 +234,7 @@ export async function collectRedactedText(
   doc: PDFDocumentProxy,
   rects: RedactionRect[]
 ): Promise<string[]> {
-  const byPage = new Map<number, RedactionRect[]>();
-  for (const r of rects) {
-    const arr = byPage.get(r.page);
-    if (arr) arr.push(r);
-    else byPage.set(r.page, [r]);
-  }
+  const byPage = groupRectsByPage(rects);
 
   const terms = new Set<string>();
   for (const [pageNum, pageRects] of byPage) {

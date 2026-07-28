@@ -10,7 +10,7 @@
 import type { PDFDocument } from 'pdf-lib';
 import { PDFArray, PDFDict, PDFName, PDFRef, PDFStream, type PDFObject } from 'pdf-lib';
 
-/** Blank the DocInfo dictionary (author, title, keywords, producer, …). */
+/** Blank the DocInfo dictionary (author, title, keywords, producer, dates, …). */
 export function stripDocInfo(doc: PDFDocument): void {
   doc.setTitle('');
   doc.setAuthor('');
@@ -18,6 +18,14 @@ export function stripDocInfo(doc: PDFDocument): void {
   doc.setKeywords([]);
   doc.setProducer('');
   doc.setCreator('');
+  // The setters above have no equivalent for dates, and pdf-lib stamps both at
+  // document creation — a leftover timestamp discloses when (and in which time
+  // zone) the file was redacted. Delete them straight off the Info dict, which
+  // the setters just guaranteed exists.
+  const info = doc.context.lookup(doc.context.trailerInfo.Info, PDFDict);
+  info.delete(PDFName.of('CreationDate'));
+  info.delete(PDFName.of('ModDate'));
+  info.delete(PDFName.of('Trapped'));
 }
 
 /** Remove the XMP metadata stream (pdf-lib has no XMP API). */

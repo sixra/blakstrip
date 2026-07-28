@@ -69,15 +69,20 @@ describe('stripAll', () => {
     expect(outputContains(after, AP)).toBe(false);
   });
 
-  it('clears document metadata', async () => {
+  it('clears document metadata, including the creation and modification dates', async () => {
     const doc = await PDFDocument.create();
     doc.addPage([612, 792]);
     doc.setAuthor('Jane Author');
     doc.setTitle('Quarterly Report');
+    // create() stamps both dates; confirm they start present so the assertion
+    // below proves the strip, not their mere absence.
+    expect(doc.getCreationDate()).toBeInstanceOf(Date);
     stripAll(doc);
     const out = await PDFDocument.load(await doc.save(), { updateMetadata: false });
     expect(out.getAuthor() ?? '').toBe('');
     expect(out.getTitle() ?? '').toBe('');
+    expect(out.getCreationDate()).toBeUndefined();
+    expect(out.getModificationDate()).toBeUndefined();
   });
 
   it('removes embedded attachments and JavaScript from a loaded document', async () => {

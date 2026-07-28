@@ -31,10 +31,10 @@ export interface RedactionRect {
   term?: string;
 }
 
-export type FindingSeverity = 'high' | 'medium' | 'low' | 'info';
+export type FindingSeverity = 'high' | 'medium';
 
 export type FindingCategory =
-  'metadata' | 'xmp' | 'attachment' | 'annotation' | 'form' | 'javascript' | 'structure';
+  'metadata' | 'xmp' | 'attachment' | 'annotation' | 'javascript' | 'structure';
 
 /** One thing discovered hiding in a document (audit) or still present (verify). */
 export interface Finding {
@@ -63,8 +63,6 @@ export interface VerifyReport {
   clean: boolean;
   /** Strings still recoverable via text extraction from the output. */
   recoverableStrings: string[];
-  /** Findings from the original audit that are now gone. */
-  removed: Finding[];
   /** Findings that still leak in the output (should be empty). */
   remaining: Finding[];
   /** Redacted search terms that still appear in the output (should be empty). */

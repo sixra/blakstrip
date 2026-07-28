@@ -7,7 +7,8 @@
  */
 import { PDFDocument } from 'pdf-lib';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { renderPageToImageCanvas } from './render';
+import { getPageSize, renderPageToImageCanvas } from './render';
+import { groupRectsByPage } from './textlayer';
 import type { RedactionRect } from './types';
 
 /** Device-pixel scale for rasterized pages (~144 DPI at 2×). Tunable. */
@@ -18,16 +19,6 @@ async function canvasToPngBytes(canvas: HTMLCanvasElement): Promise<Uint8Array> 
   /* v8 ignore next -- toBlob yields a Blob for a valid canvas */
   if (!blob) throw new Error('Failed to encode redacted page image');
   return new Uint8Array(await blob.arrayBuffer());
-}
-
-function groupByPage(rects: RedactionRect[]): Map<number, RedactionRect[]> {
-  const byPage = new Map<number, RedactionRect[]>();
-  for (const r of rects) {
-    const arr = byPage.get(r.page);
-    if (arr) arr.push(r);
-    else byPage.set(r.page, [r]);
-  }
-  return byPage;
 }
 
 /**
@@ -51,7 +42,7 @@ export async function buildRedactedPdf(
     );
   }
   const out = await PDFDocument.create();
-  const byPage = groupByPage(rects);
+  const byPage = groupRectsByPage(rects);
   const pageCount = src.getPageCount();
 
   for (let i = 0; i < pageCount; i += 1) {
@@ -76,7 +67,7 @@ export async function buildRedactedPdf(
       const img = await out.embedPng(png);
       // Use the pdf.js viewport (rotation-aware) so rotated pages aren't
       // stretched — the rasterized image already bakes in the /Rotate.
-      const { width, height } = page.getViewport({ scale: 1 });
+      const { width, height } = getPageSize(page);
       const outPage = out.addPage([width, height]);
       outPage.drawImage(img, { x: 0, y: 0, width, height });
     } else {
