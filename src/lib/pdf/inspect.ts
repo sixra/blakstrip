@@ -3,7 +3,15 @@
  * DocInfo and enumerates ACTUAL indirect objects (not references) so it sees
  * content regardless of whether a reference still points at it.
  */
-import { PDFDict, PDFDocument, PDFName, PDFStream, type PDFObject } from 'pdf-lib';
+import {
+  PDFArray,
+  PDFDict,
+  PDFDocument,
+  PDFName,
+  PDFRawStream,
+  PDFStream,
+  type PDFObject,
+} from 'pdf-lib';
 import type { Finding } from './types';
 
 function dictOf(obj: PDFObject): PDFDict | undefined {
@@ -15,6 +23,36 @@ function dictOf(obj: PDFObject): PDFDict | undefined {
 /** True when `dict[key]` is the name `/value` (PDFName instances are interned). */
 function nameEq(dict: PDFDict, key: string, value: string): boolean {
   return dict.lookupMaybe(PDFName.of(key), PDFName) === PDFName.of(value);
+}
+
+/** True when the stream is JPEG-compressed (`/Filter /DCTDecode`, name or array). */
+function usesDct(dict: PDFDict): boolean {
+  const filter = dict.get(PDFName.of('Filter'));
+  const dct = PDFName.of('DCTDecode');
+  if (filter === dct) return true;
+  return filter instanceof PDFArray && filter.asArray().some((f) => f === dct);
+}
+
+/**
+ * Scan JPEG bytes for an APP1 EXIF segment (`FF E1 … "Exif\0\0"`), which can
+ * carry GPS coordinates and camera identifiers. The marker sits in the file
+ * header, so bound the scan to the first 64 KiB.
+ */
+function hasExifSegment(bytes: Uint8Array): boolean {
+  const limit = Math.min(bytes.length - 7, 65536);
+  for (let i = 0; i < limit; i += 1) {
+    if (
+      bytes[i] === 0xff &&
+      bytes[i + 1] === 0xe1 &&
+      bytes[i + 4] === 0x45 && // E
+      bytes[i + 5] === 0x78 && // x
+      bytes[i + 6] === 0x69 && // i
+      bytes[i + 7] === 0x66 // f
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -68,6 +106,7 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
   let files = 0;
   let xmp = 0;
   let js = 0;
+  let exif = 0;
   for (const [, obj] of doc.context.enumerateIndirectObjects()) {
     const dict = dictOf(obj);
     if (!dict) continue;
@@ -75,6 +114,7 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
     else if (nameEq(dict, 'Type', 'EmbeddedFile')) files += 1;
     else if (nameEq(dict, 'Type', 'Metadata')) xmp += 1;
     if (nameEq(dict, 'S', 'JavaScript') || dict.get(PDFName.of('JS')) !== undefined) js += 1;
+    if (obj instanceof PDFRawStream && usesDct(dict) && hasExifSegment(obj.contents)) exif += 1;
   }
 
   if (xmp > 0)
@@ -108,6 +148,14 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
       category: 'javascript',
       title: 'Embedded JavaScript',
       detail: `${js} script object(s).`,
+    });
+  if (exif > 0)
+    findings.push({
+      id: 'exif',
+      severity: 'high',
+      category: 'metadata',
+      title: 'Photo (EXIF/GPS) data in an image',
+      detail: `${exif} embedded JPEG(s) carry EXIF metadata, which can include GPS location and camera details. This sits inside the image itself, so redacting elsewhere on the page does not remove it.`,
     });
 
   // Page-piece data isn't typed, so enumeration can't spot it — check the

@@ -1,4 +1,4 @@
-import { PDFDocument, PDFName, PDFString } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFRawStream, PDFString, type PDFRef } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import { inspectStructure } from './inspect';
 import { stripAll } from './metadata';
@@ -70,6 +70,45 @@ describe('inspectStructure', () => {
     expect(findings[0].id).toBe('encrypted');
     expect(findings[0].category).toBe('structure');
     expect(findings[0].severity).toBe('high');
+  });
+
+  it('flags EXIF/GPS data in DCTDecode images (name and array /Filter), ignoring clean JPEGs', async () => {
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([612, 792]);
+    // A JPEG header carrying an APP1 EXIF segment (FF E1 … "Exif\0\0").
+    const withExif = new Uint8Array([
+      0xff, 0xd8, 0xff, 0xe1, 0x00, 0x10, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00, 0, 0, 0, 0,
+    ]);
+    // A JPEG with no APP1 EXIF segment.
+    const noExif = new Uint8Array([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x08, 1, 2, 3, 4, 5, 6]);
+    const mk = (filter: unknown, bytes: Uint8Array): PDFRef =>
+      doc.context.register(
+        PDFRawStream.of(
+          doc.context.obj({
+            Type: 'XObject',
+            Subtype: 'Image',
+            Width: 1,
+            Height: 1,
+            Filter: filter,
+          }),
+          bytes
+        )
+      );
+    page.node.set(
+      PDFName.of('Resources'),
+      doc.context.obj({
+        XObject: {
+          Im0: mk('DCTDecode', withExif), // name /Filter
+          Im1: mk(['DCTDecode'], withExif), // array /Filter
+          Im2: mk('DCTDecode', noExif), // DCT but no EXIF — must not count
+        },
+      })
+    );
+    const findings = await inspectStructure(await doc.save());
+    const exif = findings.find((f) => f.id === 'exif');
+    expect(exif).toBeDefined();
+    expect(exif?.category).toBe('metadata');
+    expect(exif?.detail).toContain('2'); // only the two EXIF-bearing images
   });
 
   it('skips non-dictionary objects and flags a bare /JS action', async () => {
