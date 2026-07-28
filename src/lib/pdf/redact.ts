@@ -54,14 +54,18 @@ export async function buildRedactedPdf(
       const ctx = canvas.getContext('2d');
       /* v8 ignore next -- a real 2D context is always available in the browser */
       if (!ctx) throw new Error('2D canvas context unavailable');
+      ctx.imageSmoothingEnabled = false;
       ctx.fillStyle = '#000000';
       for (const r of pageRects) {
-        ctx.fillRect(
-          r.x * canvas.width,
-          r.y * canvas.height,
-          r.w * canvas.width,
-          r.h * canvas.height
-        );
+        // Snap each edge outward to a whole device pixel. A fractional fillRect
+        // is antialiased, leaving a boundary row that blends black with the
+        // original pixel underneath — faintly recoverable. Rounding out covers
+        // slightly more, never less, matching the "over-cover" policy.
+        const x0 = Math.floor(r.x * canvas.width);
+        const y0 = Math.floor(r.y * canvas.height);
+        const x1 = Math.ceil((r.x + r.w) * canvas.width);
+        const y1 = Math.ceil((r.y + r.h) * canvas.height);
+        ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
       }
       const png = await canvasToPngBytes(canvas);
       const img = await out.embedPng(png);
