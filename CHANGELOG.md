@@ -8,17 +8,23 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [1.0.0] - 2026-07-30
 
+First stable release. blakstrip redacts PDFs entirely in the browser: redacted pages are rasterized
+so removed content is gone rather than covered, hidden metadata is stripped, and the output is
+re-verified before you can download it. No file ever leaves your device.
+
 ### Added
 
-- In-browser PDF redaction that rasterizes redacted pages, burning the black boxes into the pixels
-  so the underlying text and vectors are removed rather than covered. Untouched pages are copied
-  verbatim and keep selectable text.
-- Audit-on-load that enumerates leak vectors (metadata, XMP, annotations, form values, attachments,
+- **Rasterizing redaction**: pages you redact are flattened to an image with the black boxes burned
+  into the pixels, so the underlying text and vectors are removed rather than hidden. Untouched
+  pages are copied verbatim and keep selectable text.
+- **Audit on load**: enumerates leak vectors (metadata, XMP, annotations, form values, attachments,
   embedded JavaScript) and flags scanned pages.
-- Verify-on-export that re-opens the output and checks for recoverable text, surviving structure,
+- **Verify on export**: re-opens the output and checks for recoverable text, surviving structure,
   and a pixel-coverage backstop before allowing the download.
-- Metadata stripping with mark-sweep garbage collection of orphaned objects.
-- Strict `connect-src 'none'` Content-Security-Policy in production and offline PWA support.
+- **Metadata stripping**: clears document and embedded metadata, then mark-sweep garbage-collects
+  the orphaned objects.
+- **No network egress**: a strict `connect-src 'none'` Content-Security-Policy in production, plus
+  offline PWA support.
 
 [Unreleased]: https://github.com/sixra/blakstrip/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/sixra/blakstrip/releases/tag/v1.0.0
