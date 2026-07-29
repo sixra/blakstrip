@@ -28,6 +28,20 @@ uploaded — the file is opened, redacted, and saved entirely on your device.
 5. **Verify** — the output is re-opened and re-inspected; the dialog lists any recoverable text or
    surviving structure before you confirm the download.
 
+## Getting started
+
+Requires Node ≥ 22 and pnpm (the repo pins a version via `packageManager`; Corepack picks it up
+automatically).
+
+```sh
+pnpm install
+pnpm dev        # dev server at http://localhost:4321
+```
+
+`pnpm build` produces the static site in `dist/`. Note the strict CSP and the PWA only exist in a
+production build (`pnpm build && pnpm preview`), not in `pnpm dev`. See the [Scripts](#scripts) table
+for the test and quality-gate commands.
+
 ## Tech
 
 Astro 7 (static, `<meta>` CSP) · Svelte 5 (runes) islands · pdf-lib (write/strip) ·
@@ -73,3 +87,12 @@ scripts/            gen-icons, gen-fixtures
 - **The 100% coverage gate on `src/lib/**` is real** — new engine code needs matching tests.
 - Tooling (ESLint/Prettier/lefthook/commitlint) comes from `@sixra/devkit`; commits follow
   Conventional Commits.
+
+## Security
+
+Found a way to recover redacted content, or anything that leaks the user's file? Please report it
+privately — see [SECURITY.md](./SECURITY.md).
+
+## License
+
+[MIT](./LICENSE) © sixra

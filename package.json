@@ -2,6 +2,29 @@
   "name": "blakstrip",
   "type": "module",
   "version": "0.0.1",
+  "description": "A fully in-browser PDF redactor that removes content instead of covering it — nothing is uploaded.",
+  "license": "MIT",
+  "author": "sixra",
+  "homepage": "https://blakstrip.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sixra/blakstrip.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sixra/blakstrip/issues"
+  },
+  "keywords": [
+    "pdf",
+    "redaction",
+    "redact",
+    "privacy",
+    "client-side",
+    "in-browser",
+    "metadata",
+    "astro",
+    "svelte",
+    "pwa"
+  ],
   "packageManager": "pnpm@11.17.0",
   "engines": {
     "node": ">=22.12.0"

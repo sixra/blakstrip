@@ -23,6 +23,3 @@ playwright-report/
 # Static assets & binary fixtures
 public/
 src/lib/pdf/__fixtures__/
-
-# CLAUDE.md is a symlink to AGENTS.md; format the target, not the link.
-CLAUDE.md
