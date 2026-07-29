@@ -68,12 +68,18 @@ export async function buildRedactedPdf(
         ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
       }
       const png = await canvasToPngBytes(canvas);
+      // Release the canvas backing store now rather than waiting for GC: with
+      // many redacted pages the retained bitmaps dominate memory and can crash
+      // the tab before the single final save().
+      canvas.width = 0;
+      canvas.height = 0;
       const img = await out.embedPng(png);
       // Use the pdf.js viewport (rotation-aware) so rotated pages aren't
       // stretched — the rasterized image already bakes in the /Rotate.
       const { width, height } = getPageSize(page);
       const outPage = out.addPage([width, height]);
       outPage.drawImage(img, { x: 0, y: 0, width, height });
+      page.cleanup(); // drop pdf.js's cached operator list for this page
     } else {
       const [copied] = await out.copyPages(src, [i]);
       out.addPage(copied);
