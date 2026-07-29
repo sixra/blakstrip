@@ -61,10 +61,10 @@ describe('textlayer', () => {
     expect(await searchPageRects(await doc.getPage(1), 'zzzznotpresent')).toEqual([]);
   });
 
-  it('is case-insensitive by default, case-sensitive on request', async () => {
+  it('matches case-insensitively', async () => {
     const page = await (await loadPdf(await makeTextPdf())).getPage(1);
     expect((await searchPageRects(page, 'jane author')).length).toBeGreaterThan(0);
-    expect(await searchPageRects(page, 'jane author', { caseSensitive: true })).toEqual([]);
+    expect((await searchPageRects(page, 'JANE AUTHOR')).length).toBeGreaterThan(0);
   });
 
   it('finds a term that spans two text runs', async () => {

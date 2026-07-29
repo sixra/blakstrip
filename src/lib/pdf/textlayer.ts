@@ -249,17 +249,13 @@ export function overlaps(a: Box, b: Box): boolean {
  * gives run width, not per-glyph advances), then padded — redaction errs toward
  * covering slightly more, never less.
  */
-export async function searchPageRects(
-  page: PDFPageProxy,
-  term: string,
-  opts: { caseSensitive?: boolean } = {}
-): Promise<RedactionRect[]> {
+export async function searchPageRects(page: PDFPageProxy, term: string): Promise<RedactionRect[]> {
   if (!term) return [];
   const vp = page.getViewport({ scale: 1 });
   // Page width in user space (pre-rotation), for the page-fraction floor on the
   // horizontal safety margin (the font-relative part is computed per run below).
   const uw = vp.viewBox[2] - vp.viewBox[0];
-  const needle = opts.caseSensitive ? term : term.toLowerCase();
+  const needle = term.toLowerCase();
   const content = await page.getTextContent();
   const styles = content.styles as Record<string, { fontFamily?: string }>;
   const ctx = textMeasurer();
@@ -272,7 +268,7 @@ export async function searchPageRects(
     /* v8 ignore next -- marked-content / empty-run items don't occur in our text PDFs */
     if (!isGlyph(item) || item.str.length === 0) continue;
     runs.push({ item, start: hay.length });
-    hay += opts.caseSensitive ? item.str : item.str.toLowerCase();
+    hay += item.str.toLowerCase();
   }
 
   const rects: RedactionRect[] = [];
@@ -361,13 +357,12 @@ export async function collectRedactedText(
 /** Search every page; returns all match rects across the document. */
 export async function searchDocumentRects(
   doc: PDFDocumentProxy,
-  term: string,
-  opts: { caseSensitive?: boolean } = {}
+  term: string
 ): Promise<RedactionRect[]> {
   const all: RedactionRect[] = [];
   for (let n = 1; n <= doc.numPages; n += 1) {
     const page = await doc.getPage(n);
-    all.push(...(await searchPageRects(page, term, opts)));
+    all.push(...(await searchPageRects(page, term)));
   }
   return all;
 }
