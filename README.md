@@ -81,7 +81,7 @@ scripts/            gen-icons, gen-fixtures
 ## Versioning
 
 This project follows [Semantic Versioning](https://semver.org). See [CHANGELOG.md](./CHANGELOG.md)
-for the release history.
+for the release history and [RELEASING.md](./RELEASING.md) for how to cut a release.
 
 ## Security
 

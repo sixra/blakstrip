@@ -26,5 +26,7 @@ re-verified before you can download it. No file ever leaves your device.
 - **No network egress**: a strict `connect-src 'none'` Content-Security-Policy in production, plus
   offline PWA support.
 
+<!-- On release, update these refs and add the new version. See RELEASING.md. -->
+
 [Unreleased]: https://github.com/sixra/blakstrip/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/sixra/blakstrip/releases/tag/v1.0.0
