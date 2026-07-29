@@ -119,6 +119,21 @@ describe('inspectStructure', () => {
     expect(findings.some((f) => f.id === 'ocg')).toBe(true);
   });
 
+  it('reports creation and modification dates, and drops them after stripAll', async () => {
+    const doc = await PDFDocument.create();
+    doc.addPage([612, 792]);
+    doc.setCreationDate(new Date('2020-01-02T03:04:05Z'));
+    doc.setModificationDate(new Date('2021-06-07T08:09:10Z'));
+    const before = await inspectStructure(await doc.save());
+    expect(before.some((f) => f.id === 'date-Created')).toBe(true);
+    expect(before.some((f) => f.id === 'date-Modified')).toBe(true);
+
+    stripAll(doc);
+    const after = await inspectStructure(await doc.save());
+    // Symmetry: the dates the audit flagged are gone from the stripped output.
+    expect(after.some((f) => f.category === 'metadata')).toBe(false);
+  });
+
   it('skips non-dictionary objects and flags a bare /JS action', async () => {
     const doc = await PDFDocument.create();
     doc.addPage([612, 792]);

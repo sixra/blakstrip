@@ -102,6 +102,26 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
     }
   }
 
+  // Timestamps live in the Info dict alongside the strings above; a leftover one
+  // discloses when (and in which time zone) the file was made or last edited.
+  // stripDocInfo deletes these on export, so reporting them keeps audit and
+  // verify symmetric — a date the audit flags is a date the output no longer has.
+  const dates: Record<string, Date | undefined> = {
+    Created: doc.getCreationDate(),
+    Modified: doc.getModificationDate(),
+  };
+  for (const [key, value] of Object.entries(dates)) {
+    if (value) {
+      findings.push({
+        id: `date-${key}`,
+        severity: 'medium',
+        category: 'metadata',
+        title: `${key} date`,
+        detail: value.toISOString(),
+      });
+    }
+  }
+
   let annots = 0;
   let files = 0;
   let xmp = 0;
