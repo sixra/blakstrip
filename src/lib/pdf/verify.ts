@@ -10,6 +10,21 @@ import { loadPdf } from './render';
 import { extractAllText } from './textlayer';
 import type { RedactionRect, VerifyReport } from './types';
 
+/** Escape a user term for literal use inside a RegExp. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * A term counts as leaked only when it survives as a whole token — bounded by a
+ * non-word character or a string edge — not as an incidental substring. Without
+ * this, redacting "Lee" would flag every "flee" in the output and train users to
+ * dismiss the warning that matters.
+ */
+function survivesAsWord(haystack: string, term: string): boolean {
+  return new RegExp(`(^|\\W)${escapeRegExp(term.toLowerCase())}(\\W|$)`).test(haystack);
+}
+
 /** Text still extractable from the output, de-duplicated and trimmed. */
 async function recoverableStrings(bytes: Uint8Array): Promise<string[]> {
   const doc = await loadPdf(bytes.slice().buffer);
@@ -45,7 +60,7 @@ export async function verifyExport(
 
   const haystack = strings.join('\n').toLowerCase();
   const leakedTerms = redactedTerms.filter(
-    (t) => t.trim().length > 0 && haystack.includes(t.toLowerCase())
+    (t) => t.trim().length > 0 && survivesAsWord(haystack, t.trim())
   );
 
   const uncoveredRegions = coverage ? await checkCoverage(coverage.doc, coverage.rects, bytes) : [];

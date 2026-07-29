@@ -83,6 +83,20 @@ describe('redact + export + verify', () => {
     expect(report.clean).toBe(true);
   });
 
+  it('flags a surviving term as a whole word, not an incidental substring', async () => {
+    const pristine = await makeTextPdf();
+    const doc = await loadPdf(pristine);
+    // Redact page 1; page 2 keeps "Appendix — footer for Jane Author".
+    const bytes = await exportRedactedPdf(pristine, doc, [wholePage1]);
+
+    // "Appendix" survives as a word → flagged.
+    expect((await verifyExport(bytes, ['Appendix'])).leakedTerms).toEqual(['Appendix']);
+    // "ppen" only appears inside "Appendix" → not a real leak, not flagged.
+    const sub = await verifyExport(bytes, ['ppen']);
+    expect(sub.leakedTerms).toEqual([]);
+    expect(sub.clean).toBe(true);
+  });
+
   it('runs the pixel-coverage backstop when given the source doc and rects', async () => {
     const pristine = await makeTextPdf();
     const doc = await loadPdf(pristine);
