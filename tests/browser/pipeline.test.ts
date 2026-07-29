@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { downloadBytes, exportRedactedPdf, redactedFileName } from '../../src/lib/pdf/export';
 import { buildRedactedPdf } from '../../src/lib/pdf/redact';
 import { loadPdf } from '../../src/lib/pdf/render';
@@ -115,9 +115,49 @@ describe('redact + export + verify', () => {
     expect(leak.clean).toBe(false);
   });
 
-  it('names and downloads the redacted file', () => {
+  it('names the redacted file', () => {
     expect(redactedFileName('report.pdf')).toBe('report-redacted.pdf');
     expect(redactedFileName('report')).toBe('report-redacted.pdf');
-    expect(() => downloadBytes(new Uint8Array([37, 80, 68, 70]), 'x-redacted.pdf')).not.toThrow();
+  });
+
+  it('downloads bytes as a PDF blob and revokes the object URL', () => {
+    const anchors: HTMLAnchorElement[] = [];
+    const realCreate = document.createElement.bind(document);
+    const createSpy = vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = realCreate(tag as 'a');
+      if (tag === 'a') anchors.push(el as HTMLAnchorElement);
+      return el;
+    });
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined);
+    let blob: Blob | undefined;
+    const createUrl = vi
+      .spyOn(URL, 'createObjectURL')
+      .mockImplementation((b: Blob | MediaSource) => {
+        blob = b as Blob;
+        return 'blob:mock-url';
+      });
+    const revokeUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    try {
+      downloadBytes(new Uint8Array([37, 80, 68, 70]), 'report-redacted.pdf');
+      expect(anchors).toHaveLength(1);
+      expect(anchors[0].download).toBe('report-redacted.pdf');
+      expect(anchors[0].getAttribute('href')).toBe('blob:mock-url');
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      expect(blob?.type).toBe('application/pdf');
+      expect(revokeUrl).toHaveBeenCalledWith('blob:mock-url'); // no leaked object URL
+    } finally {
+      createSpy.mockRestore();
+      clickSpy.mockRestore();
+      createUrl.mockRestore();
+      revokeUrl.mockRestore();
+    }
+  });
+
+  it('rejects a non-PDF / truncated file with an error', async () => {
+    // The bytes a corrupt upload would carry — loadPdf must reject, not hang, so
+    // openFile's catch can surface a visible error.
+    await expect(loadPdf(new Uint8Array([1, 2, 3, 4]).buffer)).rejects.toThrow();
   });
 });
