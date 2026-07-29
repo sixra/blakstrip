@@ -4,3 +4,9 @@ allowBuilds:
   sharp: true
 minimumReleaseAgeExclude:
   - astro@7.1.4
+
+# Security patch for a transitive dev dependency (Dependabot advisory).
+# brace-expansion's expand() API is stable across majors, so pinning the
+# patched release is safe for the older (2.x) consumer in the tree.
+overrides:
+  'brace-expansion@<5.0.8': '5.0.8'
