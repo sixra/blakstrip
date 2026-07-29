@@ -2,13 +2,13 @@
  * Pixel-coverage check: the backstop that lets verify see the only leak the
  * redaction model can produce. A redacted page is flattened to a text-less image,
  * so text extraction alone can never notice a black box that visually
- * *under-covers* a glyph — it would certify a visible leak "clean".
+ * *under-covers* a glyph; it would certify a visible leak "clean".
  *
  * The check compares pixels, not geometry: a leak is a pixel that was **ink** in
  * the source page but is **not black** in the exported page. Source ink is the
  * ground truth for "what had to be destroyed" (so blank margins never
  * false-positive), and the exported pixels are the ground truth for "what was
- * actually covered" — neither comes from the measured geometry that placed the
+ * actually covered": neither comes from the measured geometry that placed the
  * box, so a placement bug can't pass by agreeing with itself.
  *
  * Search rects are additionally held to the authoritative run boxes from pdf.js
@@ -54,7 +54,7 @@ function lumaAt(img: Rgba, i: number): number {
  * Fraction of source-ink pixels in a normalized region that are still visible
  * (not black) in the output. The region is eroded one device pixel per side so
  * the antialiased box boundary doesn't skew the count. Returns 0 when the region
- * is too small to sample or holds no ink — nothing there to leak.
+ * is too small to sample or holds no ink; nothing there to leak.
  */
 function residualInk(src: Rgba, out: Rgba, r: Region): number {
   const x0 = Math.floor(r.x * src.width) + 1;

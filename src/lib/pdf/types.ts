@@ -1,5 +1,5 @@
 /**
- * Shared data contracts for the redaction engine — plain, serializable shapes
+ * Shared data contracts for the redaction engine: plain, serializable shapes
  * with no pdf.js / pdf-lib / DOM types, so the UI and tests can pass them around
  * freely. (Engine *functions* still take and return vendor handles such as
  * PDFDocumentProxy where they must; only the types declared here are vendor-free.)
@@ -8,7 +8,7 @@
 /**
  * A region to redact, stored in **normalized page coordinates**: fractions of
  * the page's width/height with the origin at the top-left (the same orientation
- * the user sees on screen). Resolution-independent — maps trivially to a canvas
+ * the user sees on screen). Resolution-independent: maps trivially to a canvas
  * at any scale for rasterization, and to PDF user space (with a y-flip) later.
  */
 export interface RedactionRect {
@@ -23,7 +23,7 @@ export interface RedactionRect {
   /** Height, 0..1 of page height. */
   h: number;
   /**
-   * The exact text this rect was created to cover, when known — set for rects
+   * The exact text this rect was created to cover, when known; set for rects
    * produced by search-redaction. Carried into verify so the precise term (not
    * just the coarse run under a hand-drawn box) is confirmed absent from the
    * output. Undefined for hand-drawn boxes. Travels with the rect, so undo/redo
@@ -58,7 +58,7 @@ export interface AuditReport {
   findings: Finding[];
 }
 
-/** Result of re-inspecting the exported bytes — the proof shown before download. */
+/** Result of re-inspecting the exported bytes: the proof shown before download. */
 export interface VerifyReport {
   /** True when nothing sensitive survived. */
   clean: boolean;
@@ -69,7 +69,7 @@ export interface VerifyReport {
   /** Redacted search terms that still appear in the output (should be empty). */
   leakedTerms: string[];
   /**
-   * Redaction rects whose target isn't actually black in the output raster — a
+   * Redaction rects whose target isn't actually black in the output raster: a
    * box that under-covered its glyphs, or a page that failed to rasterize. Empty
    * when every redaction is proven covered by the pixel check (should be empty).
    */

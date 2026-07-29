@@ -1,5 +1,5 @@
 /**
- * Build the redacted document. Pages with redactions are **rasterized** — the
+ * Build the redacted document. Pages with redactions are **rasterized**: the
  * page is rendered to a canvas, black boxes are painted into the pixels, and the
  * flattened image replaces the page, so nothing underneath survives. Pages
  * without redactions are copied verbatim from the source so their text stays
@@ -59,7 +59,7 @@ export async function buildRedactedPdf(
       for (const r of pageRects) {
         // Snap each edge outward to a whole device pixel. A fractional fillRect
         // is antialiased, leaving a boundary row that blends black with the
-        // original pixel underneath — faintly recoverable. Rounding out covers
+        // original pixel underneath, faintly recoverable. Rounding out covers
         // slightly more, never less, matching the "over-cover" policy.
         const x0 = Math.floor(r.x * canvas.width);
         const y0 = Math.floor(r.y * canvas.height);
@@ -75,7 +75,7 @@ export async function buildRedactedPdf(
       canvas.height = 0;
       const img = await out.embedPng(png);
       // Use the pdf.js viewport (rotation-aware) so rotated pages aren't
-      // stretched — the rasterized image already bakes in the /Rotate.
+      // stretched; the rasterized image already bakes in the /Rotate.
       const { width, height } = getPageSize(page);
       const outPage = out.addPage([width, height]);
       outPage.drawImage(img, { x: 0, y: 0, width, height });

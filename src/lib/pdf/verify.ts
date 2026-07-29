@@ -16,8 +16,8 @@ function escapeRegExp(s: string): string {
 }
 
 /**
- * A term counts as leaked only when it survives as a whole token — bounded by a
- * non-word character or a string edge — not as an incidental substring. Without
+ * A term counts as leaked only when it survives as a whole token (bounded by a
+ * non-word character or a string edge), not as an incidental substring. Without
  * this, redacting "Lee" would flag every "flee" in the output and train users to
  * dismiss the warning that matters.
  */

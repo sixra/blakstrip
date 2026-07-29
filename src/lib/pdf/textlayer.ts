@@ -190,7 +190,7 @@ export interface RunBox extends Box {
 
 /**
  * Every non-blank text run on a page as a normalized box derived purely from
- * pdf.js glyph metrics (`transform`/`width`/`height`) — independent of the
+ * pdf.js glyph metrics (`transform`/`width`/`height`), independent of the
  * measured search geometry that places redaction rects. Verify uses these as the
  * ground truth for "where the ink is" when checking the output raster actually
  * covers it, so a placement bug can't hide behind the same measurement twice.
@@ -211,7 +211,7 @@ export async function pageRunBoxes(page: PDFPageProxy): Promise<RunBox[]> {
  * The user-space horizontal extent [left, right] a match occupies within a run.
  * pdf.js reorders RTL runs (item.str is logical order while the transform/width
  * describe visual layout), so measuring the substring left-to-right lands the
- * box on the wrong side; for an RTL run cover the whole run instead — an
+ * box on the wrong side; for an RTL run cover the whole run instead, an
  * over-cover that is always safe. LTR runs use the measured sub-extent, but when
  * the match reaches a run boundary the extent is snapped to that boundary rather
  * than trusting the per-glyph measurement (unreliable for condensed/substituted
@@ -246,7 +246,7 @@ export function overlaps(a: Box, b: Box): boolean {
  * visual line into many items for kerning/justification/font changes), so the
  * page text is concatenated and each hit maps back to a rect per run segment it
  * covers. Sub-string position within a run is estimated proportionally (pdf.js
- * gives run width, not per-glyph advances), then padded — redaction errs toward
+ * gives run width, not per-glyph advances), then padded; redaction errs toward
  * covering slightly more, never less.
  */
 export async function searchPageRects(page: PDFPageProxy, term: string): Promise<RedactionRect[]> {
@@ -328,7 +328,7 @@ export async function searchPageRects(page: PDFPageProxy, term: string): Promise
 }
 
 /**
- * The text sitting under a set of redaction rects — the terms an export must no
+ * The text sitting under a set of redaction rects: the terms an export must no
  * longer expose. A run counts as covered when its box overlaps any rect on the
  * same page. Fed to verify so a redacted string that survives anywhere in the
  * output is flagged (the same paranoid check an attacker's extraction would do).

@@ -81,7 +81,7 @@
   function redactAllMatches() {
     if (searchMatches.length === 0) return;
     // Each match rect already carries its exact term (see searchPageRects), so
-    // verify picks it up from the rects — no separate bookkeeping to drift.
+    // verify picks it up from the rects, no separate bookkeeping to drift.
     commit([...rects, ...searchMatches]);
     searchMatches = [];
     searchTerm = '';
@@ -128,7 +128,7 @@
 
   // Clear every piece of per-document state. Called before loading a new file and on
   // reset, so stale search matches / rects / verify state from a previous document can
-  // never be committed onto — or verified against — the next one.
+  // never be committed onto (or verified against) the next one.
   function clearTransientState() {
     docGeneration += 1;
     rects = [];
@@ -193,7 +193,7 @@
         thumbs = [...thumbs, { page: n, url: canvas.toDataURL('image/png') }];
       }
     } catch {
-      // The doc was destroyed mid-thumbnail (a new file opened) — stop quietly.
+      // The doc was destroyed mid-thumbnail (a new file opened); stop quietly.
     }
   }
 
@@ -216,7 +216,7 @@
       if (token === renderToken) pageRendered = true;
     } catch {
       // A superseded or cancelled render (page/file changed, or the doc was
-      // destroyed mid-render) — ignore; the latest render wins.
+      // destroyed mid-render); ignore, the latest render wins.
     }
   }
 
@@ -389,7 +389,7 @@
     try {
       const bytes = await exportRedactedPdf(pristine, doc, rects);
       pendingBytes = bytes;
-      // Re-check that the text we actually covered is gone from the output — not
+      // Re-check that the text we actually covered is gone from the output, not
       // just that no structural leak vectors remain. Exact search terms travel
       // on the rects; hand-drawn boxes contribute the whole runs they cover.
       const rectTerms = rects.map((r) => r.term).filter((t): t is string => Boolean(t));
@@ -634,7 +634,7 @@
             resize it, Enter to place it, and Escape to cancel.
           </p>
           <!-- One positioned box, reused for committed rects, the drag preview, and
-               search-match previews — the only difference is the class and, for a
+               search-match previews; the only difference is the class and, for a
                committed rect, the delete button rendered inside. -->
           {#snippet posBox(r: RedactionRect, cls: string, inner?: Snippet<[RedactionRect]>)}
             <div
@@ -727,7 +727,7 @@
               <strong>Redaction didn't fully cover its target.</strong>
               {verifyResult.uncoveredRegions.length}
               {verifyResult.uncoveredRegions.length === 1 ? 'box' : 'boxes'} left part of the underlying
-              content visible in the exported image. Don't download — widen the box (or redact the whole
+              content visible in the exported image. Don't download; widen the box (or redact the whole
               line) and export again.
             </p>
           {/if}
@@ -749,7 +749,7 @@
       <p class="mt-3 text-xs text-amber-700">
         This re-reads the exported file: the text and hidden data left in it, and the pixels of
         every redacted page to confirm each box actually covers what's underneath. It can only check
-        the text you redacted — review the recoverable text below for anything you missed.
+        the text you redacted; review the recoverable text below for anything you missed.
       </p>
 
       <div class="mt-5">

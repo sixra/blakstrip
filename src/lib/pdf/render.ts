@@ -1,5 +1,5 @@
 /**
- * pdf.js rendering — framework-free. Loads bytes with zero network, renders
+ * pdf.js rendering, framework-free. Loads bytes with zero network, renders
  * pages to canvas (on-screen and offscreen for rasterization).
  */
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
@@ -11,13 +11,13 @@ GlobalWorkerOptions.workerSrc = workerSrc;
 
 /**
  * Load a PDF from raw bytes. pdf.js *transfers and neuters* the array into its
- * worker, so we hand it a copy — the caller keeps the pristine buffer for
+ * worker, so we hand it a copy; the caller keeps the pristine buffer for
  * pdf-lib during export.
  *
  * `useWasm: false` keeps the CSP strict: pure-JS decoders mean no
  * `wasm-unsafe-eval` is ever needed. (If a JBIG2/JPEG2000 scan fails to decode,
  * host `pdfjs-dist/wasm/` same-origin, set `wasmUrl`, and allow
- * `wasm-unsafe-eval` — `connect-src 'none'` stays intact either way.)
+ * `wasm-unsafe-eval`; `connect-src 'none'` stays intact either way.)
  */
 export function loadPdf(data: ArrayBuffer): Promise<PDFDocumentProxy> {
   const task = getDocument({ data: data.slice(0), useWasm: false });
@@ -32,7 +32,7 @@ export function getPageSize(page: PDFPageProxy): { width: number; height: number
 
 // Conservative cross-browser canvas ceilings. WebKit caps total area near 16.7M
 // device pixels and each side well below Chrome's 65k; a page rasterized past
-// either limit yields a blank or truncated canvas — a "redacted" page with
+// either limit yields a blank or truncated canvas: a "redacted" page with
 // nothing painted. These sit under the tightest (WebKit) limit.
 const MAX_CANVAS_SIDE = 8192;
 const MAX_CANVAS_AREA = 16_777_216;
@@ -54,7 +54,7 @@ export function clampScale(width: number, height: number, scale: number): number
 /**
  * Start rendering a page into an on-screen canvas fitted to `cssWidth` CSS
  * pixels, sharpened for HiDPI displays. Returns the live `RenderTask` (so the
- * caller can `.cancel()` it before starting another render on the same canvas —
+ * caller can `.cancel()` it before starting another render on the same canvas;
  * a second concurrent render throws) plus the CSS-pixel dimensions used for
  * layout. The canvas is sized synchronously; await `task.promise` for the pixels.
  */
@@ -100,7 +100,7 @@ export async function renderPageToImageCanvas(
 ): Promise<HTMLCanvasElement> {
   const base = page.getViewport({ scale: 1 });
   // Cap the scale so a very large page can't exceed a browser canvas limit and
-  // silently render blank — a redacted page that shipped with nothing painted.
+  // silently render blank: a redacted page that shipped with nothing painted.
   const viewport = page.getViewport({ scale: clampScale(base.width, base.height, scale) });
   const canvas = document.createElement('canvas');
   canvas.width = Math.ceil(viewport.width);

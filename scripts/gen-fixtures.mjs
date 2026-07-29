@@ -21,7 +21,7 @@ const font = await doc.embedFont(StandardFonts.Helvetica);
 const bold = await doc.embedFont(StandardFonts.HelveticaBold);
 
 const lines1 = [
-  'CONFIDENTIAL — Internal Distribution Only',
+  'CONFIDENTIAL: Internal Distribution Only',
   '',
   'Employee: Jane Author',
   'SSN: 123-45-6789',
@@ -42,13 +42,13 @@ for (const line of lines1) {
 
 const p2 = doc.addPage([612, 792]);
 p2.drawText('Appendix', { x: 64, y: 720, size: 18, font: bold });
-p2.drawText('Repeated footer: Jane Author — do not distribute', {
+p2.drawText('Repeated footer: Jane Author, do not distribute', {
   x: 64,
   y: 64,
   size: 10,
   font,
 });
-p1.drawText('Repeated footer: Jane Author — do not distribute', {
+p1.drawText('Repeated footer: Jane Author, do not distribute', {
   x: 64,
   y: 40,
   size: 10,
@@ -59,15 +59,15 @@ const bytes = await doc.save();
 await writeFile(`${outDir}/text-secrets.pdf`, bytes);
 console.log(`wrote src/lib/pdf/__fixtures__/text-secrets.pdf (${bytes.length} bytes)`);
 
-// A fixture whose page 2 carries an annotation with a secret in /Contents — a
+// A fixture whose page 2 carries an annotation with a secret in /Contents, a
 // leak vector that must not survive export even though page 2 isn't redacted.
 const annotated = await PDFDocument.create();
 annotated.setAuthor('Jane Author');
 const f2 = await annotated.embedFont(StandardFonts.Helvetica);
 const ap1 = annotated.addPage([612, 792]);
-ap1.drawText('Page 1 — SSN: 123-45-6789', { x: 64, y: 700, size: 14, font: f2 });
+ap1.drawText('Page 1, SSN: 123-45-6789', { x: 64, y: 700, size: 14, font: f2 });
 const ap2 = annotated.addPage([612, 792]);
-ap2.drawText('Page 2 — Appendix (no visible secret)', { x: 64, y: 700, size: 14, font: f2 });
+ap2.drawText('Page 2, Appendix (no visible secret)', { x: 64, y: 700, size: 14, font: f2 });
 const noteAnnot = annotated.context.obj({
   Type: 'Annot',
   Subtype: 'FreeText',

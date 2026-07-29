@@ -19,7 +19,7 @@ export async function makeTextPdf(): Promise<ArrayBuffer> {
     y -= 26;
   }
   const p2 = doc.addPage([612, 792]);
-  p2.drawText('Appendix — footer for Jane Author', { x: 64, y: 700, size: 14, font });
+  p2.drawText('Appendix, footer for Jane Author', { x: 64, y: 700, size: 14, font });
   return toArrayBuffer(await doc.save());
 }
 
@@ -28,9 +28,9 @@ export async function makeAnnotatedPdf(): Promise<ArrayBuffer> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const p1 = doc.addPage([612, 792]);
-  p1.drawText('Page 1 — SSN: 123-45-6789', { x: 64, y: 700, size: 14, font });
+  p1.drawText('Page 1, SSN: 123-45-6789', { x: 64, y: 700, size: 14, font });
   const p2 = doc.addPage([612, 792]);
-  p2.drawText('Page 2 — Appendix', { x: 64, y: 700, size: 14, font });
+  p2.drawText('Page 2, Appendix', { x: 64, y: 700, size: 14, font });
   const annot = doc.context.obj({
     Type: 'Annot',
     Subtype: 'FreeText',
@@ -43,7 +43,7 @@ export async function makeAnnotatedPdf(): Promise<ArrayBuffer> {
 
 /**
  * One page where the word "CONFIDENTIAL" is drawn as two adjacent runs in
- * different fonts, so pdf.js emits it as two text items — exercising search that
+ * different fonts, so pdf.js emits it as two text items, exercising search that
  * must span runs.
  */
 export async function makeSplitRunPdf(): Promise<ArrayBuffer> {
@@ -90,7 +90,7 @@ export async function makeMixedRunPdf(): Promise<ArrayBuffer> {
 /**
  * A PDF whose trailer carries an /Encrypt dictionary, so pdf-lib reports it as
  * encrypted. pdf-lib cannot produce real encryption, but its `isEncrypted` flag
- * keys off the trailer entry alone — which is exactly what our guards check.
+ * keys off the trailer entry alone, which is exactly what our guards check.
  */
 export async function makeEncryptedLikePdf(): Promise<ArrayBuffer> {
   const doc = await PDFDocument.create();
@@ -129,7 +129,7 @@ export async function makeLargeGlyphPdf(): Promise<ArrayBuffer> {
 
 /**
  * A single page far wider than any canvas limit (10000×300 pt). Rendered at 2×
- * it would be 20000px across — past the max side — so it exercises the scale
+ * it would be 20000px across (past the max side), so it exercises the scale
  * clamp that keeps an oversized page from rasterizing blank.
  */
 export async function makeWidePagePdf(): Promise<ArrayBuffer> {
@@ -140,7 +140,7 @@ export async function makeWidePagePdf(): Promise<ArrayBuffer> {
   return toArrayBuffer(await doc.save());
 }
 
-/** Single-page PDF with graphics but no text — looks like a scan. */
+/** Single-page PDF with graphics but no text, so it looks like a scan. */
 export async function makeScanLikePdf(): Promise<ArrayBuffer> {
   const doc = await PDFDocument.create();
   const page = doc.addPage([300, 300]);

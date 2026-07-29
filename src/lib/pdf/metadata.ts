@@ -4,7 +4,7 @@
  * attachments. pdf-lib has built-ins only for DocInfo; the rest are low-level
  * catalog/page deletes.
  *
- * Note: form fields are **removed**, not flattened — flattening would paint the
+ * Note: form fields are **removed**, not flattened; flattening would paint the
  * field value permanently onto the page, the opposite of redaction.
  */
 import type { PDFDocument } from 'pdf-lib';
@@ -19,7 +19,7 @@ export function stripDocInfo(doc: PDFDocument): void {
   doc.setProducer('');
   doc.setCreator('');
   // The setters above have no equivalent for dates, and pdf-lib stamps both at
-  // document creation — a leftover timestamp discloses when (and in which time
+  // document creation, and a leftover timestamp discloses when (and in which time
   // zone) the file was redacted. Delete them straight off the Info dict, which
   // the setters just guaranteed exists.
   const info = doc.context.lookup(doc.context.trailerInfo.Info, PDFDict);
@@ -72,13 +72,13 @@ export function stripPageExtras(doc: PDFDocument): void {
 }
 
 /**
- * Remove XMP metadata attached to embedded streams — image and form XObjects on
+ * Remove XMP metadata attached to embedded streams: image and form XObjects on
  * copied pages can carry their own `/Metadata` (camera info, authoring history).
  * `/Metadata` on a stream is always informational XMP, never functional, so it
  * is safe to drop from any stream; GC then reclaims the orphaned packet.
  *
- * Note: EXIF/GPS baked into the *bytes* of an embedded JPEG is not touched here
- * — that lives inside the compressed image data and would require re-encoding.
+ * Note: EXIF/GPS baked into the *bytes* of an embedded JPEG is not touched here;
+ * that lives inside the compressed image data and would require re-encoding.
  */
 export function stripEmbeddedMetadata(doc: PDFDocument): void {
   for (const [, obj] of doc.context.enumerateIndirectObjects()) {
@@ -98,8 +98,8 @@ function refsWithin(obj: PDFObject, acc: PDFRef[]): void {
  * Remove every object not reachable from the trailer root. This is the crucial
  * pass: pdf-lib writes ALL objects in its context, not just referenced ones, so
  * deleting a `/Annots` (or `/EmbeddedFiles`, `/Metadata`, …) reference alone
- * leaves the orphaned content — annotation dicts, appearance streams,
- * attachments — sitting in the output. GC deletes anything now unreferenced.
+ * leaves the orphaned content (annotation dicts, appearance streams,
+ * attachments) sitting in the output. GC deletes anything now unreferenced.
  */
 export function garbageCollect(doc: PDFDocument): void {
   const ctx = doc.context;

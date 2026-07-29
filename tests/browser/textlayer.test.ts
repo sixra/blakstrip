@@ -87,7 +87,7 @@ describe('textlayer', () => {
     expect(num[0].x + num[0].w).toBeLessThanOrEqual(berlin[0].x + 0.01);
     expect(berlin[0].x + berlin[0].w).toBeLessThan(line[0].x + line[0].w);
 
-    // "621" inside "621412" is the first half — not five of the six digits.
+    // "621" inside "621412" is the first half, not five of the six digits.
     const p = await searchPageRects(page, '621');
     const all = await searchPageRects(page, '621412');
     expect(p.length).toBe(1);
@@ -120,11 +120,11 @@ describe('textlayer', () => {
     expect(r.x + r.w).toBeLessThanOrEqual(1.001);
     expect(r.y + r.h).toBeLessThanOrEqual(1.001);
     // A horizontal run rendered under /Rotate 90 reads vertically on screen, so
-    // the box must be taller than it is wide — proof the rotation was applied
+    // the box must be taller than it is wide, proof the rotation was applied
     // (the old divide-by-viewport geometry produced a wide, mislocated box).
     expect(r.h).toBeGreaterThan(r.w);
     // Round-trip: the same rect, overlap-tested in the same coordinate system,
-    // recovers the covered text — search and collect agree on where the glyph is.
+    // recovers the covered text: search and collect agree on where the glyph is.
     const covered = await collectRedactedText(doc, rects);
     expect(covered.some((t) => t.includes('ROTATEDSECRET'))).toBe(true);
   });
@@ -134,7 +134,7 @@ describe('textlayer', () => {
     const terms = await collectRedactedText(doc, [
       { page: 1, x: 0, y: 0, w: 1, h: 1 }, // covers every run on page 1
       { page: 1, x: 0, y: 0, w: 0.01, h: 0.01 }, // second rect on the same page
-      { page: 2, x: 0.9, y: 0.9, w: 0.05, h: 0.05 }, // empty corner — covers nothing
+      { page: 2, x: 0.9, y: 0.9, w: 0.05, h: 0.05 }, // empty corner, covers nothing
     ]);
     expect(terms.some((t) => t.includes('123-45-6789'))).toBe(true);
     expect(terms.some((t) => t.includes('Appendix'))).toBe(false); // page 2 text not covered
@@ -150,7 +150,7 @@ describe('textlayer', () => {
       height: 12,
       hasEOL: false,
     };
-    // RTL is bidi-reordered, so a left-to-right measurement is wrong — cover the
+    // RTL is bidi-reordered, so a left-to-right measurement is wrong; cover the
     // full run [originX, originX + width] instead.
     expect(matchExtentX({ ...base, dir: 'rtl' }, 10, 20, 0.5)).toEqual([100, 160]);
     // LTR uses the measured sub-extent, padded and clamped inside the run.
@@ -169,7 +169,7 @@ describe('textlayer', () => {
       dir: 'ltr',
     };
     // A match reaching the run start snaps its left to originX (not preW-padded),
-    // and one reaching the run end snaps its right to originX + width — so a
+    // and one reaching the run end snaps its right to originX + width, so a
     // condensed/substituted font can't leave the boundary glyph exposed.
     expect(matchExtentX(base, 0, 20, 0.5, true, false)[0]).toBe(100);
     expect(matchExtentX(base, 40, 20, 0.5, false, true)[1]).toBe(160);

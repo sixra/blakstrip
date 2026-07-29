@@ -15,8 +15,8 @@ export default defineConfig({
   site: 'https://blakstrip.com',
   trailingSlash: 'never',
   build: { format: 'file', inlineStylesheets: 'always' },
-  // No prefetch: it would fetch() pages, which `connect-src 'none'` blocks —
-  // the no-egress guarantee (verifiable in devtools) matters more than a hint.
+  // No prefetch: it would fetch() pages, which `connect-src 'none'` blocks.
+  // The no-egress guarantee (verifiable in devtools) matters more than a hint.
   // No markdown yet, and Shiki's inline styles violate the strict CSP.
   markdown: { syntaxHighlight: false },
 
@@ -41,8 +41,8 @@ export default defineConfig({
   integrations: [
     svelte(),
     sitemap({
-      // Home ranks highest; each tool page is a primary surface. No lastmod —
-      // avoids false freshness signals on rarely-changing static pages.
+      // Home ranks highest; each tool page is a primary surface. No lastmod,
+      // which avoids false freshness signals on rarely-changing static pages.
       serialize(item) {
         item.priority = item.url === 'https://blakstrip.com/' ? 1.0 : 0.8;
         return item;

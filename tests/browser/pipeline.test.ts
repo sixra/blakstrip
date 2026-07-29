@@ -86,7 +86,7 @@ describe('redact + export + verify', () => {
   it('flags a surviving term as a whole word, not an incidental substring', async () => {
     const pristine = await makeTextPdf();
     const doc = await loadPdf(pristine);
-    // Redact page 1; page 2 keeps "Appendix — footer for Jane Author".
+    // Redact page 1; page 2 keeps "Appendix, footer for Jane Author".
     const bytes = await exportRedactedPdf(pristine, doc, [wholePage1]);
 
     // "Appendix" survives as a word → flagged.
@@ -156,7 +156,7 @@ describe('redact + export + verify', () => {
   });
 
   it('rejects a non-PDF / truncated file with an error', async () => {
-    // The bytes a corrupt upload would carry — loadPdf must reject, not hang, so
+    // The bytes a corrupt upload would carry; loadPdf must reject, not hang, so
     // openFile's catch can surface a visible error.
     await expect(loadPdf(new Uint8Array([1, 2, 3, 4]).buffer)).rejects.toThrow();
   });

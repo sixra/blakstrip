@@ -154,7 +154,7 @@ describe('stripAll', () => {
 
   it('keeps reachable page content, including objects shared across pages', async () => {
     const doc = await PDFDocument.create();
-    // One font referenced by both pages — GC must visit the shared ref only once.
+    // One font referenced by both pages; GC must visit the shared ref only once.
     const font = await doc.embedFont(StandardFonts.Helvetica);
     const p1 = doc.addPage([612, 792]);
     p1.drawText('hello', { x: 20, y: 20, size: 12, font });

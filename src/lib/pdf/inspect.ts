@@ -60,7 +60,7 @@ function hasExifSegment(bytes: Uint8Array): boolean {
  * annotations (incl. form-field widgets), embedded files, and JavaScript.
  */
 export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
-  // updateMetadata:false — otherwise pdf-lib stamps its own Producer at load
+  // updateMetadata:false, otherwise pdf-lib stamps its own Producer at load
   // time and we'd report our own inspection as a finding. ignoreEncryption so a
   // protected PDF is detected rather than throwing (pdf-lib can't decrypt).
   const doc = await PDFDocument.load(bytes, { updateMetadata: false, ignoreEncryption: true });
@@ -105,7 +105,7 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
   // Timestamps live in the Info dict alongside the strings above; a leftover one
   // discloses when (and in which time zone) the file was made or last edited.
   // stripDocInfo deletes these on export, so reporting them keeps audit and
-  // verify symmetric — a date the audit flags is a date the output no longer has.
+  // verify symmetric: a date the audit flags is a date the output no longer has.
   const dates: Record<string, Date | undefined> = {
     Created: doc.getCreationDate(),
     Modified: doc.getModificationDate(),
@@ -151,7 +151,7 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
       severity: 'high',
       category: 'annotation',
       title: 'Annotations / form fields',
-      detail: `${annots} annotation object(s) — comments or form values persist under any visual covering.`,
+      detail: `${annots} annotation object(s); comments or form values persist under any visual covering.`,
     });
   if (files > 0)
     findings.push({
@@ -178,7 +178,7 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
       detail: `${exif} embedded JPEG(s) carry EXIF metadata, which can include GPS location and camera details. This sits inside the image itself, so redacting elsewhere on the page does not remove it.`,
     });
 
-  // Page-piece data isn't typed, so enumeration can't spot it — check the
+  // Page-piece data isn't typed, so enumeration can't spot it; check the
   // catalog and each page directly for a /PieceInfo entry.
   const hasPieceInfo =
     doc.catalog.get(PDFName.of('PieceInfo')) !== undefined ||
@@ -194,7 +194,7 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
 
   // Optional-content groups (layers). A layer hidden by default is still in the
   // file and can be extracted or switched back on; pdf-lib also can't carry the
-  // /OCProperties visibility config into the output, so we can't clean it —
+  // /OCProperties visibility config into the output, so we can't clean it;
   // surface it (and, via verify, withhold the clean verdict) instead.
   if (doc.catalog.get(PDFName.of('OCProperties')) !== undefined)
     findings.push({

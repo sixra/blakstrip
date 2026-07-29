@@ -20,7 +20,7 @@ disclosure.
 
 ## Scope
 
-In scope: anything that breaks the core promise — content that survives a redaction, hidden data
+In scope: anything that breaks the core promise, such as content that survives a redaction, hidden data
 that export fails to strip, or any network request leaving the page (the production build ships a
 strict `connect-src 'none'` Content-Security-Policy).
 
@@ -29,8 +29,8 @@ build.
 
 ## Threat model and known limitations
 
-blakstrip is honest about what it proves. Redacted pages are **rasterized** — rendered to a flat
-image with the black boxes burned into the pixels — so the text and vectors underneath are gone,
+blakstrip is honest about what it proves. Redacted pages are **rasterized**: rendered to a flat
+image with the black boxes burned into the pixels, so the text and vectors underneath are gone,
 not merely hidden. Untouched pages are copied verbatim and keep selectable text.
 
 Verify-on-export re-opens the output and checks three things: (1) no redacted term is still

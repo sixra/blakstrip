@@ -8,7 +8,7 @@ import { makeLargeGlyphPdf, makeTextPdf } from '../support/testpdf';
 
 const wholePage1: RedactionRect = { page: 1, x: 0, y: 0, w: 1, h: 1 };
 
-describe('checkCoverage — pixel backstop', () => {
+describe('checkCoverage: pixel backstop', () => {
   it('returns nothing when there are no rects', async () => {
     const pristine = await makeTextPdf();
     const doc = await loadPdf(pristine);
@@ -35,7 +35,7 @@ describe('checkCoverage — pixel backstop', () => {
   it('flags a search box that under-covers its run vertically', async () => {
     const pristine = await makeTextPdf();
     const doc = await loadPdf(pristine);
-    // The whole line is one run, so the match spans it horizontally — the case
+    // The whole line is one run, so the match spans it horizontally: the case
     // where the run's authoritative box is held to account.
     const [rect] = await searchDocumentRects(doc, 'SSN: 123-45-6789');
     expect(rect).toBeDefined();
@@ -63,7 +63,7 @@ describe('checkCoverage — pixel backstop', () => {
     const doc = await loadPdf(pristine);
     // Export redacts only page 1; page 2's "Appendix … Jane Author" line stays.
     const bytes = await exportRedactedPdf(pristine, doc, [wholePage1]);
-    // A hand-drawn box over that surviving page-2 text — as if it hadn't rendered.
+    // A hand-drawn box over that surviving page-2 text, as if it hadn't rendered.
     const missed: RedactionRect = { page: 2, x: 0.08, y: 0.1, w: 0.6, h: 0.04 };
     const uncovered = await checkCoverage(doc, [missed], bytes);
     expect(uncovered).toEqual([missed]);
@@ -73,7 +73,7 @@ describe('checkCoverage — pixel backstop', () => {
     const pristine = await makeTextPdf();
     const doc = await loadPdf(pristine);
     const runs = await pageRunBoxes(await doc.getPage(1));
-    // The "Employee: Jane Author" run — cover its left 40% only, with a term set.
+    // The "Employee: Jane Author" run: cover its left 40% only, with a term set.
     const run = runs.find((r) => r.str.includes('Employee'));
     if (!run) throw new Error('fixture run not found');
     const partial: RedactionRect = {
@@ -86,7 +86,7 @@ describe('checkCoverage — pixel backstop', () => {
     };
     const bytes = await exportRedactedPdf(pristine, doc, [partial]);
     // The covered left part is black; the right part is legitimately still there,
-    // and the box does not span the run — so nothing is flagged.
+    // and the box does not span the run, so nothing is flagged.
     expect(await checkCoverage(doc, [partial], bytes)).toEqual([]);
   });
 

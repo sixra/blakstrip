@@ -100,7 +100,7 @@ describe('inspectStructure', () => {
         XObject: {
           Im0: mk('DCTDecode', withExif), // name /Filter
           Im1: mk(['DCTDecode'], withExif), // array /Filter
-          Im2: mk('DCTDecode', noExif), // DCT but no EXIF — must not count
+          Im2: mk('DCTDecode', noExif), // DCT but no EXIF, must not count
         },
       })
     );

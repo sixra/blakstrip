@@ -85,7 +85,7 @@ describe('render', () => {
 
 describe('clampScale', () => {
   it('passes a scale through when the page fits every limit', () => {
-    // 612×792 at 2× is 1224×1584 — well inside both ceilings.
+    // 612×792 at 2× is 1224×1584, well inside both ceilings.
     expect(clampScale(612, 792, 2)).toBe(2);
   });
 

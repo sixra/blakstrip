@@ -11,7 +11,7 @@ const {
   description = 'Free, private PDF redaction in your browser. blakstrip removes content for good instead of covering it, and never uploads your file.',
 } = Astro.props;
 
-// build.format: 'file' means /foo.html serves at /foo — strip the suffix for a stable canonical.
+// build.format: 'file' means /foo.html serves at /foo, so strip the suffix for a stable canonical.
 const cleanPath = Astro.url.pathname.replace(/\/index\.html$/, '').replace(/\.html$/, '') || '/';
 const canonicalURL = new URL(cleanPath, Astro.site);
 const ogImage = new URL('/og-image.png', Astro.site);
