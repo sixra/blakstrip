@@ -104,5 +104,5 @@ const jsonLd = JSON.stringify(appSchema).replace(/</g, '\\u003c');
     </footer>
   </div>
 
-  <script type="application/ld+json" set:html={jsonLd} />
+  <script type="application/ld+json" is:inline set:html={jsonLd} />
 </Base>
