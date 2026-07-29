@@ -61,7 +61,7 @@ importers:
         specifier: ^1.62.0
         version: 1.62.0
       '@sixra/devkit':
-        specifier: github:sixra/devkit#v1.1.0
+        specifier: github:sixra/devkit#semver:^1.0.0
         version: https://codeload.github.com/sixra/devkit/tar.gz/5963489bdf33b2e17b8bbdef6be8aa585c1096d7(@eslint/js@10.0.1(eslint@10.8.0(jiti@2.7.0)(supports-color@7.2.0)))(eslint-plugin-astro@3.0.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@10.8.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0))(eslint-plugin-svelte@3.22.0(eslint@10.8.0(jiti@2.7.0)(supports-color@7.2.0))(svelte@5.56.8(@typescript-eslint/types@8.65.0)))(eslint@10.8.0(jiti@2.7.0)(supports-color@7.2.0))(globals@17.8.0)(svelte-eslint-parser@1.8.0(svelte@5.56.8(@typescript-eslint/types@8.65.0)))(typescript-eslint@8.65.0(eslint@10.8.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))
       '@types/node':
         specifier: ^26.1.1

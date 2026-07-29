@@ -71,7 +71,7 @@
     "@eslint/js": "^10.0.1",
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "@playwright/test": "^1.62.0",
-    "@sixra/devkit": "github:sixra/devkit#v1.1.0",
+    "@sixra/devkit": "github:sixra/devkit#semver:^1.0.0",
     "@types/node": "^26.1.1",
     "@vite-pwa/astro": "^1.2.0",
     "@vitest/browser": "^4.1.10",
