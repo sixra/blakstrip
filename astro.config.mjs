@@ -6,7 +6,8 @@ import svelte from '@astrojs/svelte';
 import tailwindcss from '@tailwindcss/vite';
 import AstroPWA from '@vite-pwa/astro';
 
-// Vite's HMR needs a websocket in dev; production locks network egress to nothing.
+// In production the CSP locks network egress to nothing; the dev branch below
+// keeps a websocket open for Vite's HMR in case the policy is emitted there.
 const isDev = process.argv.includes('dev');
 
 // https://astro.build/config
@@ -14,7 +15,8 @@ export default defineConfig({
   site: 'https://blakstrip.com',
   trailingSlash: 'never',
   build: { format: 'file', inlineStylesheets: 'always' },
-  prefetch: { prefetchAll: false, defaultStrategy: 'viewport' },
+  // No prefetch: it would fetch() pages, which `connect-src 'none'` blocks —
+  // the no-egress guarantee (verifiable in devtools) matters more than a hint.
   // No markdown yet, and Shiki's inline styles violate the strict CSP.
   markdown: { syntaxHighlight: false },
 
