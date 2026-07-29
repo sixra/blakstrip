@@ -1,0 +1,9 @@
+{
+  "gzipKB": {
+    "html": 30,
+    "js": 800
+  },
+  "rawKB": {
+    "images": 200
+  }
+}

@@ -9,7 +9,6 @@ export default {
     'prettier-plugin-svelte',
     'prettier-plugin-tailwindcss',
   ],
-  overrides: [...(base.overrides ?? []), { files: '*.svelte', options: { parser: 'svelte' } }],
   importOrder: [
     '^(astro/(.*)$)|^(astro$)',
     '^@astrojs/',

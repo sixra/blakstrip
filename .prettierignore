@@ -3,21 +3,26 @@ dist/
 .astro/
 dev-dist/
 
+# Dependencies & lock files
+node_modules/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+
 # Test/coverage artifacts
 coverage/
 test-results/
 playwright-report/
 
-# Dependencies & lockfile
-node_modules/
-pnpm-lock.yaml
-
 # Static assets & binary fixtures
 public/
 src/lib/pdf/__fixtures__/
-
-# Logs
-*.log
 
 # CLAUDE.md is a symlink to AGENTS.md; format the target, not the link.
 CLAUDE.md

@@ -1,13 +1,2 @@
 extends:
   - node_modules/@sixra/devkit/lefthook/base.yml
-
-pre-commit:
-  jobs:
-    - name: eslint-svelte
-      glob: '*.svelte'
-      run: pnpm exec eslint --fix {staged_files}
-      stage_fixed: true
-    - name: prettier-svelte
-      glob: '*.svelte'
-      run: pnpm exec prettier --write {staged_files}
-      stage_fixed: true
