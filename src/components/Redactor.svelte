@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
-  import { onDestroy } from 'svelte';
+  import { onDestroy, type Snippet } from 'svelte';
   import { auditDocument } from '@lib/pdf/audit';
   import { downloadBytes, exportRedactedPdf, redactedFileName } from '@lib/pdf/export';
   import { loadPdf, renderPageToCanvas, renderPageToImageCanvas } from '@lib/pdf/render';
@@ -633,42 +633,39 @@
             Press Enter to start a redaction box, arrow keys to move it, Shift plus arrow keys to
             resize it, Enter to place it, and Escape to cancel.
           </p>
+          <!-- One positioned box, reused for committed rects, the drag preview, and
+               search-match previews — the only difference is the class and, for a
+               committed rect, the delete button rendered inside. -->
+          {#snippet posBox(r: RedactionRect, cls: string, inner?: Snippet<[RedactionRect]>)}
+            <div
+              class={cls}
+              style:left={`${r.x * 100}%`}
+              style:top={`${r.y * 100}%`}
+              style:width={`${r.w * 100}%`}
+              style:height={`${r.h * 100}%`}
+            >
+              {#if inner}{@render inner(r)}{/if}
+            </div>
+          {/snippet}
+          {#snippet deleteButton(r: RedactionRect)}
+            <button
+              class="pointer-events-auto absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-black opacity-0 ring-neutral-900 transition group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none"
+              onclick={(e) => {
+                e.stopPropagation();
+                deleteRect(r);
+              }}
+              aria-label="Remove redaction">×</button
+            >
+          {/snippet}
           <div class="pointer-events-none absolute inset-0">
             {#each pageRects as r (r)}
-              <div
-                class="group absolute bg-black"
-                style:left={`${r.x * 100}%`}
-                style:top={`${r.y * 100}%`}
-                style:width={`${r.w * 100}%`}
-                style:height={`${r.h * 100}%`}
-              >
-                <button
-                  class="pointer-events-auto absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-black opacity-0 ring-neutral-900 transition group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none"
-                  onclick={(e) => {
-                    e.stopPropagation();
-                    deleteRect(r);
-                  }}
-                  aria-label="Remove redaction">×</button
-                >
-              </div>
+              {@render posBox(r, 'group absolute bg-black', deleteButton)}
             {/each}
             {#if preview}
-              <div
-                class="absolute border-2 border-neutral-900 bg-black/30"
-                style:left={`${preview.x * 100}%`}
-                style:top={`${preview.y * 100}%`}
-                style:width={`${preview.w * 100}%`}
-                style:height={`${preview.h * 100}%`}
-              ></div>
+              {@render posBox(preview, 'absolute border-2 border-neutral-900 bg-black/30')}
             {/if}
             {#each searchPreview as r, i (`s${i}`)}
-              <div
-                class="absolute border-2 border-amber-400 bg-amber-400/25"
-                style:left={`${r.x * 100}%`}
-                style:top={`${r.y * 100}%`}
-                style:width={`${r.w * 100}%`}
-                style:height={`${r.h * 100}%`}
-              ></div>
+              {@render posBox(r, 'absolute border-2 border-amber-400 bg-amber-400/25')}
             {/each}
           </div>
         </div>
