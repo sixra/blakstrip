@@ -1,7 +1,8 @@
 /**
- * Shared contracts for the framework-free redaction engine.
- * No pdf.js / pdf-lib / DOM types leak out of here so the UI and tests can
- * depend on plain data.
+ * Shared data contracts for the redaction engine — plain, serializable shapes
+ * with no pdf.js / pdf-lib / DOM types, so the UI and tests can pass them around
+ * freely. (Engine *functions* still take and return vendor handles such as
+ * PDFDocumentProxy where they must; only the types declared here are vendor-free.)
  */
 
 /**
