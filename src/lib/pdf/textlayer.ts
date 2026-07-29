@@ -135,11 +135,17 @@ function indicesOf(haystack: string, needle: string): number[] {
   return out;
 }
 
-// Vertical over-cover: minimal, so a box hugs its line without bleeding into the
-// rows above/below. Horizontal position/width is measured (below), so it needs
-// only a hairline horizontal safety margin.
-const PAD_Y = 0.0012;
+// Vertical cover, as fractions of the run's font height so it scales with the
+// type: how far below the baseline to reach (descenders like g/j/p/y) and how far
+// above it to top out (caps, accents, ascenders). Font-relative, because a
+// page-absolute pad that's fine at 12pt leaves tails of a 40pt glyph exposed.
+const DESCENT_FRAC = 0.3;
+const ASCENT_FRAC = 1.15;
+// Horizontal safety margin: the larger of a hairline page fraction and a small
+// fraction of the font height, so bigger type gets a proportionally wider margin
+// where per-glyph measurement is least reliable.
 const SAFETY_X = 0.0015;
+const SAFETY_X_FRAC = 0.08;
 
 // One reused 2D context for measuring glyph advances. pdf.js gives a run's exact
 // total width but not where each glyph sits inside it; the browser's own font
@@ -206,21 +212,26 @@ export async function pageRunBoxes(page: PDFPageProxy): Promise<RunBox[]> {
  * pdf.js reorders RTL runs (item.str is logical order while the transform/width
  * describe visual layout), so measuring the substring left-to-right lands the
  * box on the wrong side; for an RTL run cover the whole run instead — an
- * over-cover that is always safe. LTR runs use the measured sub-extent, clamped
- * inside the run so a box never reaches into an adjacent word. Exported for test.
+ * over-cover that is always safe. LTR runs use the measured sub-extent, but when
+ * the match reaches a run boundary the extent is snapped to that boundary rather
+ * than trusting the per-glyph measurement (unreliable for condensed/substituted
+ * fonts), so a leading/trailing glyph can't slip out. Interior edges use the
+ * measurement, padded and clamped inside the run. Exported for test.
  */
 export function matchExtentX(
   item: GlyphItem,
   preW: number,
   matchW: number,
-  safetyX: number
+  safetyX: number,
+  atRunStart = false,
+  atRunEnd = false
 ): [number, number] {
   const originX = item.transform[4];
-  if (item.dir === 'rtl') return [originX, originX + item.width];
-  return [
-    Math.max(originX, originX + preW - safetyX),
-    Math.min(originX + item.width, originX + preW + matchW + safetyX),
-  ];
+  const runRight = originX + item.width;
+  if (item.dir === 'rtl') return [originX, runRight];
+  const left = atRunStart ? originX : Math.max(originX, originX + preW - safetyX);
+  const right = atRunEnd ? runRight : Math.min(runRight, originX + preW + matchW + safetyX);
+  return [left, right];
 }
 
 /** Do two axis-aligned top-left boxes overlap at all? Exported for direct test. */
@@ -245,12 +256,9 @@ export async function searchPageRects(
 ): Promise<RedactionRect[]> {
   if (!term) return [];
   const vp = page.getViewport({ scale: 1 });
-  // Page dimensions in user space (pre-rotation), used to scale the normalized
-  // pads into user-space points so they apply along the baseline, not the screen.
+  // Page width in user space (pre-rotation), for the page-fraction floor on the
+  // horizontal safety margin (the font-relative part is computed per run below).
   const uw = vp.viewBox[2] - vp.viewBox[0];
-  const uh = vp.viewBox[3] - vp.viewBox[1];
-  const safetyX = SAFETY_X * uw;
-  const padY = PAD_Y * uh;
   const needle = opts.caseSensitive ? term : term.toLowerCase();
   const content = await page.getTextContent();
   const styles = content.styles as Record<string, { fontFamily?: string }>;
@@ -277,11 +285,15 @@ export async function searchPageRects(
       const to = Math.min(matchEnd, runEnd);
       if (from >= to) continue; // this run isn't part of the match
 
-      const { baselineY, fontH, topPdf } = glyphMetrics(item);
-      // Tighter than glyphMetrics' 0.28 so the box hugs the line: still clears
-      // descenders (g/y/p), without reaching into the row below.
-      const descent = fontH * 0.22;
+      const { baselineY, fontH } = glyphMetrics(item);
       const localStart = from - runStart;
+      const localEnd = to - runStart;
+      // Does the match reach a run boundary? If so the box snaps to that edge
+      // instead of trusting the per-glyph measurement there (see matchExtentX).
+      const atRunStart = localStart === 0;
+      const atRunEnd = localEnd === item.str.length;
+      // Wider safety margin for larger type, where measurement drifts most.
+      const safetyX = Math.max(SAFETY_X * uw, fontH * SAFETY_X_FRAC);
 
       // Measure where the match actually sits inside the run. Font size is
       // arbitrary (100) since we rescale to the run's true advance; that scale
@@ -291,13 +303,21 @@ export async function searchPageRects(
       ctx.font = `100px ${family}`;
       const scale = item.width / ctx.measureText(item.str).width;
       const preW = ctx.measureText(item.str.slice(0, localStart)).width * scale;
-      const matchW = ctx.measureText(item.str.slice(localStart, to - runStart)).width * scale;
+      const matchW = ctx.measureText(item.str.slice(localStart, localEnd)).width * scale;
 
       // Work in user-space points along the baseline (RTL runs cover the whole
-      // run; LTR runs use the measured, run-clamped sub-extent), then map the box
-      // through the viewport transform so rotated pages land over the glyphs.
-      const [xL, xR] = matchExtentX(item, preW, matchW, safetyX);
-      const box = normalizeUserBox(vp, xL, baselineY - descent - padY, xR, topPdf + padY);
+      // run; LTR runs use the measured, run-clamped sub-extent, snapped to run
+      // boundaries the match reaches), then map the box through the viewport
+      // transform so rotated pages land over the glyphs. Vertical extent is
+      // font-relative so tall type keeps its descenders and ascenders covered.
+      const [xL, xR] = matchExtentX(item, preW, matchW, safetyX, atRunStart, atRunEnd);
+      const box = normalizeUserBox(
+        vp,
+        xL,
+        baselineY - fontH * DESCENT_FRAC,
+        xR,
+        baselineY + fontH * ASCENT_FRAC
+      );
       rects.push({
         page: page.pageNumber,
         x: Math.max(0, box.x),

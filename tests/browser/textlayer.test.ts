@@ -159,6 +159,24 @@ describe('textlayer', () => {
     expect(r).toBeCloseTo(130.5); // 100 + preW(10) + matchW(20) + safetyX(0.5)
   });
 
+  it('snaps a match to the run edge it reaches, not the measured guess', () => {
+    const base = {
+      str: 'ABC',
+      transform: [1, 0, 0, 1, 100, 700],
+      width: 60,
+      height: 12,
+      hasEOL: false,
+      dir: 'ltr',
+    };
+    // A match reaching the run start snaps its left to originX (not preW-padded),
+    // and one reaching the run end snaps its right to originX + width — so a
+    // condensed/substituted font can't leave the boundary glyph exposed.
+    expect(matchExtentX(base, 0, 20, 0.5, true, false)[0]).toBe(100);
+    expect(matchExtentX(base, 40, 20, 0.5, false, true)[1]).toBe(160);
+    // A match spanning the whole run covers it end to end.
+    expect(matchExtentX(base, 0, 60, 0.5, true, true)).toEqual([100, 160]);
+  });
+
   it('detects box overlap in every separation direction', () => {
     const box = { x: 0.4, y: 0.4, w: 0.2, h: 0.2 };
     expect(overlaps(box, { x: 0.5, y: 0.5, w: 0.2, h: 0.2 })).toBe(true); // intersecting

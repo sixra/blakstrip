@@ -4,7 +4,7 @@ import { exportRedactedPdf } from '../../src/lib/pdf/export';
 import { loadPdf } from '../../src/lib/pdf/render';
 import { pageRunBoxes, searchDocumentRects } from '../../src/lib/pdf/textlayer';
 import type { RedactionRect } from '../../src/lib/pdf/types';
-import { makeTextPdf } from '../support/testpdf';
+import { makeLargeGlyphPdf, makeTextPdf } from '../support/testpdf';
 
 const wholePage1: RedactionRect = { page: 1, x: 0, y: 0, w: 1, h: 1 };
 
@@ -46,6 +46,16 @@ describe('checkCoverage — pixel backstop', () => {
     const uncovered = await checkCoverage(doc, [shrunk], bytes);
     expect(uncovered).toHaveLength(1);
     expect(uncovered[0]).toEqual(shrunk);
+  });
+
+  it('fully covers a large-font run, descenders and all', async () => {
+    const pristine = await makeLargeGlyphPdf();
+    const doc = await loadPdf(pristine);
+    const rects = await searchDocumentRects(doc, 'PgjyQ');
+    expect(rects).toHaveLength(1);
+    const bytes = await exportRedactedPdf(pristine, doc, rects);
+    // Font-relative vertical cover means no glyph tail survives the black box.
+    expect(await checkCoverage(doc, rects, bytes)).toEqual([]);
   });
 
   it('flags a region that was never painted in the output', async () => {

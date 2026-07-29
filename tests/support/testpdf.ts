@@ -114,6 +114,32 @@ export async function makeRotatedPdf(): Promise<ArrayBuffer> {
   return toArrayBuffer(await doc.save());
 }
 
+/**
+ * One page with a single large-font run whose glyphs carry deep descenders
+ * ("gjpqy") and tall ascenders. Exercises font-relative vertical cover: a
+ * page-absolute pad that suits body text leaves a 44pt glyph's tails exposed.
+ */
+export async function makeLargeGlyphPdf(): Promise<ArrayBuffer> {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const page = doc.addPage([612, 792]);
+  page.drawText('PgjyQ', { x: 64, y: 600, size: 44, font });
+  return toArrayBuffer(await doc.save());
+}
+
+/**
+ * A single page far wider than any canvas limit (10000×300 pt). Rendered at 2×
+ * it would be 20000px across — past the max side — so it exercises the scale
+ * clamp that keeps an oversized page from rasterizing blank.
+ */
+export async function makeWidePagePdf(): Promise<ArrayBuffer> {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const page = doc.addPage([10000, 300]);
+  page.drawText('WIDE PAGE SECRET', { x: 80, y: 150, size: 48, font });
+  return toArrayBuffer(await doc.save());
+}
+
 /** Single-page PDF with graphics but no text — looks like a scan. */
 export async function makeScanLikePdf(): Promise<ArrayBuffer> {
   const doc = await PDFDocument.create();
