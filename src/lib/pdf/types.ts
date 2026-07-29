@@ -67,4 +67,10 @@ export interface VerifyReport {
   remaining: Finding[];
   /** Redacted search terms that still appear in the output (should be empty). */
   leakedTerms: string[];
+  /**
+   * Redaction rects whose target isn't actually black in the output raster — a
+   * box that under-covered its glyphs, or a page that failed to rasterize. Empty
+   * when every redaction is proven covered by the pixel check (should be empty).
+   */
+  uncoveredRegions: RedactionRect[];
 }

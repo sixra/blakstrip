@@ -366,7 +366,9 @@
       const rectTerms = rects.map((r) => r.term).filter((t): t is string => Boolean(t));
       const boxText = await collectRedactedText(doc, rects);
       const redactedTerms = [...new Set([...rectTerms, ...boxText])];
-      verifyResult = await verifyExport(bytes, redactedTerms);
+      // Pass the source doc + rects so verify also re-reads the output pixels and
+      // proves each redaction actually landed black over its target.
+      verifyResult = await verifyExport(bytes, redactedTerms, { doc, rects });
     } catch (e) {
       errorMsg = e instanceof Error ? e.message : String(e);
     } finally {
@@ -694,6 +696,15 @@
         </p>
       {:else}
         <div class="mt-4 space-y-2">
+          {#if verifyResult.uncoveredRegions.length > 0}
+            <p class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <strong>Redaction didn't fully cover its target.</strong>
+              {verifyResult.uncoveredRegions.length}
+              {verifyResult.uncoveredRegions.length === 1 ? 'box' : 'boxes'} left part of the underlying
+              content visible in the exported image. Don't download — widen the box (or redact the whole
+              line) and export again.
+            </p>
+          {/if}
           {#each verifyResult.remaining as f (f.id)}
             <p class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               <strong>{f.title}:</strong>
@@ -710,8 +721,9 @@
       {/if}
 
       <p class="mt-3 text-xs text-amber-700">
-        This checks the text and hidden data left in the file. It can't look inside the image of a
-        redacted page, so make sure every black box fully covers what you want hidden.
+        This re-reads the exported file: the text and hidden data left in it, and the pixels of
+        every redacted page to confirm each box actually covers what's underneath. It can only check
+        the text you redacted — review the recoverable text below for anything you missed.
       </p>
 
       <div class="mt-5">

@@ -177,6 +177,30 @@ function glyphBox(item: GlyphItem, vp: Viewport): Box {
   return normalizeUserBox(vp, originX, baselineY - descent, originX + item.width, topPdf);
 }
 
+/** A text run's authoritative bounding box (from pdf.js metrics), plus its text. */
+export interface RunBox extends Box {
+  str: string;
+}
+
+/**
+ * Every non-blank text run on a page as a normalized box derived purely from
+ * pdf.js glyph metrics (`transform`/`width`/`height`) — independent of the
+ * measured search geometry that places redaction rects. Verify uses these as the
+ * ground truth for "where the ink is" when checking the output raster actually
+ * covers it, so a placement bug can't hide behind the same measurement twice.
+ */
+export async function pageRunBoxes(page: PDFPageProxy): Promise<RunBox[]> {
+  const vp = page.getViewport({ scale: 1 });
+  const content = await page.getTextContent();
+  const boxes: RunBox[] = [];
+  for (const item of content.items) {
+    /* v8 ignore next -- marked-content / empty-run items don't occur in our text PDFs */
+    if (!isGlyph(item) || item.str.trim().length === 0) continue;
+    boxes.push({ ...glyphBox(item, vp), str: item.str });
+  }
+  return boxes;
+}
+
 /**
  * The user-space horizontal extent [left, right] a match occupies within a run.
  * pdf.js reorders RTL runs (item.str is logical order while the transform/width

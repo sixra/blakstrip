@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { downloadBytes, exportRedactedPdf, redactedFileName } from '../../src/lib/pdf/export';
 import { buildRedactedPdf } from '../../src/lib/pdf/redact';
 import { loadPdf } from '../../src/lib/pdf/render';
-import { collectRedactedText, extractAllText } from '../../src/lib/pdf/textlayer';
+import {
+  collectRedactedText,
+  extractAllText,
+  searchDocumentRects,
+} from '../../src/lib/pdf/textlayer';
 import type { RedactionRect } from '../../src/lib/pdf/types';
 import { verifyExport } from '../../src/lib/pdf/verify';
 import {
@@ -77,6 +81,24 @@ describe('redact + export + verify', () => {
     const report = await verifyExport(bytes);
     expect(report.remaining).toEqual([]);
     expect(report.clean).toBe(true);
+  });
+
+  it('runs the pixel-coverage backstop when given the source doc and rects', async () => {
+    const pristine = await makeTextPdf();
+    const doc = await loadPdf(pristine);
+    const rects = await searchDocumentRects(doc, 'SSN: 123-45-6789');
+    const bytes = await exportRedactedPdf(pristine, doc, rects);
+
+    const ok = await verifyExport(bytes, [], { doc, rects });
+    expect(ok.uncoveredRegions).toEqual([]);
+    expect(ok.clean).toBe(true);
+
+    // A box shrunk to a sliver of its run leaks pixels and blocks a clean verdict.
+    const shrunk = rects.map((r) => ({ ...r, y: r.y + r.h * 0.65, h: r.h * 0.35 }));
+    const shrunkBytes = await exportRedactedPdf(pristine, doc, shrunk);
+    const leak = await verifyExport(shrunkBytes, [], { doc, rects: shrunk });
+    expect(leak.uncoveredRegions.length).toBeGreaterThan(0);
+    expect(leak.clean).toBe(false);
   });
 
   it('names and downloads the redacted file', () => {
