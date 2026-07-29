@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { PDFDocumentProxy } from 'pdfjs-dist';
+  import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
+  import { onDestroy } from 'svelte';
   import { auditDocument } from '@lib/pdf/audit';
   import { downloadBytes, exportRedactedPdf, redactedFileName } from '@lib/pdf/export';
   import { loadPdf, renderPageToCanvas, renderPageToImageCanvas } from '@lib/pdf/render';
@@ -40,6 +41,10 @@
   let viewerEl = $state<HTMLDivElement>();
   let fileInput = $state<HTMLInputElement>();
   let renderToken = 0;
+  let renderTask: RenderTask | null = null;
+  // Bumped every time the document changes, so slow fire-and-forget work
+  // (thumbnails, audit) started for an old file can detect it's stale and stop.
+  let docGeneration = 0;
   let pageRendered = $state(false);
 
   const pageRects = $derived(rects.filter((r) => r.page === currentPage));
@@ -125,6 +130,7 @@
   // reset, so stale search matches / rects / verify state from a previous document can
   // never be committed onto — or verified against — the next one.
   function clearTransientState() {
+    docGeneration += 1;
     rects = [];
     past = [];
     future = [];
@@ -166,19 +172,28 @@
 
   async function runAudit() {
     if (!doc || !pristine) return;
+    const gen = docGeneration;
     try {
-      auditReport = await auditDocument(pristine, doc);
+      const report = await auditDocument(pristine, doc);
+      if (gen === docGeneration) auditReport = report; // ignore a stale document's result
     } catch {
-      auditReport = null;
+      if (gen === docGeneration) auditReport = null;
     }
   }
 
   async function buildThumbs(d: PDFDocumentProxy) {
-    for (let n = 1; n <= d.numPages; n += 1) {
-      const page = await d.getPage(n);
-      const base = page.getViewport({ scale: 1 });
-      const canvas = await renderPageToImageCanvas(page, 130 / base.width);
-      thumbs = [...thumbs, { page: n, url: canvas.toDataURL('image/png') }];
+    const gen = docGeneration;
+    try {
+      for (let n = 1; n <= d.numPages; n += 1) {
+        const page = await d.getPage(n);
+        if (gen !== docGeneration) return; // a newer file superseded this run
+        const base = page.getViewport({ scale: 1 });
+        const canvas = await renderPageToImageCanvas(page, 130 / base.width);
+        if (gen !== docGeneration) return;
+        thumbs = [...thumbs, { page: n, url: canvas.toDataURL('image/png') }];
+      }
+    } catch {
+      // The doc was destroyed mid-thumbnail (a new file opened) — stop quietly.
     }
   }
 
@@ -186,11 +201,18 @@
     if (!doc || !pageCanvas || !viewerEl) return;
     const token = (renderToken += 1);
     pageRendered = false;
+    // Cancel a render still in flight on this canvas: pdf.js throws if a second
+    // render starts on the same canvas, which would leave pageRendered false and
+    // wedge the overlay (e.g. clicking Next twice on a slow page).
+    renderTask?.cancel();
+    renderTask = null;
     try {
       const page = await doc.getPage(currentPage);
       if (token !== renderToken) return; // a newer render superseded this one
       const target = Math.min(viewerEl.clientWidth, 900);
-      await renderPageToCanvas(page, pageCanvas, target);
+      const { task } = renderPageToCanvas(page, pageCanvas, target);
+      renderTask = task;
+      await task.promise;
       if (token === renderToken) pageRendered = true;
     } catch {
       // A superseded or cancelled render (page/file changed, or the doc was
@@ -202,6 +224,13 @@
   $effect(() => {
     void currentPage;
     if (status === 'ready') void renderCurrent();
+  });
+
+  // Tear down the last-open document's worker (and any in-flight render) when the
+  // island unmounts, so navigating away doesn't leak a pdf.js worker thread.
+  onDestroy(() => {
+    renderTask?.cancel();
+    if (doc) void doc.loadingTask.destroy().catch(() => {});
   });
 
   // --- file input / drag & drop ---

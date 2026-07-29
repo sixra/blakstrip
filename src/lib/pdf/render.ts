@@ -3,7 +3,7 @@
  * pages to canvas (on-screen and offscreen for rasterization).
  */
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
+import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist';
 // Vite resolves the bundled, same-origin worker file → satisfies `worker-src 'self'`.
 import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
@@ -52,15 +52,17 @@ export function clampScale(width: number, height: number, scale: number): number
 }
 
 /**
- * Render a page into an on-screen canvas fitted to `cssWidth` CSS pixels,
- * sharpened for HiDPI displays. Returns the CSS-pixel dimensions used for layout
- * (the overlay that captures redaction rectangles sits on top at this size).
+ * Start rendering a page into an on-screen canvas fitted to `cssWidth` CSS
+ * pixels, sharpened for HiDPI displays. Returns the live `RenderTask` (so the
+ * caller can `.cancel()` it before starting another render on the same canvas —
+ * a second concurrent render throws) plus the CSS-pixel dimensions used for
+ * layout. The canvas is sized synchronously; await `task.promise` for the pixels.
  */
-export async function renderPageToCanvas(
+export function renderPageToCanvas(
   page: PDFPageProxy,
   canvas: HTMLCanvasElement,
   cssWidth: number
-): Promise<{ cssWidth: number; cssHeight: number }> {
+): { task: RenderTask; cssWidth: number; cssHeight: number } {
   const base = page.getViewport({ scale: 1 });
   const scale = cssWidth / base.width;
   const viewport = page.getViewport({ scale });
@@ -78,9 +80,10 @@ export async function renderPageToCanvas(
 
   const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : undefined;
 
-  await page.render({ canvas, canvasContext: ctx, viewport, transform }).promise;
+  const task = page.render({ canvas, canvasContext: ctx, viewport, transform });
 
   return {
+    task,
     cssWidth: Math.floor(viewport.width),
     cssHeight: Math.floor(viewport.height),
   };
