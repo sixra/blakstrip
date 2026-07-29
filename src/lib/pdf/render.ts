@@ -30,6 +30,27 @@ export function getPageSize(page: PDFPageProxy): { width: number; height: number
   return { width: vp.width, height: vp.height };
 }
 
+// Conservative cross-browser canvas ceilings. WebKit caps total area near 16.7M
+// device pixels and each side well below Chrome's 65k; a page rasterized past
+// either limit yields a blank or truncated canvas — a "redacted" page with
+// nothing painted. These sit under the tightest (WebKit) limit.
+const MAX_CANVAS_SIDE = 8192;
+const MAX_CANVAS_AREA = 16_777_216;
+
+/**
+ * The largest scale ≤ `scale` that keeps a `width`×`height` point page within
+ * both canvas ceilings, so an oversized page renders smaller instead of blanking.
+ * Exported for test.
+ */
+export function clampScale(width: number, height: number, scale: number): number {
+  return Math.min(
+    scale,
+    MAX_CANVAS_SIDE / width,
+    MAX_CANVAS_SIDE / height,
+    Math.sqrt(MAX_CANVAS_AREA / (width * height))
+  );
+}
+
 /**
  * Render a page into an on-screen canvas fitted to `cssWidth` CSS pixels,
  * sharpened for HiDPI displays. Returns the CSS-pixel dimensions used for layout
@@ -74,7 +95,10 @@ export async function renderPageToImageCanvas(
   page: PDFPageProxy,
   scale: number
 ): Promise<HTMLCanvasElement> {
-  const viewport = page.getViewport({ scale });
+  const base = page.getViewport({ scale: 1 });
+  // Cap the scale so a very large page can't exceed a browser canvas limit and
+  // silently render blank — a redacted page that shipped with nothing painted.
+  const viewport = page.getViewport({ scale: clampScale(base.width, base.height, scale) });
   const canvas = document.createElement('canvas');
   canvas.width = Math.ceil(viewport.width);
   canvas.height = Math.ceil(viewport.height);
