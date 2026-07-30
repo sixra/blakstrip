@@ -32,3 +32,11 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# Playwright MCP scratch snapshots
+.playwright-mcp/
+
+# mise (Node is pinned via .nvmrc; keep local mise files out of git)
+mise.toml
+.mise.toml
+.tool-versions
