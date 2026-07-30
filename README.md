@@ -1,5 +1,8 @@
 # blakstrip
 
+[![CI](https://github.com/sixra/blakstrip/actions/workflows/ci.yml/badge.svg)](https://github.com/sixra/blakstrip/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+
 A fully in-browser PDF redactor that removes content instead of covering it. The file is opened,
 redacted, and saved entirely on your device; nothing is uploaded.
 
@@ -77,6 +80,8 @@ scripts/            gen-icons, gen-fixtures
 - The 100% coverage gate on `src/lib/**` is enforced; new engine code needs matching tests.
 - Tooling (ESLint, Prettier, lefthook, commitlint) comes from `@sixra/devkit`. Commits follow
   Conventional Commits.
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup, tests, and the full workflow.
 
 ## Versioning
 
