@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/sixra/blakstrip/security/advisories/new
+    about: Found a way to recover redacted content, surviving hidden data, or any network egress? Report it privately here, not as a public issue.
+  - name: Try blakstrip
+    url: https://blakstrip.com
+    about: The live app. Redaction runs entirely in your browser; nothing is uploaded.
