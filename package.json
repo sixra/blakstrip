@@ -57,7 +57,7 @@
     "@astrojs/sitemap": "^3.7.3",
     "@astrojs/svelte": "^9.0.1",
     "@tailwindcss/vite": "^4.3.3",
-    "astro": "^7.1.5",
+    "astro": "^7.1.6",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.2.108",
     "svelte": "^5.56.8",
