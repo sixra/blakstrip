@@ -15,6 +15,11 @@ const appSchema = {
     'Drop in a PDF and redact it in your browser. Draw boxes or search a term to remove every match for good, strip metadata, and verify before download.',
   url: 'https://blakstrip.com/pdf-redact',
   isPartOf: { '@type': 'WebSite', name: 'blakstrip', url: 'https://blakstrip.com' },
+  creator: {
+    '@type': 'Organization',
+    name: 'sixra.dev',
+    url: 'https://sixra.dev',
+  },
 };
 const jsonLd = JSON.stringify(appSchema).replace(/</g, '\\u003c');
 ---

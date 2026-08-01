@@ -16,3 +16,4 @@ blakstrip renders your PDF in the browser with pdf.js and rasterizes the pages y
 
 - All processing is client-side. No files are uploaded, and no analytics are collected.
 - Redacted pages are rasterized (their text becomes an image); untouched pages keep selectable text.
+- Built by sixra.dev (https://sixra.dev)
