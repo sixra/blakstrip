@@ -1,12 +1,15 @@
 <script lang="ts">
   import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
   import { onDestroy, type Snippet } from 'svelte';
+  import { canRedo, canUndo, commit as commitHistory, initHistory, redo, undo } from '@lib/history';
   import { auditDocument } from '@lib/pdf/audit';
   import { downloadBytes, exportRedactedPdf, redactedFileName } from '@lib/pdf/export';
   import { loadPdf, renderPageToCanvas, renderPageToImageCanvas } from '@lib/pdf/render';
   import { collectRedactedText, searchDocumentRects } from '@lib/pdf/textlayer';
-  import type { AuditReport, FindingSeverity, RedactionRect, VerifyReport } from '@lib/pdf/types';
+  import type { AuditReport, RedactionRect, VerifyReport } from '@lib/pdf/types';
   import { verifyExport } from '@lib/pdf/verify';
+  import AuditPanel from './AuditPanel.svelte';
+  import VerifyDialog from './VerifyDialog.svelte';
 
   type Status = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -19,18 +22,10 @@
   let dragOver = $state(false);
   let auditReport = $state<AuditReport | null>(null);
 
-  // FindingSeverity is 'high' | 'medium', so there is no third case to style.
-  const sevClass = (s: FindingSeverity): string => (s === 'high' ? 'bg-red-500' : 'bg-amber-500');
-  const auditPanelClass = $derived(
-    auditReport && auditReport.findings.length > 0
-      ? 'border-amber-300 bg-amber-50'
-      : 'border-neutral-200 bg-white'
-  );
-
-  // Redaction rectangles (normalized) + undo/redo stacks.
-  let rects = $state<RedactionRect[]>([]);
-  let past = $state<RedactionRect[][]>([]);
-  let future = $state<RedactionRect[][]>([]);
+  // Redaction rectangles (normalized), with undo/redo handled by the history
+  // module so its invalidation rules are covered by the engine's test gate.
+  let history = $state(initHistory<RedactionRect[]>([]));
+  const rects = $derived(history.present);
 
   // Plain handles: doc/pristine/renderToken are not reactive; the element refs and
   // pageRendered below use $state so the template can bind to them.
@@ -104,23 +99,7 @@
   const KB_STEP = 0.02;
 
   function commit(next: RedactionRect[]) {
-    past = [...past, rects];
-    future = [];
-    rects = next;
-  }
-  function undo() {
-    const prev = past.at(-1);
-    if (prev === undefined) return;
-    future = [rects, ...future];
-    rects = prev;
-    past = past.slice(0, -1);
-  }
-  function redo() {
-    const nxt = future.at(0);
-    if (nxt === undefined) return;
-    past = [...past, rects];
-    rects = nxt;
-    future = future.slice(1);
+    history = commitHistory(history, next);
   }
   function deleteRect(target: RedactionRect) {
     commit(rects.filter((r) => r !== target));
@@ -131,9 +110,7 @@
   // never be committed onto (or verified against) the next one.
   function clearTransientState() {
     docGeneration += 1;
-    rects = [];
-    past = [];
-    future = [];
+    history = initHistory<RedactionRect[]>([]);
     thumbs = [];
     auditReport = null;
     searchMatches = [];
@@ -395,17 +372,6 @@
   let returnFocusTo: HTMLElement | null = null;
   let exportStep = $state('');
 
-  // The native dialog handles the whole modal contract: focus goes inside on
-  // showModal() and is restored on close, Tab is trapped, the background is inert,
-  // page scroll is locked, and Escape closes. A hand-rolled version of any one of
-  // those is a bug waiting to happen (the previous trap leaked on the first
-  // Shift+Tab, because focus started on an element its own query excluded).
-  let dialogEl = $state<HTMLDialogElement>();
-  $effect(() => {
-    if (verifyResult) dialogEl?.showModal();
-    else dialogEl?.close();
-  });
-
   // Zero rects is a legitimate export: every page is copied and stripAll still
   // runs, which is exactly what a user whose problem is the audit panel wants.
   async function exportPdf() {
@@ -539,8 +505,12 @@
         >{rects.length} redaction{rects.length === 1 ? '' : 's'}</span
       >
       <div class="ml-auto flex items-center gap-2">
-        <button class={btn} onclick={undo} disabled={past.length === 0}>Undo</button>
-        <button class={btn} onclick={redo} disabled={future.length === 0}>Redo</button>
+        <button class={btn} onclick={() => (history = undo(history))} disabled={!canUndo(history)}
+          >Undo</button
+        >
+        <button class={btn} onclick={() => (history = redo(history))} disabled={!canRedo(history)}
+          >Redo</button
+        >
         <button
           class="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40"
           onclick={exportPdf}
@@ -611,47 +581,7 @@
     </div>
 
     {#if auditReport}
-      <section class={`mb-4 rounded-xl border p-4 ${auditPanelClass}`} aria-label="Document audit">
-        {#if auditReport.findings.length > 0}
-          <h2 class="text-sm font-semibold text-amber-800">
-            This file is hiding {auditReport.findings.length} thing{auditReport.findings.length ===
-            1
-              ? ''
-              : 's'}:
-          </h2>
-          <ul class="mt-2 space-y-1">
-            {#each auditReport.findings as f (f.id)}
-              <li class="flex items-start gap-2 text-sm text-neutral-700">
-                <span
-                  class={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${sevClass(f.severity)}`}
-                  aria-hidden="true"
-                ></span>
-                <span
-                  ><span class="sr-only"
-                    >{f.severity === 'high' ? 'High' : 'Medium'} severity:
-                  </span><span class="font-medium text-neutral-900">{f.title}:</span>
-                  {f.detail}</span
-                >
-              </li>
-            {/each}
-          </ul>
-        {:else}
-          <p class="text-sm text-neutral-600">
-            ✓ No hidden metadata, annotations, attachments, or scripts found.
-          </p>
-        {/if}
-        {#if !hasTextLayer}
-          <p class="mt-2 text-xs text-amber-700">
-            Looks like a scanned document (no text layer). Draw boxes over regions; flattening
-            removes them safely.
-          </p>
-        {:else}
-          <p class="mt-2 text-xs text-neutral-600">
-            Has a text layer. Redacted pages are rasterized on export; untouched pages keep
-            selectable text.
-          </p>
-        {/if}
-      </section>
+      <AuditPanel report={auditReport} />
     {/if}
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-[130px_1fr]">
@@ -759,99 +689,4 @@
 
 <!-- Always mounted, contents gated: unmounting an open dialog would tear it out of
      the top layer without a close event, losing focus restoration. -->
-<dialog
-  bind:this={dialogEl}
-  aria-labelledby="verify-title"
-  onclose={closeVerify}
-  class="m-auto max-h-[85vh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-6 backdrop:bg-black/50"
->
-  {#if verifyResult}
-    <div>
-      <h2 id="verify-title" class="text-lg font-semibold text-neutral-900">
-        Verify before download
-      </h2>
-      <p class="mt-1 text-sm text-neutral-600">
-        Everything below is still recoverable from the file you are about to download.
-      </p>
-
-      {#if verifyResult.clean}
-        <p
-          class="mt-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800"
-        >
-          ✓ No text, metadata, attachments, or scripts are recoverable, and none of your redacted
-          terms survived.
-        </p>
-      {:else}
-        <div class="mt-4 space-y-2">
-          {#if verifyResult.uncoveredRegions.length > 0}
-            <p class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              <strong>Redaction didn't fully cover its target.</strong>
-              {verifyResult.uncoveredRegions.length}
-              {verifyResult.uncoveredRegions.length === 1 ? 'box' : 'boxes'} left part of the underlying
-              content visible in the exported image. Don't download; widen the box (or redact the whole
-              line) and export again.
-            </p>
-          {/if}
-          {#each verifyResult.remaining as f (f.id)}
-            <p class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              <strong>{f.title}:</strong>
-              {f.detail}
-            </p>
-          {/each}
-          {#if verifyResult.leakedTerms.length > 0}
-            <p class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              <strong>Still recoverable:</strong>
-              {verifyResult.leakedTerms.join(', ')}
-            </p>
-          {/if}
-          {#each verifyResult.survivingElsewhere as s (s.term)}
-            <p
-              class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800"
-            >
-              <strong>Also on {s.pages.length === 1 ? 'a page' : 'pages'} you didn't redact:</strong
-              >
-              “{s.term}” is covered where you boxed it, but still readable on page
-              {s.pages.join(', ')}. Redact it there too, or leave it if it isn't sensitive there.
-            </p>
-          {/each}
-        </div>
-      {/if}
-
-      <p class="mt-3 text-xs text-amber-700">
-        This re-reads the exported file: the text and hidden data left in it, and the pixels of
-        every redacted page to confirm each box actually covers what's underneath. It can only check
-        the text you redacted; review the recoverable text below for anything you missed.
-      </p>
-
-      <div class="mt-5">
-        <h3 class="text-sm font-medium text-neutral-700">
-          Recoverable text ({verifyResult.recoverableStrings.length})
-        </h3>
-        {#if verifyResult.recoverableStrings.length === 0}
-          <p class="mt-1 text-sm text-neutral-600">None. The output has no extractable text.</p>
-        {:else}
-          <ul
-            class="mt-2 max-h-48 space-y-0.5 overflow-y-auto rounded-lg border border-neutral-200 bg-neutral-100 p-3 font-mono text-xs text-neutral-700"
-          >
-            {#each verifyResult.recoverableStrings as s, i (i)}
-              <li class="truncate">{s}</li>
-            {/each}
-          </ul>
-          <p class="mt-1 text-xs text-neutral-600">
-            Pages you redacted became images, so their text is gone. Pages you didn't touch still
-            have selectable text. Make sure nothing sensitive is listed above.
-          </p>
-        {/if}
-      </div>
-
-      <div class="mt-6 flex justify-end gap-3">
-        <button class={btn} onclick={closeVerify}>Cancel</button>
-        <button
-          class="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-700"
-          onclick={confirmDownload}
-          >{verifyResult.clean ? 'Download redacted PDF' : 'Download anyway'}</button
-        >
-      </div>
-    </div>
-  {/if}
-</dialog>
+<VerifyDialog report={verifyResult} onCancel={closeVerify} onDownload={confirmDownload} />
