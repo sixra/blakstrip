@@ -1,6 +1,8 @@
 # Cloudflare Pages headers: https://developers.cloudflare.com/pages/configuration/headers/
-# Note that every matching rule contributes, and duplicate header names are joined
-# with a comma, so the per-path rules below add to this block rather than replace it.
+# Every matching rule contributes, so the per-path rules below add to this block
+# rather than replace it. Verified against the deployed site: a path matching two
+# rules that both set Content-Security-Policy is served two separate CSP headers,
+# and a browser enforces multiple CSP headers independently (each must pass).
 # These cannot be expressed in the <meta> CSP: frame-ancestors and X-Frame-Options
 # are ignored when a policy is delivered via <meta>, so a clickjacking defense for a
 # tool that handles sensitive documents has to be a real response header.
@@ -20,10 +22,9 @@
 # under a given URL: cache them for a year. This is where the ~1.3 MB pdf.js
 # worker and the app chunks live, so it is most of the repeat-visit cost.
 #
-# The CSP here is additive, not a replacement. Cloudflare joins duplicate header
-# values with a comma, and a comma-separated CSP is parsed as several independent
-# policies, so these files end up with `frame-ancestors 'none'` from the rule
-# below *and* `connect-src 'none'` from this one, each enforced on its own.
+# The CSP here is additive, not a replacement: these files are served both
+# `frame-ancestors 'none'` from the rule above and `connect-src 'none'` from this
+# one, as two headers, each enforced on its own.
 #
 # The <meta> CSP governs the page, but a worker loaded from a same-origin URL does
 # not inherit it (only blob:/data: workers do). The pdf.js worker is where the
@@ -43,6 +44,12 @@
 # The service worker fetches same-origin assets to fill its precache, and nothing
 # else. It must always revalidate: its precache manifest names every hashed asset,
 # so a stale sw.js pins an entire stale build, offline, indefinitely.
+#
+# Note: Cloudflare serves this path as `max-age=14400, must-revalidate` regardless
+# of the 0 below (checked against production; `/` does honour max-age=0, so it is
+# specific to this path, not a zone-wide browser-cache override). Harmless in
+# practice, because registration defaults to updateViaCache: 'imports', which makes
+# the browser bypass its HTTP cache for the worker script on every update check.
 /sw.js
   Cache-Control: public, max-age=0, must-revalidate
   Content-Security-Policy: connect-src 'self'

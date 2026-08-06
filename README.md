@@ -47,9 +47,13 @@ promises depend on:
 Deploy somewhere that ignores `_headers` and the app still works, but silently without any of the
 above. If you fork and host it elsewhere, port those headers to your host's own mechanism, and check
 how it combines rules that match the same path: the per-path `connect-src` is written to be
-_additive_ to the site-wide policy, which relies on Cloudflare joining duplicate header values with
-a comma (a comma-separated CSP is parsed as several independent policies). A host that instead
-replaces the value would silently drop `frame-ancestors 'none'` from those paths.
+_additive_ to the site-wide policy. Cloudflare serves such a path two separate
+`Content-Security-Policy` headers, and browsers enforce multiple CSP headers independently, so both
+apply. A host that instead replaces the value would silently drop `frame-ancestors 'none'` from
+those paths.
+
+To check a deployment, `curl -I` a hashed asset and confirm you get two `content-security-policy`
+lines plus the year-long `cache-control`.
 
 `_headers` also sets the caching policy: a year on the content-hashed `/_astro/*` assets, and
 always-revalidate on `/sw.js`, whose precache manifest would otherwise pin a whole stale build
