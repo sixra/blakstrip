@@ -16,7 +16,7 @@
  * inspected too, not just the box interior.
  */
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { loadPdf, renderPageToImageCanvas } from './render';
+import { renderPageToImageCanvas } from './render';
 import { groupRectsByPage, pageRunBoxes, type RunBox } from './textlayer';
 import type { RedactionRect } from './types';
 
@@ -119,44 +119,42 @@ function readImage(canvas: HTMLCanvasElement): Rgba {
  * (source ink survives inside the run's authoritative box, past the box edge).
  * Partial matches inside a run fall back to the rect region alone, since the rest
  * of the run is legitimately still visible and must not be flagged.
+ *
+ * Takes the already-loaded output document rather than its bytes: verify needs the
+ * same parse for its text extraction, and one export should not pay for two.
  */
 export async function checkCoverage(
   sourceDoc: PDFDocumentProxy,
   rects: RedactionRect[],
-  outputBytes: Uint8Array
+  out: PDFDocumentProxy
 ): Promise<RedactionRect[]> {
   const byPage = groupRectsByPage(rects);
   if (byPage.size === 0) return [];
 
-  const out = await loadPdf(outputBytes.slice().buffer);
-  try {
-    const uncovered: RedactionRect[] = [];
-    for (const [pageNum, pageRects] of byPage) {
-      const outPage = await out.getPage(pageNum);
-      const srcPage = await sourceDoc.getPage(pageNum);
-      // Source and output pages share point-size, so at one scale their rasters
-      // are pixel-aligned and a region maps to the same pixels in both.
-      const outImg = readImage(await renderPageToImageCanvas(outPage, COVER_SCALE));
-      const srcImg = readImage(await renderPageToImageCanvas(srcPage, COVER_SCALE));
-      const runs = await pageRunBoxes(srcPage);
+  const uncovered: RedactionRect[] = [];
+  for (const [pageNum, pageRects] of byPage) {
+    const outPage = await out.getPage(pageNum);
+    const srcPage = await sourceDoc.getPage(pageNum);
+    // Source and output pages share point-size, so at one scale their rasters
+    // are pixel-aligned and a region maps to the same pixels in both.
+    const outImg = readImage(await renderPageToImageCanvas(outPage, COVER_SCALE));
+    const srcImg = readImage(await renderPageToImageCanvas(srcPage, COVER_SCALE));
+    const runs = await pageRunBoxes(srcPage);
 
-      for (const rect of pageRects) {
-        const regions: Region[] = [rect];
-        // Search rects (which carry a term) can under-cover past their own edge,
-        // so also inspect every run they span end-to-end. Hand-drawn boxes define
-        // their own coverage, so the rect region is the whole check.
-        if (rect.term !== undefined) {
-          for (const run of runs) {
-            if (boxesOverlap(rect, run) && spansHorizontally(rect, run)) regions.push(run);
-          }
-        }
-        if (regions.some((reg) => regionLeaks(srcImg, outImg, reg))) {
-          uncovered.push(rect);
+    for (const rect of pageRects) {
+      const regions: Region[] = [rect];
+      // Search rects (which carry a term) can under-cover past their own edge,
+      // so also inspect every run they span end-to-end. Hand-drawn boxes define
+      // their own coverage, so the rect region is the whole check.
+      if (rect.term !== undefined) {
+        for (const run of runs) {
+          if (boxesOverlap(rect, run) && spansHorizontally(rect, run)) regions.push(run);
         }
       }
+      if (regions.some((reg) => regionLeaks(srcImg, outImg, reg))) {
+        uncovered.push(rect);
+      }
     }
-    return uncovered;
-  } finally {
-    await out.loadingTask.destroy(); // free the throwaway worker
   }
+  return uncovered;
 }

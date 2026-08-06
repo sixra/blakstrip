@@ -156,7 +156,8 @@
     clearTransientState();
     try {
       const buf = await file.arrayBuffer();
-      pristine = buf.slice(0);
+      // loadPdf owns the copy it hands to the worker, so this buffer stays ours.
+      pristine = buf;
       doc = await loadPdf(buf);
       pageCount = doc.numPages;
       fileName = file.name;
@@ -210,7 +211,7 @@
       const page = await doc.getPage(currentPage);
       if (token !== renderToken) return; // a newer render superseded this one
       const target = Math.min(viewerEl.clientWidth, 900);
-      const { task } = renderPageToCanvas(page, pageCanvas, target);
+      const task = renderPageToCanvas(page, pageCanvas, target);
       renderTask = task;
       await task.promise;
       if (token === renderToken) pageRendered = true;

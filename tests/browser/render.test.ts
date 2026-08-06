@@ -22,12 +22,10 @@ describe('render', () => {
   it('renders a page to an on-screen canvas fitted to a target width', async () => {
     const doc = await loadPdf(await makeTextPdf());
     const canvas = document.createElement('canvas');
-    const { task, cssWidth, cssHeight } = renderPageToCanvas(await doc.getPage(1), canvas, 400);
-    await task.promise;
-    expect(cssWidth).toBe(400);
-    expect(cssHeight).toBeGreaterThan(0);
+    await renderPageToCanvas(await doc.getPage(1), canvas, 400).promise;
     expect(canvas.width).toBeGreaterThan(0);
     expect(canvas.style.width).toBe('400px');
+    expect(parseInt(canvas.style.height, 10)).toBeGreaterThan(0);
   });
 
   it('exposes a cancellable render task', async () => {
@@ -36,10 +34,10 @@ describe('render', () => {
     // Starting a second render on the same canvas without cancelling the first
     // throws in pdf.js; cancelling the first lets the second succeed.
     const first = renderPageToCanvas(await doc.getPage(1), canvas, 400);
-    first.task.cancel();
-    await expect(first.task.promise).rejects.toThrow();
+    first.cancel();
+    await expect(first.promise).rejects.toThrow();
     const second = renderPageToCanvas(await doc.getPage(1), canvas, 400);
-    await expect(second.task.promise).resolves.toBeUndefined();
+    await expect(second.promise).resolves.toBeUndefined();
   });
 
   it('renders a page to a detached image canvas at an explicit scale', async () => {
@@ -55,7 +53,7 @@ describe('render', () => {
     try {
       const doc = await loadPdf(await makeTextPdf());
       const canvas = document.createElement('canvas');
-      await renderPageToCanvas(await doc.getPage(1), canvas, 400).task.promise;
+      await renderPageToCanvas(await doc.getPage(1), canvas, 400).promise;
       return canvas;
     } finally {
       if (original) Object.defineProperty(window, 'devicePixelRatio', original);

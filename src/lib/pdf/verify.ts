@@ -26,18 +26,13 @@ function survivesAsWord(haystack: string, term: string): boolean {
 }
 
 /** Text still extractable from the output, de-duplicated and trimmed. */
-async function recoverableStrings(bytes: Uint8Array): Promise<string[]> {
-  const doc = await loadPdf(bytes.slice().buffer);
-  try {
-    const text = await extractAllText(doc);
-    const lines = text
-      .split('\n')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-    return [...new Set(lines)];
-  } finally {
-    await doc.loadingTask.destroy(); // free the throwaway worker spun up per verify
-  }
+async function recoverableStrings(doc: PDFDocumentProxy): Promise<string[]> {
+  const text = await extractAllText(doc);
+  const lines = text
+    .split('\n')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  return [...new Set(lines)];
 }
 
 /**
@@ -55,21 +50,31 @@ export async function verifyExport(
   redactedTerms: string[] = [],
   coverage?: { doc: PDFDocumentProxy; rects: RedactionRect[] }
 ): Promise<VerifyReport> {
-  const strings = await recoverableStrings(bytes);
-  const remaining = await inspectStructure(bytes);
+  // One parse of the output, shared by the text and pixel checks. Loading it per
+  // check spins up a second pdf.js worker over the same bytes, which on a large
+  // export is another full document parsed for nothing.
+  const outDoc = await loadPdf(bytes);
+  try {
+    const strings = await recoverableStrings(outDoc);
+    const remaining = await inspectStructure(bytes);
 
-  const haystack = strings.join('\n').toLowerCase();
-  const leakedTerms = redactedTerms.filter(
-    (t) => t.trim().length > 0 && survivesAsWord(haystack, t.trim())
-  );
+    const haystack = strings.join('\n').toLowerCase();
+    const leakedTerms = redactedTerms.filter(
+      (t) => t.trim().length > 0 && survivesAsWord(haystack, t.trim())
+    );
 
-  const uncoveredRegions = coverage ? await checkCoverage(coverage.doc, coverage.rects, bytes) : [];
+    const uncoveredRegions = coverage
+      ? await checkCoverage(coverage.doc, coverage.rects, outDoc)
+      : [];
 
-  return {
-    clean: remaining.length === 0 && leakedTerms.length === 0 && uncoveredRegions.length === 0,
-    recoverableStrings: strings,
-    remaining,
-    leakedTerms,
-    uncoveredRegions,
-  };
+    return {
+      clean: remaining.length === 0 && leakedTerms.length === 0 && uncoveredRegions.length === 0,
+      recoverableStrings: strings,
+      remaining,
+      leakedTerms,
+      uncoveredRegions,
+    };
+  } finally {
+    await outDoc.loadingTask.destroy(); // free the throwaway worker
+  }
 }
