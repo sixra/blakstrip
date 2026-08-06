@@ -13,3 +13,14 @@
   Cross-Origin-Resource-Policy: same-origin
   X-Permitted-Cross-Domain-Policies: none
   X-DNS-Prefetch-Control: off
+
+# The <meta> CSP governs the page, but a worker loaded from a same-origin URL does
+# not inherit it (only blob:/data: workers do). The pdf.js worker is where the
+# user's document is actually parsed, so the no-egress guarantee has to be
+# delivered to it as a response header or it does not apply where it matters most.
+/_astro/*
+  Content-Security-Policy: default-src 'none'; script-src 'self'; connect-src 'none'
+
+# The service worker needs same-origin fetches to fill its precache.
+/sw.js
+  Content-Security-Policy: default-src 'self'; script-src 'self'; connect-src 'self'
