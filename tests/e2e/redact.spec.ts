@@ -18,9 +18,7 @@ test('audits on load, redacts a box, and verifies a clean export', async ({ page
   await redactor.export();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText('No text, metadata, attachments, or scripts are recoverable', {
-    timeout: 15_000,
-  });
+  await expect(dialog).toContainText('No text, metadata, attachments, or scripts are recoverable');
 });
 
 test('the downloaded file no longer contains the redacted secret', async ({ page }) => {
