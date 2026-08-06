@@ -10,8 +10,9 @@ redacted, and saved entirely on your device; nothing is uploaded.
 
 1. **Load.** The file is read into memory and rendered with pdf.js. No network; the original bytes
    are kept for pdf-lib.
-2. **Audit.** `inspectStructure` enumerates leak vectors (metadata, XMP, annotations, form values,
-   attachments, embedded JavaScript) and a text-layer check flags scans.
+2. **Audit.** `inspectStructure` enumerates leak vectors (metadata and timestamps, XMP, annotations,
+   form values, attachments, embedded JavaScript, EXIF/GPS in embedded JPEGs, authoring page-piece
+   data, optional-content layers, encryption) and a text-layer check flags scans.
 3. **Redact.** Draw boxes, or search a term and redact every match. Rects are stored in normalized,
    resolution-independent coordinates.
 4. **Export.** Redacted pages are rasterized: the black boxes are burned into the pixels, so the
@@ -21,15 +22,32 @@ redacted, and saved entirely on your device; nothing is uploaded.
 5. **Verify.** The output is re-opened and re-inspected; the dialog lists any recoverable text or
    surviving structure before you confirm the download.
 
-A strict Content-Security-Policy (`connect-src 'none'` in production) blocks all network egress,
-verifiable in devtools, and the app works offline as a PWA.
+A strict Content-Security-Policy (`connect-src 'none'` in production) blocks network egress from the
+page, and a matching response-header policy covers the pdf.js worker that actually parses your file.
+The only requests the app ever makes are same-origin loads of its own assets; your document is never
+among them, which you can confirm in devtools. It works offline as a PWA.
 
 **Stack:** Astro 7 (static, `<meta>` CSP), Svelte 5 (runes) islands, pdf-lib (write/strip),
 pdfjs-dist (render/text), Tailwind v4, `@vite-pwa/astro`, TypeScript strict.
 
+## Limitations
+
+Redaction is only as good as what you tell it to remove, and blakstrip would rather say so than
+imply more than it does. See [SECURITY.md](./SECURITY.md) for the full threat model.
+
+- **EXIF/GPS inside a photo is detected, not stripped.** Removing it means re-encoding the image;
+  drawing a box anywhere on that page rasterizes it and takes the EXIF with it.
+- **Optional-content (layer) PDFs are not fully cleaned** on pages copied verbatim, and the export
+  loses the layer visibility settings, so a hidden layer may become visible. blakstrip detects this
+  and refuses a clean verdict.
+- **Encrypted PDFs are refused**; re-save without protection first.
+- **Untouched pages keep selectable text.** Only pages you redact are rasterized.
+- **Verify only checks what you redacted.** It cannot know what you missed, which is why it lists
+  everything still readable in the output.
+
 ## Getting started
 
-Requires Node 22+ and pnpm (the repo pins a version via `packageManager`; Corepack picks it up
+Requires Node 24+ (see `.nvmrc`) and pnpm (the repo pins a version via `packageManager`; Corepack picks it up
 automatically).
 
 ```sh
@@ -65,6 +83,7 @@ src/lib/pdf/        framework-free redaction engine (security-critical)
   inspect.ts        structural leak-vector enumeration (shared by audit + verify)
   redact.ts         build the redacted doc (rasterize + copy)
   metadata.ts       strip passes + mark-sweep garbage collection
+  coverage.ts       pixel backstop: source ink vs output black
   export.ts         orchestrate build, strip, save, download
   verify.ts         verify-on-export
 src/components/     Redactor.svelte (the app), InstallButton.svelte, Header.astro

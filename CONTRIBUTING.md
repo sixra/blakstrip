@@ -4,9 +4,11 @@ Thanks for your interest in improving blakstrip. This is a privacy-focused, full
 redactor, so the bar for anything touching the redaction engine is high: correctness and the
 no-network-egress guarantee come first.
 
+By taking part you agree to the [Code of Conduct](./CODE_OF_CONDUCT.md).
+
 ## Development setup
 
-Requires Node 22+ and pnpm (the repo pins a version via `packageManager`; Corepack picks it up
+Requires Node 24+ (see `.nvmrc`) and pnpm (the repo pins a version via `packageManager`; Corepack picks it up
 automatically).
 
 ```sh
