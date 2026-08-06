@@ -130,7 +130,9 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
     }
   }
 
-  const annotDicts: PDFDict[] = [];
+  // A Set, not an array: scanned forms can carry thousands of annotations, and
+  // the page walk below has to deduplicate against everything found so far.
+  const annotDicts = new Set<PDFDict>();
   let files = 0;
   let xmp = 0;
   let js = 0;
@@ -139,7 +141,7 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
   for (const [, obj] of doc.context.enumerateIndirectObjects()) {
     const dict = dictOf(obj);
     if (!dict) continue;
-    if (nameEq(dict, 'Type', 'Annot')) annotDicts.push(dict);
+    if (nameEq(dict, 'Type', 'Annot')) annotDicts.add(dict);
     else if (nameEq(dict, 'Type', 'EmbeddedFile')) files += 1;
     else if (nameEq(dict, 'Type', 'Metadata')) xmp += 1;
     else if (nameEq(dict, 'Type', 'OCG') || nameEq(dict, 'Type', 'OCMD')) ocgs += 1;
@@ -149,21 +151,22 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
 
   // An annotation written directly into a page's /Annots array is legal and is
   // not an indirect object, so the enumeration above cannot see it. Walk the
-  // arrays too, deduplicating by identity against what we already found.
+  // arrays too; the Set deduplicates the indirect ones by identity.
   for (const page of doc.getPages()) {
     const annots = doc.context.lookup(page.node.get(PDFName.of('Annots')));
     if (!(annots instanceof PDFArray)) continue;
     for (const entry of annots.asArray()) {
       const dict = doc.context.lookup(entry);
-      if (dict instanceof PDFDict && !annotDicts.includes(dict)) annotDicts.push(dict);
+      if (dict instanceof PDFDict) annotDicts.add(dict);
     }
   }
 
   // A /Link is a hyperlink, not concealed content. Reporting it at the same
   // severity as a comment or a form value is how users learn to dismiss the
   // panel, so it gets its own quieter finding.
-  const links = annotDicts.filter((d) => nameEq(d, 'Subtype', 'Link')).length;
-  const annots = annotDicts.length - links;
+  let links = 0;
+  for (const dict of annotDicts) if (nameEq(dict, 'Subtype', 'Link')) links += 1;
+  const annots = annotDicts.size - links;
 
   if (xmp > 0)
     findings.push({

@@ -23,9 +23,10 @@ redacted, and saved entirely on your device; nothing is uploaded.
    surviving structure before you confirm the download.
 
 A strict Content-Security-Policy (`connect-src 'none'` in production) blocks network egress from the
-page, and a matching response-header policy covers the pdf.js worker that actually parses your file.
-The only requests the app ever makes are same-origin loads of its own assets; your document is never
-among them, which you can confirm in devtools. It works offline as a PWA.
+page. A worker does not inherit the page's policy, so the same `connect-src 'none'` is delivered as
+a response header on the pdf.js worker, which is where your file is actually parsed. The only
+requests the app ever makes are same-origin loads of its own assets; your document is never among
+them, which you can confirm in devtools. It works offline as a PWA.
 
 **Stack:** Astro 7 (static, `<meta>` CSP), Svelte 5 (runes) islands, pdf-lib (write/strip),
 pdfjs-dist (render/text), Tailwind v4, `@vite-pwa/astro`, TypeScript strict.
@@ -40,8 +41,8 @@ that this app's promises depend on:
 - `frame-ancestors` / `X-Frame-Options`, the clickjacking defence, which is ignored in a `<meta>`
   policy;
 - `Strict-Transport-Security`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-*`;
-- the per-path CSP over `/_astro/*` and `/sw.js`, which is what actually constrains the pdf.js
-  worker where your document is parsed.
+- the per-path `connect-src` over `/_astro/*` and `/sw.js`, which is what blocks network egress from
+  the pdf.js worker where your document is parsed (a worker does not inherit the page's policy).
 
 Deploy somewhere that ignores `_headers` and the app still works, but silently without any of
 the above. If you fork and host it elsewhere, port those headers to your host's own mechanism.
@@ -63,8 +64,8 @@ imply more than it does. See [SECURITY.md](./SECURITY.md) for the full threat mo
 
 ## Getting started
 
-Requires Node 24+ (see `.nvmrc`) and pnpm (the repo pins a version via `packageManager`; Corepack picks it up
-automatically).
+Requires Node 24+ (see `.nvmrc`) and pnpm (the repo pins a version via `packageManager`; Corepack
+picks it up automatically).
 
 ```sh
 pnpm install

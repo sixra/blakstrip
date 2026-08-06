@@ -13,7 +13,8 @@ interface GlyphItem {
   width: number;
   height: number;
   hasEOL: boolean;
-  fontName?: string;
+  /** pdf.js's internal name for the run's font; keys into `TextContent.styles`. */
+  fontName: string;
   /** pdf.js reading direction of the run: 'ltr' | 'rtl' | 'ttb'. Always present. */
   dir: string;
 }
@@ -150,6 +151,15 @@ interface TextStyleMetrics {
   fontFamily?: string;
   ascent?: number;
   descent?: number;
+}
+
+/**
+ * The CSS family to measure glyph advances with. Exported for test: substituting
+ * a different family changes the measured distribution and therefore where the
+ * box lands, so the fallback should not be an untested default.
+ */
+export function measurementFamily(style: TextStyleMetrics | undefined): string {
+  return style?.fontFamily ?? 'sans-serif';
 }
 
 /**
@@ -327,11 +337,8 @@ export async function searchPageRects(page: PDFPageProxy, term: string): Promise
       // Measure where the match actually sits inside the run. Font size is
       // arbitrary (100) since we rescale to the run's true advance; that scale
       // also corrects for the browser substituting a font family.
-      /* v8 ignore next -- runs always carry a font name in our PDFs */
-      const style = styles[item.fontName ?? ''] as TextStyleMetrics | undefined;
-      /* v8 ignore next -- and that name always resolves to a style entry */
-      const family = style?.fontFamily ?? 'sans-serif';
-      ctx.font = `100px ${family}`;
+      const style = styles[item.fontName] as TextStyleMetrics | undefined;
+      ctx.font = `100px ${measurementFamily(style)}`;
       const scale = item.width / ctx.measureText(item.str).width;
       const preW = ctx.measureText(item.str.slice(0, localStart)).width * scale;
       const matchW = ctx.measureText(item.str.slice(localStart, localEnd)).width * scale;

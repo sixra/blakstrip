@@ -18,9 +18,16 @@
 # not inherit it (only blob:/data: workers do). The pdf.js worker is where the
 # user's document is actually parsed, so the no-egress guarantee has to be
 # delivered to it as a response header or it does not apply where it matters most.
+#
+# Deliberately only connect-src. The pdf.js worker bundle uses Function(), spawns
+# sub-workers and references WebAssembly, all of which a default-src 'none' would
+# block, breaking PostScript function evaluation and image decoding for some
+# documents. Those are capabilities, not egress; connect-src is the directive that
+# carries the actual promise, and it is the one we can be sure does not regress
+# rendering. Nothing here is exercised by `astro preview`, so keep it minimal.
 /_astro/*
-  Content-Security-Policy: default-src 'none'; script-src 'self'; connect-src 'none'
+  Content-Security-Policy: connect-src 'none'
 
-# The service worker needs same-origin fetches to fill its precache.
+# The service worker fetches same-origin assets to fill its precache, and nothing else.
 /sw.js
-  Content-Security-Policy: default-src 'self'; script-src 'self'; connect-src 'self'
+  Content-Security-Policy: connect-src 'self'

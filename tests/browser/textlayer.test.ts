@@ -6,6 +6,7 @@ import {
   extractAllText,
   extractPageText,
   matchExtentX,
+  measurementFamily,
   overlaps,
   pageHasText,
   pageRunBoxes,
@@ -152,6 +153,7 @@ describe('textlayer', () => {
       width: 60,
       height: 12,
       hasEOL: false,
+      fontName: 'g_d0_f1',
     };
     // RTL is bidi-reordered, so a left-to-right measurement is wrong; cover the
     // full run [originX, originX + width] instead.
@@ -171,6 +173,7 @@ describe('textlayer', () => {
       width: 60,
       height: 12,
       hasEOL: false,
+      fontName: 'g_d0_f1',
       dir: 'ltr',
     };
     // A match reaching the run start snaps its left to originX (not preW-padded),
@@ -207,6 +210,15 @@ describe('textlayer', () => {
     } finally {
       CanvasRenderingContext2D.prototype.measureText = original;
     }
+  });
+
+  it('falls back to a generic family when a font reports none', () => {
+    // Not cosmetic: the family drives measureText, which drives where the box
+    // lands, so the fallback is geometry and deserves a test rather than an
+    // ignore comment.
+    expect(measurementFamily(undefined)).toBe('sans-serif');
+    expect(measurementFamily({})).toBe('sans-serif');
+    expect(measurementFamily({ fontFamily: 'serif' })).toBe('serif');
   });
 
   it('falls back to the padded defaults when a font reports no metrics', () => {

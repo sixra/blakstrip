@@ -62,8 +62,9 @@ export async function buildRedactedPdf(
 
   for (let i = 0; i < pageCount; i += 1) {
     const pageRects = byPage.get(i + 1);
+    const rasterizing = pageRects !== undefined && pageRects.length > 0;
 
-    if (pageRects && pageRects.length > 0) {
+    if (rasterizing) {
       const page = await pdfjsDoc.getPage(i + 1);
       const canvas = await renderPageToImageCanvas(page, RASTER_SCALE);
       const ctx = canvas.getContext('2d');
@@ -101,10 +102,11 @@ export async function buildRedactedPdf(
 
     if (onPage) {
       onPage(i + 1, pageCount);
-      // Rasterizing is CPU-bound and never yields on its own, so on a long
-      // document the tab would sit frozen with a progress label it cannot paint.
-      // Only when someone is actually watching: tests and headless runs skip it.
-      await new Promise((resolve) => setTimeout(resolve));
+      // Rasterizing is CPU-bound and never yields on its own, so the tab would
+      // sit frozen holding a progress label it cannot paint. Only after that
+      // branch: copying a page is cheap, and a timer per page would cost seconds
+      // on a long document that has just a few redactions in it.
+      if (rasterizing) await new Promise((resolve) => setTimeout(resolve));
     }
   }
 

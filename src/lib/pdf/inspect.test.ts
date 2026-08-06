@@ -162,6 +162,9 @@ describe('inspectStructure', () => {
     // panel, so the user sees no warnings on the files most likely to hide data.
     doc.context.register(doc.context.obj({ Type: 5 }));
     doc.context.register(doc.context.obj({ S: PDFString.of('not-a-name') }));
+    // And junk where annotation dictionaries should be, which the page walk has
+    // to step over rather than choke on.
+    doc.getPages()[0].node.set(PDFName.of('Annots'), doc.context.obj([1, 2]));
 
     const findings = await inspectStructure(await doc.save());
     expect(findings.some((f) => f.id === 'meta-Author')).toBe(true);

@@ -8,8 +8,8 @@ By taking part you agree to the [Code of Conduct](./CODE_OF_CONDUCT.md).
 
 ## Development setup
 
-Requires Node 24+ (see `.nvmrc`) and pnpm (the repo pins a version via `packageManager`; Corepack picks it up
-automatically).
+Requires Node 24+ (see `.nvmrc`) and pnpm (the repo pins a version via `packageManager`; Corepack
+picks it up automatically).
 
 ```sh
 pnpm install

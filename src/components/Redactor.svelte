@@ -20,11 +20,14 @@
   let currentPage = $state(1);
   let thumbs = $state<{ page: number; url: string }[]>([]);
   let auditReport = $state<AuditReport | null>(null);
+  let auditFailed = $state(false);
 
   // Redaction rectangles (normalized), with undo/redo handled by the history
   // module so its invalidation rules are covered by the engine's test gate.
   let history = $state(initHistory<RedactionRect[]>([]));
   const rects = $derived(history.present);
+  /** The rect set most recently written to disk, so we don't warn about saved work. */
+  let downloadedRects = $state<RedactionRect[] | null>(null);
 
   // Plain handles: doc/pristine/renderToken are not reactive; the element refs and
   // pageRendered below use $state so the template can bind to them.
@@ -111,6 +114,7 @@
     history = initHistory<RedactionRect[]>([]);
     thumbs = [];
     auditReport = null;
+    auditFailed = false;
     searchMatches = [];
     searchTerm = '';
     noMatches = false;
@@ -120,6 +124,7 @@
     preview = null;
     verifyResult = null;
     pendingBytes = null;
+    downloadedRects = null;
     errorMsg = '';
   }
 
@@ -154,7 +159,10 @@
       const report = await auditDocument(pristine, doc);
       if (gen === docGeneration) auditReport = report; // ignore a stale document's result
     } catch {
-      if (gen === docGeneration) auditReport = null;
+      // An audit that fell over must not look like an audit that found nothing:
+      // no panel at all reads as "this file is fine", which is the opposite of
+      // what a crash on a malformed file means.
+      if (gen === docGeneration) auditFailed = true;
     }
   }
 
@@ -199,9 +207,12 @@
 
   // Redactions live only in this tab; nothing is stored anywhere. Losing them to a
   // stray navigation means redoing the work on a document the user cared enough
-  // about to redact.
+  // about to redact. Not after a download of exactly this set, though: warning
+  // about work the user just saved is how people learn to dismiss the prompt.
+  // Identity comparison is enough because every commit makes a new array.
+  const hasUnsavedWork = $derived(rects.length > 0 && rects !== downloadedRects);
   $effect(() => {
-    if (rects.length === 0) return;
+    if (!hasUnsavedWork) return;
     const warn = (e: BeforeUnloadEvent): void => e.preventDefault();
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
@@ -388,7 +399,10 @@
   }
 
   function confirmDownload() {
-    if (pendingBytes) downloadBytes(pendingBytes, redactedFileName(fileName));
+    if (pendingBytes) {
+      downloadBytes(pendingBytes, redactedFileName(fileName));
+      downloadedRects = rects;
+    }
     closeVerify();
   }
   function closeVerify() {
@@ -530,6 +544,15 @@
 
     {#if auditReport}
       <AuditPanel report={auditReport} />
+    {:else if auditFailed}
+      <p
+        class="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800"
+        role="alert"
+      >
+        Couldn't inspect this file for hidden data, so nothing is listed above. That is not a clean
+        bill of health: treat it as unknown, and read the verify dialog carefully before you
+        download.
+      </p>
     {/if}
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-[130px_1fr]">
