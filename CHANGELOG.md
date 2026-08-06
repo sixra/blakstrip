@@ -47,6 +47,9 @@ All notable changes to this project are documented in this file. The format is b
 - The pdf writer loads only once a document is open, roughly halving the first-load JavaScript.
 - CI pins actions to commit SHAs, runs with `contents: read`, and caches Playwright browsers;
   `@sixra/devkit` is pinned to an exact commit rather than a mutable tag range.
+- `_headers` now sets caching as well as security: a year on the content-hashed `/_astro/*` assets
+  (which is where the ~1.3 MB pdf.js worker lives) and always-revalidate on `/sw.js`, whose precache
+  manifest would otherwise pin an entire stale build offline.
 
 ## [1.0.0] - 2026-07-30
 

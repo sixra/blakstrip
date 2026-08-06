@@ -33,10 +33,10 @@ pdfjs-dist (render/text), Tailwind v4, `@vite-pwa/astro`, TypeScript strict.
 
 ## Deploying
 
-`pnpm build` emits a static site to `dist/`, so any static host will serve it. One
-requirement is not optional: **the host must apply `public/_headers`** (Cloudflare Pages and
-Netlify both read it natively). That file carries the things a `<meta>` CSP cannot express and
-that this app's promises depend on:
+`pnpm build` emits a static site to `dist/`, so any static host will serve it. The target is
+**Cloudflare Pages**, and one requirement is not optional: **the host must apply
+`public/_headers`**. That file carries the things a `<meta>` CSP cannot express and that this app's
+promises depend on:
 
 - `frame-ancestors` / `X-Frame-Options`, the clickjacking defence, which is ignored in a `<meta>`
   policy;
@@ -44,8 +44,16 @@ that this app's promises depend on:
 - the per-path `connect-src` over `/_astro/*` and `/sw.js`, which is what blocks network egress from
   the pdf.js worker where your document is parsed (a worker does not inherit the page's policy).
 
-Deploy somewhere that ignores `_headers` and the app still works, but silently without any of
-the above. If you fork and host it elsewhere, port those headers to your host's own mechanism.
+Deploy somewhere that ignores `_headers` and the app still works, but silently without any of the
+above. If you fork and host it elsewhere, port those headers to your host's own mechanism, and check
+how it combines rules that match the same path: the per-path `connect-src` is written to be
+_additive_ to the site-wide policy, which relies on Cloudflare joining duplicate header values with
+a comma (a comma-separated CSP is parsed as several independent policies). A host that instead
+replaces the value would silently drop `frame-ancestors 'none'` from those paths.
+
+`_headers` also sets the caching policy: a year on the content-hashed `/_astro/*` assets, and
+always-revalidate on `/sw.js`, whose precache manifest would otherwise pin a whole stale build
+offline.
 
 ## Limitations
 
@@ -101,9 +109,13 @@ src/lib/pdf/        framework-free redaction engine (security-critical)
   redact.ts         build the redacted doc (rasterize + copy)
   metadata.ts       strip passes + mark-sweep garbage collection
   coverage.ts       pixel backstop: source ink vs output black
-  export.ts         orchestrate build, strip, save, download
+  export.ts         orchestrate build, strip, save
+  download.ts       save bytes to disk (kept clear of pdf-lib so it loads eagerly)
   verify.ts         verify-on-export
-src/components/     Redactor.svelte (the app), InstallButton.svelte, Header.astro
+src/lib/history.ts  undo/redo over immutable snapshots
+src/components/     Redactor.svelte (the app), with AuditPanel, DropZone,
+                    PageThumbs and VerifyDialog split out of it; InstallButton,
+                    Header.astro
 src/pages/          index.astro (landing), pdf-redact.astro (the tool)
 tests/              Vitest (node + real-Chromium browser projects) + Playwright e2e + axe
 scripts/            gen-icons, gen-fixtures
