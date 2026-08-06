@@ -57,7 +57,7 @@ describe('regionLeaks: the thresholds themselves', () => {
   it('flags a large region by absolute pixel count even when the fraction is tiny', () => {
     const src = solid(100, 100, 0); // ~9,604 ink pixels after erosion
     const out = withVisiblePixels(solid(100, 100, 0), 100);
-    // 100 / 9604 = 1.0%, comfortably under the 3% fraction — but 100 visible ink
+    // 100 / 9604 = 1.0%, comfortably under the 3% fraction, but 100 visible ink
     // pixels is a legible mark, so the absolute ceiling has to catch it.
     expect(regionLeaks(src, out, WHOLE)).toBe(true);
   });

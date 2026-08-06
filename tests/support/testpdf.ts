@@ -182,7 +182,7 @@ export async function makeGreyTextPdf(): Promise<ArrayBuffer> {
 
 /**
  * One page whose text is dense with regex metacharacters. Unescaped, such a term
- * is still a *syntactically valid* regex — it just stops matching the literal
+ * is still a *syntactically valid* regex, it just stops matching the literal
  * text, so a term that genuinely survived is reported as not leaked.
  */
 export async function makeMetacharPdf(): Promise<ArrayBuffer> {
