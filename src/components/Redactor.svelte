@@ -9,6 +9,8 @@
   import type { AuditReport, RedactionRect, VerifyReport } from '@lib/pdf/types';
   import { verifyExport } from '@lib/pdf/verify';
   import AuditPanel from './AuditPanel.svelte';
+  import DropZone from './DropZone.svelte';
+  import PageThumbs from './PageThumbs.svelte';
   import VerifyDialog from './VerifyDialog.svelte';
 
   type Status = 'idle' | 'loading' | 'ready' | 'error';
@@ -19,7 +21,6 @@
   let pageCount = $state(0);
   let currentPage = $state(1);
   let thumbs = $state<{ page: number; url: string }[]>([]);
-  let dragOver = $state(false);
   let auditReport = $state<AuditReport | null>(null);
 
   // Redaction rectangles (normalized), with undo/redo handled by the history
@@ -34,7 +35,6 @@
   let pageCanvas = $state<HTMLCanvasElement>();
   let overlayEl = $state<HTMLDivElement>();
   let viewerEl = $state<HTMLDivElement>();
-  let fileInput = $state<HTMLInputElement>();
   let renderToken = 0;
   let renderTask: RenderTask | null = null;
   // Bumped every time the document changes, so slow fire-and-forget work
@@ -243,33 +243,6 @@
     if (doc) void doc.loadingTask.destroy().catch(() => {});
   });
 
-  // --- file input / drag & drop ---
-  function onInputChange(e: Event) {
-    const input = e.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    if (file) void openFile(file);
-  }
-  // dragleave also fires when the pointer crosses onto a child element, which
-  // would flicker the highlight; only clear it when the pointer truly left.
-  function onDragLeave(e: DragEvent) {
-    const to = e.relatedTarget as Node | null;
-    if (!to || !(e.currentTarget as HTMLElement).contains(to)) dragOver = false;
-  }
-  function onDrop(e: DragEvent) {
-    e.preventDefault();
-    dragOver = false;
-    const file = e.dataTransfer?.files?.[0];
-    if (!file) return;
-    // Some platforms hand over a PDF with an empty type, so fall back to the
-    // extension. Anything else gets a visible reason rather than silence.
-    if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
-      status = 'error';
-      errorMsg = `${file.name} is not a PDF.`;
-      return;
-    }
-    void openFile(file);
-  }
-
   // --- drawing rectangles on the overlay ---
   function fractionsFromEvent(e: PointerEvent) {
     const r = overlayEl!.getBoundingClientRect();
@@ -460,43 +433,13 @@
 <div class="mx-auto w-full max-w-6xl">
   <p class="sr-only" role="status" aria-live="polite">{liveStatus}</p>
   {#if status === 'idle' || status === 'error'}
-    <!-- A real button, so the visible text is the accessible name (WCAG 2.5.3) and
-         Enter/Space come from the platform. The error lives outside it: `button`
-         has children-presentational semantics, so anything nested here is hidden
-         from screen readers, and this is the only feedback a failed open gets. -->
-    <button
-      type="button"
-      class="flex min-h-72 w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-10 text-center transition"
-      class:border-neutral-300={!dragOver}
-      class:bg-white={!dragOver}
-      class:border-neutral-900={dragOver}
-      class:bg-neutral-100={dragOver}
-      ondragover={(e) => {
-        e.preventDefault();
-        dragOver = true;
+    <DropZone
+      error={status === 'error' ? errorMsg : ''}
+      onFile={(file) => void openFile(file)}
+      onReject={(reason) => {
+        status = 'error';
+        errorMsg = reason;
       }}
-      ondragleave={onDragLeave}
-      ondrop={onDrop}
-      onclick={() => fileInput?.click()}
-    >
-      <span class="text-lg font-medium text-neutral-800">Drop a PDF to redact</span>
-      <span class="text-sm text-neutral-600">
-        or <span class="pp-click">click</span><span class="pp-tap">tap</span> to choose a file · nothing
-        leaves your browser
-      </span>
-    </button>
-    {#if status === 'error'}
-      <p class="mt-3 text-center text-sm text-red-600" role="alert">
-        Could not open that file: {errorMsg}
-      </p>
-    {/if}
-    <input
-      bind:this={fileInput}
-      type="file"
-      accept="application/pdf"
-      class="sr-only"
-      onchange={onInputChange}
-      aria-label="Choose a PDF file"
     />
   {:else}
     <div class="mb-4 flex flex-wrap items-center gap-3">
@@ -585,24 +528,7 @@
     {/if}
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-[130px_1fr]">
-      <nav
-        class="flex max-h-32 gap-2 overflow-x-auto pr-1 sm:block sm:max-h-[76vh] sm:gap-0 sm:overflow-x-visible sm:overflow-y-auto"
-        aria-label="Pages"
-      >
-        {#each thumbs as t (t.page)}
-          <!-- Fixed width in the narrow-screen strip; full width in the sidebar. -->
-          <button
-            class="block w-20 shrink-0 overflow-hidden rounded border bg-neutral-100 transition sm:mb-2 sm:w-full"
-            class:border-neutral-900={t.page === currentPage}
-            class:border-transparent={t.page !== currentPage}
-            onclick={() => goTo(t.page)}
-            aria-current={t.page === currentPage ? 'page' : undefined}
-          >
-            <img src={t.url} alt={`Page ${t.page}`} class="block w-full" />
-            <span class="block py-1 text-center text-xs text-neutral-600">{t.page}</span>
-          </button>
-        {/each}
-      </nav>
+      <PageThumbs {thumbs} {currentPage} onSelect={goTo} />
 
       <div bind:this={viewerEl}>
         <div class="relative inline-block">
