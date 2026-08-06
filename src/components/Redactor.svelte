@@ -227,6 +227,28 @@
     if (status === 'ready') void renderCurrent();
   });
 
+  // The canvas is sized once from the viewer's width and then carries explicit
+  // pixel width *and* height. Narrow the window and `max-w-full` shrinks the width
+  // while that inline height stays put, so the page renders squashed and the black
+  // boxes visibly stop sitting over the content they cover. Re-fit on resize.
+  $effect(() => {
+    if (status !== 'ready' || !viewerEl) return;
+    const el = viewerEl;
+    let last = el.clientWidth;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const observer = new ResizeObserver(() => {
+      if (el.clientWidth === last) return; // height-only changes need no re-render
+      last = el.clientWidth;
+      clearTimeout(timer);
+      timer = setTimeout(() => void renderCurrent(), 100);
+    });
+    observer.observe(el);
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
+  });
+
   // Tear down the last-open document's worker (and any in-flight render) when the
   // island unmounts, so navigating away doesn't leak a pdf.js worker thread.
   onDestroy(() => {

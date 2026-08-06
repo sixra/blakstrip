@@ -47,6 +47,28 @@ test('the downloaded file no longer contains the redacted secret', async ({ page
   expect(outputContains(bytes, 'jane.author@example.com')).toBe(false);
 });
 
+test('re-fits the page when the viewport narrows', async ({ page }) => {
+  const redactor = new RedactorPage(page);
+  await redactor.goto();
+  await redactor.uploadTextFixture();
+
+  const canvas = page.locator('canvas');
+  const size = (): Promise<{ w: number; h: number }> =>
+    canvas.evaluate((c: HTMLCanvasElement) => ({
+      w: parseInt(c.style.width, 10),
+      h: parseInt(c.style.height, 10),
+    }));
+  const before = await size();
+
+  await page.setViewportSize({ width: 700, height: 800 });
+  // Without a re-render the canvas keeps its old inline width and `max-w-full`
+  // squashes it, so this poll is what actually distinguishes the two behaviours.
+  await expect.poll(async () => (await size()).w).toBeLessThan(before.w);
+
+  const after = await size();
+  expect(after.w / after.h).toBeCloseTo(before.w / before.h, 2); // not distorted
+});
+
 test('authors a redaction box with the keyboard', async ({ page }) => {
   const redactor = new RedactorPage(page);
   await redactor.goto();
