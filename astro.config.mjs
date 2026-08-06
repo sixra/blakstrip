@@ -73,7 +73,12 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // pdf.js ships its worker as .mjs; without that extension the app installs
+        // but cannot open a PDF offline, which is the whole point of installing it.
+        globPatterns: ['**/*.{js,mjs,css,html,ico,png,svg,woff2,wasm}'],
+        // The worker is ~1.3 MB and grows each release; workbox silently skips
+        // anything over its 2 MiB default, so pin the ceiling rather than drift into it.
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
     }),
   ],
