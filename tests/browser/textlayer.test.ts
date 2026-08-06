@@ -8,6 +8,7 @@ import {
   matchExtentX,
   overlaps,
   pageHasText,
+  pageRunBoxes,
   searchDocumentRects,
   searchPageRects,
 } from '../../src/lib/pdf/textlayer';
@@ -175,6 +176,33 @@ describe('textlayer', () => {
     expect(matchExtentX(base, 40, 20, 0.5, false, true)[1]).toBe(160);
     // A match spanning the whole run covers it end to end.
     expect(matchExtentX(base, 0, 60, 0.5, true, true)).toEqual([100, 160]);
+  });
+
+  it('snaps a match to the run edge when per-glyph measurement falls short', async () => {
+    const doc = await loadPdf(await makeMixedRunPdf());
+    const page = await doc.getPage(1);
+    const RUN = '10827 Berlin.';
+
+    // A uniform measurement error cannot be observed here: the run's total is
+    // rescaled to pdf.js's authoritative width, so any constant factor cancels.
+    // What the snap actually defends against is measurement that is short *within*
+    // the run, which is what condensed and substituted fonts produce. Model that
+    // by under-reporting substrings while leaving the full run honest.
+    const original = CanvasRenderingContext2D.prototype.measureText;
+    CanvasRenderingContext2D.prototype.measureText = function (text: string) {
+      const { width } = original.call(this, text);
+      return { width: text === RUN ? width : width * 0.8 } as TextMetrics;
+    };
+    try {
+      const [berlin] = await searchPageRects(page, 'Berlin.');
+      const run = (await pageRunBoxes(page)).find((r) => r.str === RUN);
+      if (!run) throw new Error('fixture run not found');
+      // The match reaches the end of the run, so its right edge must snap there
+      // rather than trust the short measurement and leave the final glyphs bare.
+      expect(berlin.x + berlin.w).toBeGreaterThanOrEqual(run.x + run.w - 1e-6);
+    } finally {
+      CanvasRenderingContext2D.prototype.measureText = original;
+    }
   });
 
   it('detects box overlap in every separation direction', () => {

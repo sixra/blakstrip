@@ -5,6 +5,7 @@ import { loadPdf } from '../../src/lib/pdf/render';
 import {
   collectRedactedText,
   extractAllText,
+  extractPageText,
   searchDocumentRects,
 } from '../../src/lib/pdf/textlayer';
 import type { RedactionRect } from '../../src/lib/pdf/types';
@@ -12,8 +13,11 @@ import { verifyExport } from '../../src/lib/pdf/verify';
 import {
   makeAnnotatedPdf,
   makeEncryptedLikePdf,
+  makeLayeredPdf,
+  makeMetacharPdf,
   makeRepeatedRunPdf,
   makeTextPdf,
+  makeTwoLinePdf,
 } from '../support/testpdf';
 
 const wholePage1: RedactionRect = { page: 1, x: 0, y: 0, w: 1, h: 1 };
@@ -83,6 +87,19 @@ describe('redact + export + verify', () => {
     expect(report.clean).toBe(true);
   });
 
+  it('refuses a clean verdict when a copied page still carries a layer', async () => {
+    const pristine = await makeLayeredPdf();
+    const doc = await loadPdf(pristine);
+    // Redact page 1 only, so page 2 is copied verbatim and brings its OCG along.
+    const bytes = await exportRedactedPdf(pristine, doc, [wholePage1]);
+    const report = await verifyExport(bytes);
+    // The catalog's /OCProperties does not survive copyPages, so keying off it
+    // alone would find nothing here and hand back "clean" on a file whose hidden
+    // layer may now render visible.
+    expect(report.remaining.some((f) => f.id === 'ocg')).toBe(true);
+    expect(report.clean).toBe(false);
+  });
+
   it('flags a surviving term as a whole word, not an incidental substring', async () => {
     const pristine = await makeTextPdf();
     const doc = await loadPdf(pristine);
@@ -113,6 +130,34 @@ describe('redact + export + verify', () => {
     const leak = await verifyExport(shrunkBytes, [], { doc, rects: shrunk });
     expect(leak.uncoveredRegions.length).toBeGreaterThan(0);
     expect(leak.clean).toBe(false);
+  });
+
+  it('matches a redacted term literally, not as a regular expression', async () => {
+    const pristine = await makeMetacharPdf();
+    const doc = await loadPdf(pristine);
+    // No redactions, so the line genuinely survives in the output.
+    const bytes = await exportRedactedPdf(pristine, doc, []);
+
+    const leak = await verifyExport(bytes, ['Phone: +1 (555) 123-4567']);
+    expect(leak.leakedTerms).toEqual(['Phone: +1 (555) 123-4567']);
+
+    // The other direction, and the one that catches a silent regression: "5.5"
+    // does not occur literally, but as a regex `5.5` matches the "555" inside
+    // "(555)". Reporting it would be a false alarm; missing the case above would
+    // be a false "clean". Both come from the same escaping.
+    expect((await verifyExport(bytes, ['5.5'])).leakedTerms).toEqual([]);
+  });
+
+  it('separates lines so the next one cannot mask a leaked term', async () => {
+    const pristine = await makeTwoLinePdf();
+    const doc = await loadPdf(pristine);
+    const text = await extractPageText(await doc.getPage(1));
+    expect(text.split('\n').map((s) => s.trim())).toContain('Reported by Jane Author');
+
+    // Without the line break the haystack reads "...Jane AuthorSensitive...", and
+    // the \W boundary after the term never matches: a surviving name goes unflagged.
+    const bytes = await exportRedactedPdf(pristine, doc, []);
+    expect((await verifyExport(bytes, ['Jane Author'])).leakedTerms).toEqual(['Jane Author']);
   });
 
   it('names the redacted file', () => {
