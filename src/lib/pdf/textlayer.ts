@@ -139,8 +139,38 @@ function indicesOf(haystack: string, needle: string): number[] {
 // type: how far below the baseline to reach (descenders like g/j/p/y) and how far
 // above it to top out (caps, accents, ascenders). Font-relative, because a
 // page-absolute pad that's fine at 12pt leaves tails of a 40pt glyph exposed.
+// Deliberately generous: for ordinary fonts these exceed the true metrics (a
+// typical ascent is ~0.72 em against the 1.15 here), and over-covering is the
+// only safe direction to be wrong in.
 const DESCENT_FRAC = 0.3;
 const ASCENT_FRAC = 1.15;
+
+/** The subset of a pdf.js TextStyle we use, keyed by `item.fontName`. */
+interface TextStyleMetrics {
+  fontFamily?: string;
+  ascent?: number;
+  descent?: number;
+}
+
+/**
+ * How far above and below the baseline to cover, in fractions of the font height.
+ * pdf.js reports each font's real ascent and descent as em fractions (descent
+ * negative); the padded defaults above normally reach further, so this only binds
+ * for the unusual font whose descenders or accents run past them. Taking the max
+ * can only grow the box, never shrink it. Exported for test: the fallbacks matter
+ * (a missing style must not shrink the box to nothing) and are not otherwise
+ * reachable, since pdf.js supplies metrics for every font it reports.
+ */
+export function verticalCover(style: TextStyleMetrics | undefined): {
+  above: number;
+  below: number;
+} {
+  return {
+    above: Math.max(ASCENT_FRAC, style?.ascent ?? 0),
+    below: Math.max(DESCENT_FRAC, Math.abs(style?.descent ?? 0)),
+  };
+}
+
 // Horizontal safety margin: the larger of a hairline page fraction and a small
 // fraction of the font height, so bigger type gets a proportionally wider margin
 // where per-glyph measurement is least reliable.
@@ -260,7 +290,7 @@ export async function searchPageRects(page: PDFPageProxy, term: string): Promise
   const uw = vp.viewBox[2] - vp.viewBox[0];
   const needle = term.toLowerCase();
   const content = await page.getTextContent();
-  const styles = content.styles as Record<string, { fontFamily?: string }>;
+  const styles = content.styles as Record<string, TextStyleMetrics>;
   const ctx = textMeasurer();
 
   // Flatten runs into one string, remembering where each run sits in it so a
@@ -298,7 +328,9 @@ export async function searchPageRects(page: PDFPageProxy, term: string): Promise
       // arbitrary (100) since we rescale to the run's true advance; that scale
       // also corrects for the browser substituting a font family.
       /* v8 ignore next -- runs always carry a font name in our PDFs */
-      const family = styles[item.fontName ?? '']?.fontFamily ?? 'sans-serif';
+      const style = styles[item.fontName ?? ''] as TextStyleMetrics | undefined;
+      /* v8 ignore next -- and that name always resolves to a style entry */
+      const family = style?.fontFamily ?? 'sans-serif';
       ctx.font = `100px ${family}`;
       const scale = item.width / ctx.measureText(item.str).width;
       const preW = ctx.measureText(item.str.slice(0, localStart)).width * scale;
@@ -310,12 +342,13 @@ export async function searchPageRects(page: PDFPageProxy, term: string): Promise
       // transform so rotated pages land over the glyphs. Vertical extent is
       // font-relative so tall type keeps its descenders and ascenders covered.
       const [xL, xR] = matchExtentX(item, preW, matchW, safetyX, atRunStart, atRunEnd);
+      const { above, below } = verticalCover(style);
       const box = normalizeUserBox(
         vp,
         xL,
-        baselineY - fontH * DESCENT_FRAC,
+        baselineY - fontH * below,
         xR,
-        baselineY + fontH * ASCENT_FRAC
+        baselineY + fontH * above
       );
       rects.push({
         page: page.pageNumber,

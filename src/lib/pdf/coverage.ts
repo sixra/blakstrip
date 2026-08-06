@@ -17,7 +17,7 @@
  */
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { renderPageToImageCanvas } from './render';
-import { groupRectsByPage, pageRunBoxes, type RunBox } from './textlayer';
+import { groupRectsByPage, overlaps, pageRunBoxes, type RunBox } from './textlayer';
 import type { RedactionRect } from './types';
 
 /** Device-pixel scale for the coverage raster. Enough to resolve thin glyph tails. */
@@ -94,11 +94,6 @@ export function regionLeaks(src: Rgba, out: Rgba, r: Region): boolean {
   return leaked > MAX_LEAK_PIXELS || leaked / ink > MAX_LEAK_FRACTION;
 }
 
-/** Overlap test between a rect and a run box (both normalized, top-left). */
-function boxesOverlap(a: RedactionRect, b: RunBox): boolean {
-  return !(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
-}
-
 /** Does `rect` span the full horizontal extent of `run` (so the whole run should be gone)? */
 function spansHorizontally(rect: RedactionRect, run: RunBox): boolean {
   const eps = 1e-4;
@@ -148,7 +143,7 @@ export async function checkCoverage(
       // their own coverage, so the rect region is the whole check.
       if (rect.term !== undefined) {
         for (const run of runs) {
-          if (boxesOverlap(rect, run) && spansHorizontally(rect, run)) regions.push(run);
+          if (overlaps(rect, run) && spansHorizontally(rect, run)) regions.push(run);
         }
       }
       if (regions.some((reg) => regionLeaks(srcImg, outImg, reg))) {

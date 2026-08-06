@@ -54,7 +54,6 @@ export async function buildRedactedPdf(
       const ctx = canvas.getContext('2d');
       /* v8 ignore next -- a real 2D context is always available in the browser */
       if (!ctx) throw new Error('2D canvas context unavailable');
-      ctx.imageSmoothingEnabled = false;
       ctx.fillStyle = '#000000';
       for (const r of pageRects) {
         // Snap each edge outward to a whole device pixel. A fractional fillRect

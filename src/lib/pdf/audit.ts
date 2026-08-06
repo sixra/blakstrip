@@ -19,11 +19,5 @@ export async function auditDocument(
   const findings = await inspectStructure(new Uint8Array(pristine));
   const hasTextLayer = await documentHasText(pdfjsDoc);
 
-  return {
-    pageCount: pdfjsDoc.numPages,
-    hasTextLayer,
-    // No extractable text on any page → almost certainly a scan.
-    isLikelyScan: !hasTextLayer,
-    findings,
-  };
+  return { hasTextLayer, findings };
 }

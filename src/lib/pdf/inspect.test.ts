@@ -119,6 +119,40 @@ describe('inspectStructure', () => {
     expect(findings.some((f) => f.id === 'ocg')).toBe(true);
   });
 
+  it('separates hyperlinks from annotations that can hide content', async () => {
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([612, 792]);
+    const link = doc.context.obj({
+      Type: 'Annot',
+      Subtype: 'Link',
+      Rect: [0, 0, 10, 10],
+      A: { S: 'URI', URI: PDFString.of('https://example.com') },
+    });
+    page.node.set(PDFName.of('Annots'), doc.context.obj([doc.context.register(link)]));
+
+    const findings = await inspectStructure(await doc.save());
+    // A clickable URL is not concealed content; flagging it as one at high
+    // severity is what teaches users to ignore the panel.
+    expect(findings.some((f) => f.id === 'annots')).toBe(false);
+    const links = findings.find((f) => f.id === 'links');
+    expect(links?.severity).toBe('medium');
+  });
+
+  it('sees an annotation written directly into a page /Annots array', async () => {
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([612, 792]);
+    // Direct dictionary, not an indirect object: legal PDF, and invisible to an
+    // enumeration of indirect objects.
+    page.node.set(
+      PDFName.of('Annots'),
+      doc.context.obj([
+        { Type: 'Annot', Subtype: 'Text', Rect: [0, 0, 10, 10], Contents: PDFString.of('secret') },
+      ])
+    );
+    const findings = await inspectStructure(await doc.save());
+    expect(findings.some((f) => f.id === 'annots')).toBe(true);
+  });
+
   it('survives a wrong-typed /Type and /S instead of blanking the audit', async () => {
     const doc = await PDFDocument.create();
     doc.addPage([612, 792]);

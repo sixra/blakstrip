@@ -50,11 +50,11 @@ export interface Finding {
 
 /** Result of inspecting a document on load. */
 export interface AuditReport {
-  pageCount: number;
-  /** True if any page exposes extractable text (vs a pure scan). */
+  /**
+   * True if any page exposes extractable text. A document with none is almost
+   * certainly a scan, which is the same fact, so it is not stored twice.
+   */
   hasTextLayer: boolean;
-  /** Heuristic: image-only pages with no text → likely a scan. */
-  isLikelyScan: boolean;
   findings: Finding[];
 }
 

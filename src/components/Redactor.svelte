@@ -555,7 +555,8 @@
         disabled={!hasTextLayer}
         placeholder="Find text to redact across all pages…"
         aria-label="Find text to redact"
-        class="w-72 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-900 placeholder:text-neutral-500 focus:border-neutral-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-400"
+        aria-describedby={hasTextLayer ? undefined : 'no-text-layer-help'}
+        class="w-full max-w-72 rounded-lg border border-neutral-500 bg-white px-3 py-1.5 text-sm text-neutral-900 placeholder:text-neutral-500 focus:border-neutral-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-400"
       />
       <button
         class={btn}
@@ -580,7 +581,7 @@
         >Apply page to all</button
       >
       {#if auditReport && !hasTextLayer}
-        <p class="basis-full text-xs text-amber-700">
+        <p id="no-text-layer-help" class="basis-full text-xs text-amber-700">
           This file has no text layer, so search can't find words. Draw boxes to redact instead.
         </p>
       {/if}
@@ -616,7 +617,7 @@
             ✓ No hidden metadata, annotations, attachments, or scripts found.
           </p>
         {/if}
-        {#if auditReport.isLikelyScan}
+        {#if !hasTextLayer}
           <p class="mt-2 text-xs text-amber-700">
             Looks like a scanned document (no text layer). Draw boxes over regions; flattening
             removes them safely.
@@ -630,11 +631,15 @@
       </section>
     {/if}
 
-    <div class="grid grid-cols-[130px_1fr] gap-4">
-      <nav class="max-h-[76vh] overflow-y-auto pr-1" aria-label="Pages">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-[130px_1fr]">
+      <nav
+        class="flex max-h-32 gap-2 overflow-x-auto pr-1 sm:block sm:max-h-[76vh] sm:gap-0 sm:overflow-x-visible sm:overflow-y-auto"
+        aria-label="Pages"
+      >
         {#each thumbs as t (t.page)}
+          <!-- Fixed width in the narrow-screen strip; full width in the sidebar. -->
           <button
-            class="mb-2 block w-full overflow-hidden rounded border bg-neutral-100 transition"
+            class="block w-20 shrink-0 overflow-hidden rounded border bg-neutral-100 transition sm:mb-2 sm:w-full"
             class:border-neutral-900={t.page === currentPage}
             class:border-transparent={t.page !== currentPage}
             onclick={() => goTo(t.page)}
@@ -688,7 +693,7 @@
           {/snippet}
           {#snippet deleteButton(r: RedactionRect)}
             <button
-              class="pointer-events-auto absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-black opacity-0 ring-neutral-900 transition group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none"
+              class="pointer-events-auto absolute -top-3 -right-3 flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-bold text-black opacity-0 ring-neutral-900 transition group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none"
               onclick={(e) => {
                 e.stopPropagation();
                 deleteRect(r);
@@ -704,7 +709,7 @@
               {@render posBox(preview, 'absolute border-2 border-neutral-900 bg-black/30')}
             {/if}
             {#each searchPreview as r, i (`s${i}`)}
-              {@render posBox(r, 'absolute border-2 border-amber-400 bg-amber-400/25')}
+              {@render posBox(r, 'absolute border-2 border-amber-700 bg-amber-400/25')}
             {/each}
           </div>
         </div>

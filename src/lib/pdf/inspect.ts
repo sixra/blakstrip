@@ -40,10 +40,12 @@ function usesDct(dict: PDFDict): boolean {
 /**
  * Scan JPEG bytes for an APP1 EXIF segment (`FF E1 … "Exif\0\0"`), which can
  * carry GPS coordinates and camera identifiers. The marker sits in the file
- * header, so bound the scan to the first 64 KiB.
+ * header, so bound the scan to the first 64 KiB. The two NUL bytes that close
+ * the identifier are part of the match: without them, entropy-coded image data
+ * that happens to spell "Exif" would raise a false alarm.
  */
 function hasExifSegment(bytes: Uint8Array): boolean {
-  const limit = Math.min(bytes.length - 7, 65536);
+  const limit = Math.min(bytes.length - 9, 65536);
   for (let i = 0; i < limit; i += 1) {
     if (
       bytes[i] === 0xff &&
@@ -51,7 +53,9 @@ function hasExifSegment(bytes: Uint8Array): boolean {
       bytes[i + 4] === 0x45 && // E
       bytes[i + 5] === 0x78 && // x
       bytes[i + 6] === 0x69 && // i
-      bytes[i + 7] === 0x66 // f
+      bytes[i + 7] === 0x66 && // f
+      bytes[i + 8] === 0x00 &&
+      bytes[i + 9] === 0x00
     ) {
       return true;
     }
@@ -126,7 +130,7 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
     }
   }
 
-  let annots = 0;
+  const annotDicts: PDFDict[] = [];
   let files = 0;
   let xmp = 0;
   let js = 0;
@@ -135,13 +139,31 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
   for (const [, obj] of doc.context.enumerateIndirectObjects()) {
     const dict = dictOf(obj);
     if (!dict) continue;
-    if (nameEq(dict, 'Type', 'Annot')) annots += 1;
+    if (nameEq(dict, 'Type', 'Annot')) annotDicts.push(dict);
     else if (nameEq(dict, 'Type', 'EmbeddedFile')) files += 1;
     else if (nameEq(dict, 'Type', 'Metadata')) xmp += 1;
     else if (nameEq(dict, 'Type', 'OCG') || nameEq(dict, 'Type', 'OCMD')) ocgs += 1;
     if (nameEq(dict, 'S', 'JavaScript') || dict.get(PDFName.of('JS')) !== undefined) js += 1;
     if (obj instanceof PDFRawStream && usesDct(dict) && hasExifSegment(obj.contents)) exif += 1;
   }
+
+  // An annotation written directly into a page's /Annots array is legal and is
+  // not an indirect object, so the enumeration above cannot see it. Walk the
+  // arrays too, deduplicating by identity against what we already found.
+  for (const page of doc.getPages()) {
+    const annots = doc.context.lookup(page.node.get(PDFName.of('Annots')));
+    if (!(annots instanceof PDFArray)) continue;
+    for (const entry of annots.asArray()) {
+      const dict = doc.context.lookup(entry);
+      if (dict instanceof PDFDict && !annotDicts.includes(dict)) annotDicts.push(dict);
+    }
+  }
+
+  // A /Link is a hyperlink, not concealed content. Reporting it at the same
+  // severity as a comment or a form value is how users learn to dismiss the
+  // panel, so it gets its own quieter finding.
+  const links = annotDicts.filter((d) => nameEq(d, 'Subtype', 'Link')).length;
+  const annots = annotDicts.length - links;
 
   if (xmp > 0)
     findings.push({
@@ -158,6 +180,14 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
       category: 'annotation',
       title: 'Annotations / form fields',
       detail: `${annots} annotation object(s); comments or form values persist under any visual covering.`,
+    });
+  if (links > 0)
+    findings.push({
+      id: 'links',
+      severity: 'medium',
+      category: 'annotation',
+      title: 'Hyperlinks',
+      detail: `${links} link annotation(s). These are clickable URLs rather than hidden content, but the addresses are stored in the file and are removed on export.`,
     });
   if (files > 0)
     findings.push({

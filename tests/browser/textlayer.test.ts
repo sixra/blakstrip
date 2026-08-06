@@ -11,8 +11,10 @@ import {
   pageRunBoxes,
   searchDocumentRects,
   searchPageRects,
+  verticalCover,
 } from '../../src/lib/pdf/textlayer';
 import {
+  makeLargeGlyphPdf,
   makeMixedRunPdf,
   makeRotatedPdf,
   makeScanLikePdf,
@@ -205,6 +207,37 @@ describe('textlayer', () => {
     } finally {
       CanvasRenderingContext2D.prototype.measureText = original;
     }
+  });
+
+  it('falls back to the padded defaults when a font reports no metrics', () => {
+    // A missing style entry must not collapse the vertical cover to nothing.
+    expect(verticalCover(undefined)).toEqual({ above: 1.15, below: 0.3 });
+    expect(verticalCover({})).toEqual({ above: 1.15, below: 0.3 });
+    // Real metrics only ever widen it, and descent arrives negative.
+    expect(verticalCover({ ascent: 1.4, descent: -0.45 })).toEqual({ above: 1.4, below: 0.45 });
+    expect(verticalCover({ ascent: 0.72, descent: -0.21 })).toEqual({ above: 1.15, below: 0.3 });
+  });
+
+  it('never covers less than the font its own metrics ask for', async () => {
+    // pdf.js reports each font's real ascent/descent, and the padded defaults are
+    // normally the larger of the two. Assert that reality holds for a standard
+    // font, so the max() in verticalCover is documented rather than assumed, and
+    // that the box still clears the run box derived from those same metrics.
+    const doc = await loadPdf(await makeLargeGlyphPdf());
+    const page = await doc.getPage(1);
+    const styles = (await page.getTextContent()).styles as Record<
+      string,
+      { ascent?: number; descent?: number }
+    >;
+    const metrics = Object.values(styles)[0];
+    expect(metrics.ascent).toBeLessThan(1.15); // the padded default reaches further
+    expect(Math.abs(metrics.descent ?? 0)).toBeLessThan(0.3);
+
+    const [rect] = await searchPageRects(page, 'PgjyQ');
+    const run = (await pageRunBoxes(page)).find((r) => r.str === 'PgjyQ');
+    if (!run) throw new Error('fixture run not found');
+    expect(rect.y).toBeLessThanOrEqual(run.y);
+    expect(rect.y + rect.h).toBeGreaterThanOrEqual(run.y + run.h);
   });
 
   it('detects box overlap in every separation direction', () => {
