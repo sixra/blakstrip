@@ -221,6 +221,16 @@
     }
   }
 
+  // Redactions live only in this tab; nothing is stored anywhere. Losing them to a
+  // stray navigation means redoing the work on a document the user cared enough
+  // about to redact.
+  $effect(() => {
+    if (rects.length === 0) return;
+    const warn = (e: BeforeUnloadEvent): void => e.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  });
+
   // Re-render whenever the document or page changes (runs after DOM is ready).
   $effect(() => {
     void currentPage;
@@ -383,6 +393,7 @@
   let verifyResult = $state<VerifyReport | null>(null);
   let pendingBytes: Uint8Array | null = null;
   let returnFocusTo: HTMLElement | null = null;
+  let exportStep = $state('');
 
   // The native dialog handles the whole modal contract: focus goes inside on
   // showModal() and is restored on close, Tab is trapped, the background is inert,
@@ -406,21 +417,29 @@
     exporting = true;
     errorMsg = '';
     try {
-      const bytes = await exportRedactedPdf(pristine, doc, rects);
+      const bytes = await exportRedactedPdf(pristine, doc, rects, (done, total) => {
+        exportStep = `page ${done} of ${total}`;
+      });
+      exportStep = 'verifying';
       pendingBytes = bytes;
       // Re-check that the text we actually covered is gone from the output, not
       // just that no structural leak vectors remain. Exact search terms travel
       // on the rects; hand-drawn boxes contribute the whole runs they cover.
-      const rectTerms = rects.map((r) => r.term).filter((t): t is string => Boolean(t));
+      // Search terms are checked document-wide: search redacted every match, so a
+      // survivor anywhere is a genuine failure. Text under a hand-drawn box is
+      // page-local, so it is passed separately and reported as "also on page N".
+      const rectTerms = [
+        ...new Set(rects.map((r) => r.term).filter((t): t is string => Boolean(t))),
+      ];
       const boxText = await collectRedactedText(doc, rects);
-      const redactedTerms = [...new Set([...rectTerms, ...boxText])];
       // Pass the source doc + rects so verify also re-reads the output pixels and
       // proves each redaction actually landed black over its target.
-      verifyResult = await verifyExport(bytes, redactedTerms, { doc, rects });
+      verifyResult = await verifyExport(bytes, rectTerms, { doc, rects }, boxText);
     } catch (e) {
       errorMsg = e instanceof Error ? e.message : String(e);
     } finally {
       exporting = false;
+      exportStep = '';
     }
   }
 
@@ -457,7 +476,7 @@
     status === 'loading'
       ? 'Opening file.'
       : exporting
-        ? 'Exporting redacted PDF.'
+        ? `Exporting redacted PDF, ${exportStep}.`
         : searching
           ? 'Searching.'
           : noMatches
@@ -526,7 +545,11 @@
           class="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40"
           onclick={exportPdf}
           disabled={exporting}
-          >{exporting ? 'Exporting…' : rects.length === 0 ? 'Strip metadata' : 'Export'}</button
+          >{exporting
+            ? `Exporting… ${exportStep}`
+            : rects.length === 0
+              ? 'Strip metadata'
+              : 'Export'}</button
         >
         <button class={btn} onclick={reset}>New file</button>
       </div>
@@ -781,6 +804,16 @@
               {verifyResult.leakedTerms.join(', ')}
             </p>
           {/if}
+          {#each verifyResult.survivingElsewhere as s (s.term)}
+            <p
+              class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+            >
+              <strong>Also on {s.pages.length === 1 ? 'a page' : 'pages'} you didn't redact:</strong
+              >
+              “{s.term}” is covered where you boxed it, but still readable on page
+              {s.pages.join(', ')}. Redact it there too, or leave it if it isn't sensitive there.
+            </p>
+          {/each}
         </div>
       {/if}
 

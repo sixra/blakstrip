@@ -16,9 +16,10 @@ import type { RedactionRect } from './types';
 export async function exportRedactedPdf(
   pristine: ArrayBuffer,
   pdfjsDoc: PDFDocumentProxy,
-  rects: RedactionRect[]
+  rects: RedactionRect[],
+  onPage?: (done: number, total: number) => void
 ): Promise<Uint8Array> {
-  const out = await buildRedactedPdf(pristine, pdfjsDoc, rects);
+  const out = await buildRedactedPdf(pristine, pdfjsDoc, rects, onPage);
   stripAll(out);
   return out.save({ useObjectStreams: true });
 }

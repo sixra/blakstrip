@@ -14,6 +14,14 @@ import type { RedactionRect } from './types';
 /** Device-pixel scale for rasterized pages (~144 DPI at 2×). Tunable. */
 const RASTER_SCALE = 2;
 
+/**
+ * Every rasterized page is held as an embedded PNG until the single final save(),
+ * so memory grows with the number of redacted pages. Past this many the tab is
+ * likely to be killed mid-export, which looks like data loss rather than a limit;
+ * fail with a sentence the user can act on instead.
+ */
+const MAX_RASTER_PAGES = 300;
+
 async function canvasToPngBytes(canvas: HTMLCanvasElement): Promise<Uint8Array> {
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
   /* v8 ignore next -- toBlob yields a Blob for a valid canvas */
@@ -31,7 +39,8 @@ async function canvasToPngBytes(canvas: HTMLCanvasElement): Promise<Uint8Array> 
 export async function buildRedactedPdf(
   pristine: ArrayBuffer,
   pdfjsDoc: PDFDocumentProxy,
-  rects: RedactionRect[]
+  rects: RedactionRect[],
+  onPage?: (done: number, total: number) => void
 ): Promise<PDFDocument> {
   // ignoreEncryption lets load() succeed on a protected file so we can detect it;
   // pdf-lib cannot actually decrypt, so copying its pages would emit ciphertext.
@@ -44,6 +53,12 @@ export async function buildRedactedPdf(
   const out = await PDFDocument.create();
   const byPage = groupRectsByPage(rects);
   const pageCount = src.getPageCount();
+
+  if (byPage.size > MAX_RASTER_PAGES) {
+    throw new Error(
+      `This export would flatten ${byPage.size} pages to images, which is likely to run the browser out of memory. Redact and export in batches of ${MAX_RASTER_PAGES} pages or fewer.`
+    );
+  }
 
   for (let i = 0; i < pageCount; i += 1) {
     const pageRects = byPage.get(i + 1);
@@ -82,6 +97,14 @@ export async function buildRedactedPdf(
     } else {
       const [copied] = await out.copyPages(src, [i]);
       out.addPage(copied);
+    }
+
+    if (onPage) {
+      onPage(i + 1, pageCount);
+      // Rasterizing is CPU-bound and never yields on its own, so on a long
+      // document the tab would sit frozen with a progress label it cannot paint.
+      // Only when someone is actually watching: tests and headless runs skip it.
+      await new Promise((resolve) => setTimeout(resolve));
     }
   }
 

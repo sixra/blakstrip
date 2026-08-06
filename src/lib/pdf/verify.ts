@@ -7,7 +7,7 @@ import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { checkCoverage } from './coverage';
 import { inspectStructure } from './inspect';
 import { loadPdf } from './render';
-import { extractAllText } from './textlayer';
+import { extractAllText, extractPageText } from './textlayer';
 import type { RedactionRect, VerifyReport } from './types';
 
 /** Escape a user term for literal use inside a RegExp. */
@@ -35,6 +35,26 @@ async function recoverableStrings(doc: PDFDocumentProxy): Promise<string[]> {
   return [...new Set(lines)];
 }
 
+/** Which output pages still read a given term as a whole word. */
+async function findSurvivingPages(
+  doc: PDFDocumentProxy,
+  terms: string[]
+): Promise<{ term: string; pages: number[] }[]> {
+  const wanted = [...new Set(terms.map((t) => t.trim()).filter((t) => t.length > 0))];
+  if (wanted.length === 0) return [];
+
+  const pageText: string[] = [];
+  for (let n = 1; n <= doc.numPages; n += 1) {
+    pageText.push((await extractPageText(await doc.getPage(n))).toLowerCase());
+  }
+  return wanted
+    .map((term) => ({
+      term,
+      pages: pageText.flatMap((text, i) => (survivesAsWord(text, term) ? [i + 1] : [])),
+    }))
+    .filter((hit) => hit.pages.length > 0);
+}
+
 /**
  * Verify exported bytes against the terms the user redacted. A term counts as
  * leaked if it still appears in the recoverable text of the output.
@@ -48,7 +68,8 @@ async function recoverableStrings(doc: PDFDocumentProxy): Promise<string[]> {
 export async function verifyExport(
   bytes: Uint8Array,
   redactedTerms: string[] = [],
-  coverage?: { doc: PDFDocumentProxy; rects: RedactionRect[] }
+  coverage?: { doc: PDFDocumentProxy; rects: RedactionRect[] },
+  boxedText: string[] = []
 ): Promise<VerifyReport> {
   // One parse of the output, shared by the text and pixel checks. Loading it per
   // check spins up a second pdf.js worker over the same bytes, which on a large
@@ -67,12 +88,22 @@ export async function verifyExport(
       ? await checkCoverage(coverage.doc, coverage.rects, outDoc)
       : [];
 
+    // Text under a hand-drawn box is gone from its own page (that page was
+    // rasterized), so anything still readable is on a page the user chose to
+    // leave alone. Naming those pages turns a vague alarm into an instruction.
+    const survivingElsewhere = await findSurvivingPages(outDoc, boxedText);
+
     return {
-      clean: remaining.length === 0 && leakedTerms.length === 0 && uncoveredRegions.length === 0,
+      clean:
+        remaining.length === 0 &&
+        leakedTerms.length === 0 &&
+        uncoveredRegions.length === 0 &&
+        survivingElsewhere.length === 0,
       recoverableStrings: strings,
       remaining,
       leakedTerms,
       uncoveredRegions,
+      survivingElsewhere,
     };
   } finally {
     await outDoc.loadingTask.destroy(); // free the throwaway worker

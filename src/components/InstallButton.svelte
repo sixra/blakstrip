@@ -9,17 +9,18 @@
     userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
   }
 
+  // One-shot facts with no reactive inputs, so they belong at init rather than in
+  // an effect. The island is client:only, so navigator is available here.
+  const nav = navigator as Navigator & { standalone?: boolean };
+  const alreadyInstalled =
+    window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
   let deferred = $state<InstallEvent | null>(null);
-  let showIOS = $state(false);
+  let showIOS = $state(isIOS && !alreadyInstalled);
   let iosHintOpen = $state(false);
 
   $effect(() => {
-    const nav = navigator as Navigator & { standalone?: boolean };
-    const installed =
-      window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true;
-    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    showIOS = isIOS && !installed;
-
     const onPrompt = (e: Event) => {
       e.preventDefault();
       deferred = e as InstallEvent;

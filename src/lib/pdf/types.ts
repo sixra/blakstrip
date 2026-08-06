@@ -69,6 +69,14 @@ export interface VerifyReport {
   /** Redacted search terms that still appear in the output (should be empty). */
   leakedTerms: string[];
   /**
+   * Text a hand-drawn box covered on its own page that is still readable on a
+   * page the user did not redact. Not a failed redaction: the box did its job,
+   * and the same words simply appear again elsewhere. Reported separately so the
+   * remedy ("redact it on page 3 too") is obvious, rather than being mixed in
+   * with redactions that actually failed.
+   */
+  survivingElsewhere: { term: string; pages: number[] }[];
+  /**
    * Redaction rects whose target isn't actually black in the output raster: a
    * box that under-covered its glyphs, or a page that failed to rasterize. Empty
    * when every redaction is proven covered by the pixel check (should be empty).

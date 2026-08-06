@@ -65,16 +65,20 @@ describe('redact + export + verify', () => {
     expect(leak.clean).toBe(false);
   });
 
-  it('verify flags a redacted run still present on an un-redacted page', async () => {
+  it('names the pages where boxed text is still readable', async () => {
     const pristine = await makeRepeatedRunPdf();
     const doc = await loadPdf(pristine);
     // Redact page 1 only; the identical line survives on page 2.
     const rects = [wholePage1];
     const bytes = await exportRedactedPdf(pristine, doc, rects);
-    // The terms the UI would derive from the boxes, fed back into verify.
-    const terms = await collectRedactedText(doc, rects);
-    const report = await verifyExport(bytes, terms);
-    expect(report.leakedTerms).toContain('SEALED CASE 12-34567');
+    // The text the UI derives from the boxes, fed back in as box-local terms.
+    const boxText = await collectRedactedText(doc, rects);
+    const report = await verifyExport(bytes, [], undefined, boxText);
+
+    // Not a failed redaction, so it does not belong in leakedTerms, but it still
+    // blocks a clean verdict and now says where to look.
+    expect(report.leakedTerms).toEqual([]);
+    expect(report.survivingElsewhere).toEqual([{ term: 'SEALED CASE 12-34567', pages: [2] }]);
     expect(report.clean).toBe(false);
   });
 
@@ -158,6 +162,34 @@ describe('redact + export + verify', () => {
     // the \W boundary after the term never matches: a surviving name goes unflagged.
     const bytes = await exportRedactedPdf(pristine, doc, []);
     expect((await verifyExport(bytes, ['Jane Author'])).leakedTerms).toEqual(['Jane Author']);
+  });
+
+  it('reports progress per page so a long export can show where it is', async () => {
+    const pristine = await makeTextPdf();
+    const doc = await loadPdf(pristine);
+    const seen: [number, number][] = [];
+    await exportRedactedPdf(pristine, doc, [wholePage1], (done, total) => {
+      seen.push([done, total]);
+    });
+    expect(seen).toEqual([
+      [1, 2],
+      [2, 2],
+    ]);
+  });
+
+  it('refuses an export that would flatten more pages than memory allows', async () => {
+    const pristine = await makeTextPdf();
+    const doc = await loadPdf(pristine);
+    // The guard runs on the number of distinct redacted pages, before any page is
+    // rasterized, so it can be exercised without building a 300-page fixture.
+    const many: RedactionRect[] = Array.from({ length: 301 }, (_, i) => ({
+      page: i + 1,
+      x: 0,
+      y: 0,
+      w: 1,
+      h: 1,
+    }));
+    await expect(buildRedactedPdf(pristine, doc, many)).rejects.toThrow(/batches/i);
   });
 
   it('names the redacted file', () => {
