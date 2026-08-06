@@ -3,12 +3,8 @@
   "include": [".astro/types.d.ts", "**/*"],
   "exclude": ["dist", "coverage", "test-results", "playwright-report", "dev-dist"],
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@components/*": ["src/components/*"],
-      "@layouts/*": ["src/layouts/*"],
-      "@lib/*": ["src/lib/*"]
+      "@lib/*": ["./src/lib/*"]
     }
   }
 }

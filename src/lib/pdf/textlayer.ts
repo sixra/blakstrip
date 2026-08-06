@@ -14,8 +14,8 @@ interface GlyphItem {
   height: number;
   hasEOL: boolean;
   fontName?: string;
-  /** pdf.js reading direction of the run: 'ltr' | 'rtl' | 'ttb'. */
-  dir?: string;
+  /** pdf.js reading direction of the run: 'ltr' | 'rtl' | 'ttb'. Always present. */
+  dir: string;
 }
 
 function isGlyph(item: unknown): item is GlyphItem {
@@ -228,7 +228,10 @@ export function matchExtentX(
 ): [number, number] {
   const originX = item.transform[4];
   const runRight = originX + item.width;
-  if (item.dir === 'rtl') return [originX, runRight];
+  // Anything but plain left-to-right gets the whole run. pdf.js also emits 'ttb'
+  // for vertical text, where a left-to-right sub-extent is just as meaningless as
+  // it is for the bidi-reordered 'rtl' case. Over-covering is always safe.
+  if (item.dir !== 'ltr') return [originX, runRight];
   const left = atRunStart ? originX : Math.max(originX, originX + preW - safetyX);
   const right = atRunEnd ? runRight : Math.min(runRight, originX + preW + matchW + safetyX);
   return [left, right];

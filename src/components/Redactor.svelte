@@ -373,8 +373,10 @@
     else dialogEl?.close();
   });
 
+  // Zero rects is a legitimate export: every page is copied and stripAll still
+  // runs, which is exactly what a user whose problem is the audit panel wants.
   async function exportPdf() {
-    if (!doc || !pristine || rects.length === 0) return;
+    if (!doc || !pristine || exporting) return;
     // Captured before the button disables itself: a focused element that becomes
     // disabled hands focus to <body>, so by the time the dialog opens there is
     // nothing sensible left for it to restore to on close.
@@ -501,7 +503,8 @@
         <button
           class="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40"
           onclick={exportPdf}
-          disabled={rects.length === 0 || exporting}>{exporting ? 'Exporting…' : 'Export'}</button
+          disabled={exporting}
+          >{exporting ? 'Exporting…' : rects.length === 0 ? 'Strip metadata' : 'Export'}</button
         >
         <button class={btn} onclick={reset}>New file</button>
       </div>

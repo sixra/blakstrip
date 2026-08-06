@@ -154,6 +154,8 @@ describe('textlayer', () => {
     // RTL is bidi-reordered, so a left-to-right measurement is wrong; cover the
     // full run [originX, originX + width] instead.
     expect(matchExtentX({ ...base, dir: 'rtl' }, 10, 20, 0.5)).toEqual([100, 160]);
+    // Vertical runs get the same whole-run treatment for the same reason.
+    expect(matchExtentX({ ...base, dir: 'ttb' }, 10, 20, 0.5)).toEqual([100, 160]);
     // LTR uses the measured sub-extent, padded and clamped inside the run.
     const [l, r] = matchExtentX({ ...base, dir: 'ltr' }, 10, 20, 0.5);
     expect(l).toBeCloseTo(109.5); // 100 + preW(10) - safetyX(0.5)
