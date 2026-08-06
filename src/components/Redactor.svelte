@@ -19,8 +19,8 @@
   let dragOver = $state(false);
   let auditReport = $state<AuditReport | null>(null);
 
-  const sevClass = (s: FindingSeverity): string =>
-    s === 'high' ? 'bg-red-500' : s === 'medium' ? 'bg-amber-500' : 'bg-neutral-500';
+  // FindingSeverity is 'high' | 'medium', so there is no third case to style.
+  const sevClass = (s: FindingSeverity): string => (s === 'high' ? 'bg-red-500' : 'bg-amber-500');
   const auditPanelClass = $derived(
     auditReport && auditReport.findings.length > 0
       ? 'border-amber-300 bg-amber-50'
@@ -239,11 +239,25 @@
     const file = input.files?.[0];
     if (file) void openFile(file);
   }
+  // dragleave also fires when the pointer crosses onto a child element, which
+  // would flicker the highlight; only clear it when the pointer truly left.
+  function onDragLeave(e: DragEvent) {
+    const to = e.relatedTarget as Node | null;
+    if (!to || !(e.currentTarget as HTMLElement).contains(to)) dragOver = false;
+  }
   function onDrop(e: DragEvent) {
     e.preventDefault();
     dragOver = false;
     const file = e.dataTransfer?.files?.[0];
-    if (file && file.type === 'application/pdf') void openFile(file);
+    if (!file) return;
+    // Some platforms hand over a PDF with an empty type, so fall back to the
+    // extension. Anything else gets a visible reason rather than silence.
+    if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+      status = 'error';
+      errorMsg = `${file.name} is not a PDF.`;
+      return;
+    }
+    void openFile(file);
   }
 
   // --- drawing rectangles on the overlay ---
@@ -345,45 +359,25 @@
   let exporting = $state(false);
   let verifyResult = $state<VerifyReport | null>(null);
   let pendingBytes: Uint8Array | null = null;
+  let returnFocusTo: HTMLElement | null = null;
 
-  // Lock the page behind the verify dialog so only the dialog scrolls.
+  // The native dialog handles the whole modal contract: focus goes inside on
+  // showModal() and is restored on close, Tab is trapped, the background is inert,
+  // page scroll is locked, and Escape closes. A hand-rolled version of any one of
+  // those is a bug waiting to happen (the previous trap leaked on the first
+  // Shift+Tab, because focus started on an element its own query excluded).
+  let dialogEl = $state<HTMLDialogElement>();
   $effect(() => {
-    if (!verifyResult) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    if (verifyResult) dialogEl?.showModal();
+    else dialogEl?.close();
   });
-
-  let dialogEl = $state<HTMLDivElement>();
-  // Move focus into the verify dialog on open and restore it on close, and keep
-  // Tab focus trapped inside while it is open (modal focus management).
-  $effect(() => {
-    if (!verifyResult) return;
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    dialogEl?.focus();
-    return () => previouslyFocused?.focus?.();
-  });
-  function trapTab(e: KeyboardEvent) {
-    if (e.key !== 'Tab' || !dialogEl) return;
-    const focusable = dialogEl.querySelectorAll<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
-    if (focusable.length === 0) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  }
 
   async function exportPdf() {
     if (!doc || !pristine || rects.length === 0) return;
+    // Captured before the button disables itself: a focused element that becomes
+    // disabled hands focus to <body>, so by the time the dialog opens there is
+    // nothing sensible left for it to restore to on close.
+    returnFocusTo = document.activeElement as HTMLElement | null;
     exporting = true;
     errorMsg = '';
     try {
@@ -412,9 +406,7 @@
   function closeVerify() {
     verifyResult = null;
     pendingBytes = null;
-  }
-  function onKey(e: KeyboardEvent) {
-    if (e.key === 'Escape' && verifyResult) closeVerify();
+    returnFocusTo?.focus();
   }
 
   function reset() {
@@ -431,15 +423,40 @@
 
   const btn =
     'rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-800 transition hover:border-neutral-400 disabled:cursor-not-allowed disabled:opacity-40';
+
+  // Everything here happens asynchronously and is otherwise announced only by a
+  // button label changing, which screen readers report unreliably. The region is
+  // always mounted (one injected alongside its text is routinely missed) and the
+  // ordering is most-urgent-first, so a single live area covers the whole flow.
+  const liveStatus = $derived(
+    status === 'loading'
+      ? 'Opening file.'
+      : exporting
+        ? 'Exporting redacted PDF.'
+        : searching
+          ? 'Searching.'
+          : noMatches
+            ? 'No matches found.'
+            : searchMatches.length > 0
+              ? `${searchMatches.length} matches found.`
+              : kbAuthoring && preview
+                ? `Redaction box at ${Math.round(preview.x * 100)} percent from left, ${Math.round(preview.y * 100)} percent from top, ${Math.round(preview.w * 100)} by ${Math.round(preview.h * 100)} percent.`
+                : auditReport
+                  ? `Document ready, ${pageCount} pages, ${auditReport.findings.length} hidden items found.`
+                  : ''
+  );
 </script>
 
 <div class="mx-auto w-full max-w-6xl">
+  <p class="sr-only" role="status" aria-live="polite">{liveStatus}</p>
   {#if status === 'idle' || status === 'error'}
-    <div
-      role="button"
-      tabindex="0"
-      aria-label="Drop a PDF here or press Enter to choose a file"
-      class="flex min-h-72 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-10 text-center transition"
+    <!-- A real button, so the visible text is the accessible name (WCAG 2.5.3) and
+         Enter/Space come from the platform. The error lives outside it: `button`
+         has children-presentational semantics, so anything nested here is hidden
+         from screen readers, and this is the only feedback a failed open gets. -->
+    <button
+      type="button"
+      class="flex min-h-72 w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-10 text-center transition"
       class:border-neutral-300={!dragOver}
       class:bg-white={!dragOver}
       class:border-neutral-900={dragOver}
@@ -448,25 +465,21 @@
         e.preventDefault();
         dragOver = true;
       }}
-      ondragleave={() => (dragOver = false)}
+      ondragleave={onDragLeave}
       ondrop={onDrop}
       onclick={() => fileInput?.click()}
-      onkeydown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          fileInput?.click();
-        }
-      }}
     >
-      <p class="text-lg font-medium text-neutral-800">Drop a PDF to redact</p>
-      <p class="text-sm text-neutral-600">
+      <span class="text-lg font-medium text-neutral-800">Drop a PDF to redact</span>
+      <span class="text-sm text-neutral-600">
         or <span class="pp-click">click</span><span class="pp-tap">tap</span> to choose a file · nothing
         leaves your browser
+      </span>
+    </button>
+    {#if status === 'error'}
+      <p class="mt-3 text-center text-sm text-red-600" role="alert">
+        Could not open that file: {errorMsg}
       </p>
-      {#if status === 'error'}
-        <p class="text-sm text-red-600">Could not open that file: {errorMsg}</p>
-      {/if}
-    </div>
+    {/if}
     <input
       bind:this={fileInput}
       type="file"
@@ -614,7 +627,7 @@
             class="block max-w-full rounded shadow-md ring-1 ring-neutral-200"
           ></canvas>
           <!-- Intentional: role="application" drawing surface with a documented keyboard model (see #redact-kb-help). -->
-          <!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
+          <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
           <div
             bind:this={overlayEl}
             class="absolute inset-0 cursor-crosshair touch-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:outline-none"
@@ -690,22 +703,16 @@
   {/if}
 </div>
 
-<svelte:window onkeydown={onKey} />
-
-{#if verifyResult}
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="verify-title"
-    tabindex="-1"
-    onkeydown={trapTab}
-  >
-    <div
-      bind:this={dialogEl}
-      tabindex="-1"
-      class="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-6"
-    >
+<!-- Always mounted, contents gated: unmounting an open dialog would tear it out of
+     the top layer without a close event, losing focus restoration. -->
+<dialog
+  bind:this={dialogEl}
+  aria-labelledby="verify-title"
+  onclose={closeVerify}
+  class="m-auto max-h-[85vh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-6 backdrop:bg-black/50"
+>
+  {#if verifyResult}
+    <div>
       <h2 id="verify-title" class="text-lg font-semibold text-neutral-900">
         Verify before download
       </h2>
@@ -777,9 +784,10 @@
         <button class={btn} onclick={closeVerify}>Cancel</button>
         <button
           class="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-700"
-          onclick={confirmDownload}>Download redacted PDF</button
+          onclick={confirmDownload}
+          >{verifyResult.clean ? 'Download redacted PDF' : 'Download anyway'}</button
         >
       </div>
     </div>
-  </div>
-{/if}
+  {/if}
+</dialog>
