@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { expect, type Locator, type Page } from '@playwright/test';
 
@@ -50,7 +51,29 @@ export class RedactorPage {
     await this.page.keyboard.press('Enter'); // place it
   }
 
+  /**
+   * Redact every occurrence of a term. Unlike drawBox this provably lands on the
+   * text, so a downstream assertion about that text means something.
+   */
+  async redactAllMatching(term: string): Promise<void> {
+    await this.page.getByRole('searchbox', { name: 'Find text to redact' }).fill(term);
+    await this.page.getByRole('button', { name: 'Find' }).click();
+    await this.page.getByRole('button', { name: /^Redact all \d+$/ }).click();
+  }
+
   async export(): Promise<void> {
     await this.page.getByRole('button', { name: 'Export' }).click();
+  }
+
+  /** Confirm the verify dialog and return the bytes the browser actually saved. */
+  async downloadFromDialog(): Promise<Uint8Array> {
+    const dialog = this.page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    const [download] = await Promise.all([
+      this.page.waitForEvent('download'),
+      dialog.getByRole('button', { name: /^Download/ }).click(),
+    ]);
+    const path = await download.path();
+    return new Uint8Array(await readFile(path));
   }
 }

@@ -1,30 +1,7 @@
-import { inflateSync } from 'node:zlib';
 import { PDFDict, PDFDocument, PDFName, PDFStream, PDFString, StandardFonts } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
+import { outputContains } from '../../../tests/support/pdfbytes';
 import { garbageCollect, stripAll } from './metadata';
-
-/** Search raw bytes and every inflatable stream for a needle. */
-function outputContains(bytes: Uint8Array, needle: string): boolean {
-  const raw = Buffer.from(bytes).toString('latin1');
-  if (raw.includes(needle)) return true;
-  let idx = 0;
-  for (;;) {
-    const s = raw.indexOf('stream', idx);
-    if (s === -1) break;
-    const e = raw.indexOf('endstream', s);
-    if (e === -1) break;
-    const body = Buffer.from(raw.slice(s + 6, e), 'latin1');
-    for (const off of [1, 2, 0]) {
-      try {
-        if (inflateSync(body.subarray(off)).toString('latin1').includes(needle)) return true;
-      } catch {
-        /* not a flate stream at this offset */
-      }
-    }
-    idx = e + 9;
-  }
-  return false;
-}
 
 async function countAnnots(bytes: Uint8Array): Promise<number> {
   const doc = await PDFDocument.load(bytes, { updateMetadata: false });
