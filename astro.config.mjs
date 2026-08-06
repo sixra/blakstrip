@@ -43,8 +43,14 @@ export default defineConfig({
     sitemap({
       // Home ranks highest; each tool page is a primary surface. No lastmod,
       // which avoids false freshness signals on rarely-changing static pages.
+      // The home entry is emitted without a trailing slash while its canonical
+      // has one. Not worth chasing: an empty path and "/" are the same URL per
+      // RFC 3986 §6.2.3, and the integration's trailingSlash handling rewrites
+      // this after serialize runs, so setting item.url here would be dead code.
       serialize(item) {
-        item.priority = item.url === 'https://blakstrip.com/' ? 1.0 : 0.8;
+        const isHome =
+          item.url === 'https://blakstrip.com' || item.url === 'https://blakstrip.com/';
+        item.priority = isHome ? 1.0 : 0.8;
         return item;
       },
     }),

@@ -24,6 +24,9 @@ const features = [
 const appSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebApplication',
+  // Shared id so the tool page references this entity instead of declaring a
+  // second, unlinked application.
+  '@id': 'https://blakstrip.com/#app',
   name: 'blakstrip',
   applicationCategory: 'UtilitiesApplication',
   operatingSystem: 'Any modern web browser',
@@ -36,7 +39,12 @@ const appSchema = {
     '@type': 'Organization',
     name: 'blakstrip',
     url: 'https://blakstrip.com',
-    logo: 'https://blakstrip.com/apple-touch-icon.png',
+    logo: {
+      '@type': 'ImageObject',
+      url: 'https://blakstrip.com/android-chrome-512x512.png',
+      width: 512,
+      height: 512,
+    },
   },
   creator: {
     '@type': 'Organization',

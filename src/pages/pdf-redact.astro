@@ -6,6 +6,9 @@ import Base from '../layouts/Base.astro';
 const appSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebApplication',
+  // Same @id as the landing page declares, so this is the one application seen
+  // from a second URL rather than a separate one with a similar name.
+  '@id': 'https://blakstrip.com/#app',
   name: 'blakstrip · PDF redactor',
   applicationCategory: 'UtilitiesApplication',
   operatingSystem: 'Any modern web browser',

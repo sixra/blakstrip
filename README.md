@@ -30,6 +30,22 @@ among them, which you can confirm in devtools. It works offline as a PWA.
 **Stack:** Astro 7 (static, `<meta>` CSP), Svelte 5 (runes) islands, pdf-lib (write/strip),
 pdfjs-dist (render/text), Tailwind v4, `@vite-pwa/astro`, TypeScript strict.
 
+## Deploying
+
+`pnpm build` emits a static site to `dist/`, so any static host will serve it. One
+requirement is not optional: **the host must apply `public/_headers`** (Cloudflare Pages and
+Netlify both read it natively). That file carries the things a `<meta>` CSP cannot express and
+that this app's promises depend on:
+
+- `frame-ancestors` / `X-Frame-Options`, the clickjacking defence, which is ignored in a `<meta>`
+  policy;
+- `Strict-Transport-Security`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-*`;
+- the per-path CSP over `/_astro/*` and `/sw.js`, which is what actually constrains the pdf.js
+  worker where your document is parsed.
+
+Deploy somewhere that ignores `_headers` and the app still works, but silently without any of
+the above. If you fork and host it elsewhere, port those headers to your host's own mechanism.
+
 ## Limitations
 
 Redaction is only as good as what you tell it to remove, and blakstrip would rather say so than

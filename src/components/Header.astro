@@ -1,12 +1,19 @@
 ---
 // Shared site header: brand logo (links home) + the quiet install affordance.
 // Used by every page so the logo and install button stay identical.
+import { Image } from 'astro:assets';
+import logo from '../assets/logo.png';
 import InstallButton from './InstallButton.svelte';
 ---
 
 <div class="flex items-center justify-between">
   <a href="/" aria-label="blakstrip home">
-    <img src="/logo.png" alt="blakstrip" width="791" height="394" class="h-12 w-auto" />
+    {
+      /* Through astro:assets rather than public/, so the LCP image on the landing
+        page ships at the size it renders instead of 8x it. The link's aria-label
+        is the accessible name, so the alt text stays out of the way. */
+    }
+    <Image src={logo} alt="" widths={[96, 192]} sizes="96px" class="h-12 w-auto" />
   </a>
   <InstallButton client:only="svelte" />
 </div>
