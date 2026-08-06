@@ -28,9 +28,8 @@ representing the project in public.
 
 ## Reporting
 
-Report a concern privately to the maintainer through GitHub
-([@sixra](https://github.com/sixra)). Reports are handled confidentially, and the person reporting
-will not be named without their agreement.
+Report a concern privately to <contact@sixra.dev>. Reports are handled confidentially, and the
+person reporting will not be named without their agreement.
 
 Maintainers may warn, remove content, or block an account. If you believe a decision was wrong, say
 so in your reply; it will be reconsidered.
