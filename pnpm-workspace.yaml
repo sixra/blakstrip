@@ -2,8 +2,13 @@ allowBuilds:
   esbuild: true
   lefthook: false
   sharp: true
-# Security patch for a transitive dev dependency (Dependabot advisory).
-# brace-expansion's expand() API is stable across majors, so pinning the
-# patched release is safe for the older (2.x) consumer in the tree.
+# Security patches for transitive dev dependencies (Dependabot advisories). Both
+# are patch-level bumps of packages with stable APIs, so forcing them is safe for
+# the consumers in the tree (minimatch for brace-expansion, ajv for fast-uri).
+#
+# Pin as a range, never an exact version: an exact pin holds the package *at* that
+# release, so when the next advisory lands (as it did for brace-expansion 5.0.8)
+# the override goes from fixing the problem to preventing the fix.
 overrides:
-  'brace-expansion@<5.0.8': '5.0.8'
+  'brace-expansion@<5.0.9': '5.0.9'
+  'fast-uri@<3.1.5': '3.1.5'
