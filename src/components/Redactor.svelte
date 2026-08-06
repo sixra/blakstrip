@@ -2,12 +2,10 @@
   import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
   import { onDestroy, type Snippet } from 'svelte';
   import { canRedo, canUndo, commit as commitHistory, initHistory, redo, undo } from '@lib/history';
-  import { auditDocument } from '@lib/pdf/audit';
-  import { downloadBytes, exportRedactedPdf, redactedFileName } from '@lib/pdf/export';
+  import { downloadBytes, redactedFileName } from '@lib/pdf/download';
   import { loadPdf, renderPageToCanvas, renderPageToImageCanvas } from '@lib/pdf/render';
   import { collectRedactedText, searchDocumentRects } from '@lib/pdf/textlayer';
   import type { AuditReport, RedactionRect, VerifyReport } from '@lib/pdf/types';
-  import { verifyExport } from '@lib/pdf/verify';
   import AuditPanel from './AuditPanel.svelte';
   import DropZone from './DropZone.svelte';
   import PageThumbs from './PageThumbs.svelte';
@@ -152,6 +150,7 @@
     if (!doc || !pristine) return;
     const gen = docGeneration;
     try {
+      const { auditDocument } = await import('@lib/pdf/audit');
       const report = await auditDocument(pristine, doc);
       if (gen === docGeneration) auditReport = report; // ignore a stale document's result
     } catch {
@@ -356,6 +355,12 @@
     exporting = true;
     errorMsg = '';
     try {
+      // pdf-lib is only needed once there is a document to work on, so it is
+      // loaded here rather than shipped in the island's first chunk.
+      const [{ exportRedactedPdf }, { verifyExport }] = await Promise.all([
+        import('@lib/pdf/export'),
+        import('@lib/pdf/verify'),
+      ]);
       const bytes = await exportRedactedPdf(pristine, doc, rects, (done, total) => {
         exportStep = `page ${done} of ${total}`;
       });

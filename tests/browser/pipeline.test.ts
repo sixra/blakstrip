@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { downloadBytes, exportRedactedPdf, redactedFileName } from '../../src/lib/pdf/export';
+import { downloadBytes, redactedFileName } from '../../src/lib/pdf/download';
+import { exportRedactedPdf } from '../../src/lib/pdf/export';
 import { buildRedactedPdf } from '../../src/lib/pdf/redact';
 import { loadPdf } from '../../src/lib/pdf/render';
 import {
