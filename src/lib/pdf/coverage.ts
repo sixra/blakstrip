@@ -22,14 +22,25 @@ import type { RedactionRect } from './types';
 
 /** Device-pixel scale for the coverage raster. Enough to resolve thin glyph tails. */
 const COVER_SCALE = 2;
-/** Source pixel at/below this Rec. 601 luma counts as ink that must be destroyed. */
-const INK_LUMA = 110;
+/**
+ * Source pixel at/below this Rec. 601 luma counts as ink that must be destroyed.
+ * Set well above "black" on purpose: a light-grey signature, watermark or
+ * de-emphasised disclaimer is still content, and a threshold tuned to body text
+ * would leave exactly that class of ink unchecked.
+ */
+const INK_LUMA = 200;
 /** Output pixel at/below this luma counts as successfully redacted (black). */
 const BLACK_LUMA = 24;
 /** A region leaks when more than this fraction of its source ink survives visible. */
 const MAX_LEAK_FRACTION = 0.03;
+/**
+ * ...and regardless of that fraction, when this many source-ink pixels survive.
+ * A fraction alone scales with the region: 3% of a hand-drawn box over a dense
+ * page is thousands of pixels, i.e. a readable line, still certified clean.
+ */
+const MAX_LEAK_PIXELS = 64;
 
-interface Rgba {
+export interface Rgba {
   data: Uint8ClampedArray;
   width: number;
   height: number;
@@ -51,17 +62,22 @@ function lumaAt(img: Rgba, i: number): number {
 }
 
 /**
- * Fraction of source-ink pixels in a normalized region that are still visible
- * (not black) in the output. The region is eroded one device pixel per side so
- * the antialiased box boundary doesn't skew the count. Returns 0 when the region
- * is too small to sample or holds no ink; nothing there to leak.
+ * Does source ink in this normalized region survive visible in the output? The
+ * region is eroded one device pixel per side so the antialiased box boundary
+ * doesn't skew the count. False when the region is too small to sample or holds
+ * no ink; there is nothing there to leak. Exported for test.
  */
-function residualInk(src: Rgba, out: Rgba, r: Region): number {
+export function regionLeaks(src: Rgba, out: Rgba, r: Region): boolean {
+  // Fail closed. One index addresses both rasters, so unequal dimensions would
+  // read out of bounds on `out`, yield NaN, and score every pixel as covered:
+  // a safety check that reports "clean" precisely when it cannot see.
+  if (src.width !== out.width || src.height !== out.height) return true;
+
   const x0 = Math.floor(r.x * src.width) + 1;
   const y0 = Math.floor(r.y * src.height) + 1;
   const x1 = Math.ceil((r.x + r.w) * src.width) - 1;
   const y1 = Math.ceil((r.y + r.h) * src.height) - 1;
-  if (x1 <= x0 || y1 <= y0) return 0;
+  if (x1 <= x0 || y1 <= y0) return false;
 
   let ink = 0;
   let leaked = 0;
@@ -74,7 +90,8 @@ function residualInk(src: Rgba, out: Rgba, r: Region): number {
       }
     }
   }
-  return ink === 0 ? 0 : leaked / ink;
+  if (ink === 0) return false;
+  return leaked > MAX_LEAK_PIXELS || leaked / ink > MAX_LEAK_FRACTION;
 }
 
 /** Overlap test between a rect and a run box (both normalized, top-left). */
@@ -133,7 +150,7 @@ export async function checkCoverage(
             if (boxesOverlap(rect, run) && spansHorizontally(rect, run)) regions.push(run);
           }
         }
-        if (regions.some((reg) => residualInk(srcImg, outImg, reg) > MAX_LEAK_FRACTION)) {
+        if (regions.some((reg) => regionLeaks(srcImg, outImg, reg))) {
           uncovered.push(rect);
         }
       }
