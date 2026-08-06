@@ -119,6 +119,20 @@ describe('inspectStructure', () => {
     expect(findings.some((f) => f.id === 'ocg')).toBe(true);
   });
 
+  it('survives a wrong-typed /Type and /S instead of blanking the audit', async () => {
+    const doc = await PDFDocument.create();
+    doc.addPage([612, 792]);
+    doc.setAuthor('Jane Author');
+    // A malformed (or hostile) file where /Type and /S exist but are not names.
+    // These must not abort the scan: an audit that throws renders as an empty
+    // panel, so the user sees no warnings on the files most likely to hide data.
+    doc.context.register(doc.context.obj({ Type: 5 }));
+    doc.context.register(doc.context.obj({ S: PDFString.of('not-a-name') }));
+
+    const findings = await inspectStructure(await doc.save());
+    expect(findings.some((f) => f.id === 'meta-Author')).toBe(true);
+  });
+
   it('reports creation and modification dates, and drops them after stripAll', async () => {
     const doc = await PDFDocument.create();
     doc.addPage([612, 792]);

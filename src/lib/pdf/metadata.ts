@@ -41,19 +41,28 @@ export function stripAnnotationsAndForms(doc: PDFDocument): void {
   }
 }
 
+/**
+ * The catalog's `/Names` tree, resolved through its indirect reference. Uses the
+ * untyped `context.lookup`, which resolves refs but never throws; `lookupMaybe`
+ * throws when the entry exists with the wrong type, and a malformed file must not
+ * be able to abort a strip pass partway through.
+ */
+function nameTree(doc: PDFDocument): PDFDict | undefined {
+  const names = doc.context.lookup(doc.catalog.get(PDFName.of('Names')));
+  return names instanceof PDFDict ? names : undefined;
+}
+
 /** Remove document-level JavaScript and auto-run actions. */
 export function stripJavaScript(doc: PDFDocument): void {
   doc.catalog.delete(PDFName.of('OpenAction'));
   doc.catalog.delete(PDFName.of('AA'));
-  const names = doc.catalog.lookupMaybe(PDFName.of('Names'), PDFDict);
-  names?.delete(PDFName.of('JavaScript'));
+  nameTree(doc)?.delete(PDFName.of('JavaScript'));
 }
 
 /** Remove embedded file attachments (both the name tree and /AF references). */
 export function stripAttachments(doc: PDFDocument): void {
   doc.catalog.delete(PDFName.of('AF')); // associated-files array points at filespecs directly
-  const names = doc.catalog.lookupMaybe(PDFName.of('Names'), PDFDict);
-  names?.delete(PDFName.of('EmbeddedFiles'));
+  nameTree(doc)?.delete(PDFName.of('EmbeddedFiles'));
 }
 
 /**

@@ -20,9 +20,13 @@ function dictOf(obj: PDFObject): PDFDict | undefined {
   return undefined;
 }
 
-/** True when `dict[key]` is the name `/value` (PDFName instances are interned). */
+/**
+ * True when `dict[key]` is the name `/value` (PDFName instances are interned).
+ * Uses `get`, not `lookupMaybe`: lookupMaybe throws on a present-but-wrong-typed
+ * value, and this runs over every object in an untrusted file.
+ */
 function nameEq(dict: PDFDict, key: string, value: string): boolean {
-  return dict.lookupMaybe(PDFName.of(key), PDFName) === PDFName.of(value);
+  return dict.get(PDFName.of(key)) === PDFName.of(value);
 }
 
 /** True when the stream is JPEG-compressed (`/Filter /DCTDecode`, name or array). */
@@ -127,12 +131,14 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
   let xmp = 0;
   let js = 0;
   let exif = 0;
+  let ocgs = 0;
   for (const [, obj] of doc.context.enumerateIndirectObjects()) {
     const dict = dictOf(obj);
     if (!dict) continue;
     if (nameEq(dict, 'Type', 'Annot')) annots += 1;
     else if (nameEq(dict, 'Type', 'EmbeddedFile')) files += 1;
     else if (nameEq(dict, 'Type', 'Metadata')) xmp += 1;
+    else if (nameEq(dict, 'Type', 'OCG') || nameEq(dict, 'Type', 'OCMD')) ocgs += 1;
     if (nameEq(dict, 'S', 'JavaScript') || dict.get(PDFName.of('JS')) !== undefined) js += 1;
     if (obj instanceof PDFRawStream && usesDct(dict) && hasExifSegment(obj.contents)) exif += 1;
   }
@@ -192,18 +198,21 @@ export async function inspectStructure(bytes: Uint8Array): Promise<Finding[]> {
       detail: 'Private editable content (/PieceInfo) left by an authoring app.',
     });
 
-  // Optional-content groups (layers). A layer hidden by default is still in the
-  // file and can be extracted or switched back on; pdf-lib also can't carry the
-  // /OCProperties visibility config into the output, so we can't clean it;
-  // surface it (and, via verify, withhold the clean verdict) instead.
-  if (doc.catalog.get(PDFName.of('OCProperties')) !== undefined)
+  // Optional-content groups (layers). Detect the OCG/OCMD objects themselves and
+  // not just the catalog's /OCProperties: copyPages carries a page's layer content
+  // and its OCG references, but /OCProperties lives on the catalog and is left
+  // behind, so keying off the catalog alone would find nothing in our own output
+  // and hand back a clean verdict. Worse, the export then has no config marking a
+  // layer OFF, so content the user never saw can render visible.
+  const hasOcProperties = doc.catalog.get(PDFName.of('OCProperties')) !== undefined;
+  if (hasOcProperties || ocgs > 0)
     findings.push({
       id: 'ocg',
       severity: 'medium',
       category: 'structure',
       title: 'Optional content layers',
       detail:
-        'This document uses layers (optional content). A layer hidden by default can still be extracted or turned back on, so content you cannot see may remain in the file.',
+        'This document uses layers (optional content). blakstrip cannot remove them from a page it copies verbatim, and the exported file loses the layer visibility settings, so a layer that was hidden may become visible. Redact something on every page that uses layers to force it to be flattened.',
     });
 
   return findings;
