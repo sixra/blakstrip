@@ -35,16 +35,6 @@ const jsonLd = JSON.stringify(appSchema).replace(/</g, '\\u003c');
     <header class="mb-8">
       <Header />
       <p class="mt-8 text-center text-xs text-neutral-600">Your file never leaves your device</p>
-      {
-        /* The honesty boundary, stated once as static HTML rather than inside
-           the island: a caveat reprinted above every file dilutes the findings
-           next to it, and this costs no JavaScript here. Overclaiming is the
-           fastest way for a privacy tool to lose the only thing it sells. */
-      }
-      <p class="mx-auto mt-2 max-w-prose text-center text-xs text-neutral-500">
-        Removing metadata does not make a photo anonymous: what the picture shows is still in the
-        picture.
-      </p>
     </header>
     <!--
       client:only rather than client:visible: the island's whole job starts with a
