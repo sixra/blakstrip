@@ -119,6 +119,16 @@ export function parseBoxes(bytes: Uint8Array, from: number, to: number): Box[] {
   return boxes;
 }
 
+/**
+ * How deep the box tree may nest before we call the file hostile.
+ *
+ * A real file reaches about six (moov > trak > mdia > minf > stbl > stsd), so
+ * this is generous. Without it, a crafted file of nested containers recurses
+ * once per level and takes the tab down with a stack overflow, which is the one
+ * outcome an adversarial-input path must never have.
+ */
+const MAX_DEPTH = 32;
+
 /** Every box in the tree, depth first, paired with its depth. */
 function walk(
   bytes: Uint8Array,
@@ -126,6 +136,9 @@ function walk(
   to: number,
   depth = 0
 ): { box: Box; depth: number }[] {
+  if (depth > MAX_DEPTH) {
+    throw new MalformedFileError(`box tree nested deeper than ${MAX_DEPTH} levels`);
+  }
   const out: { box: Box; depth: number }[] = [];
   for (const box of parseBoxes(bytes, from, to)) {
     out.push({ box, depth });
@@ -283,9 +296,19 @@ export function stripIsobmff(bytes: Uint8Array): StripResult {
     changed = true;
   };
 
+  // The walk is built before any blanking, so it still lists the children of a
+  // box we blank. Writing to one of those afterwards would put the `free` header
+  // back into bytes we had just zeroed, leaving a padding box that looks like it
+  // carries data and failing our own verify on a file that is actually clean.
+  // Depth-first order means one watermark is enough to skip a blanked subtree.
+  let blankedUntil = 0;
+
   for (const { box } of walk(bytes, 0, bytes.length)) {
+    if (box.start < blankedUntil) continue;
+
     if (REMOVABLE.has(box.type)) {
       blank(box);
+      blankedUntil = box.end;
       continue;
     }
     if (PADDING.has(box.type)) {

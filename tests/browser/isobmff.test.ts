@@ -146,6 +146,23 @@ describe('isobmff strip', () => {
     expect(topLevelTypes(stripped)).toEqual(topLevelTypes(bytes));
   });
 
+  it('blanks a nested removable box without un-blanking its parent', () => {
+    // udta holding meta. The walk is built before any blanking, so the child is
+    // still in the list after the parent has been zeroed. Writing to it then
+    // puts the `free` header back into bytes just cleared, leaving padding that
+    // looks like it carries data and failing verify on a genuinely clean file.
+    const chars = (text: string): number[] => [...text].map((c) => c.charCodeAt(0));
+    const nested = new Uint8Array([
+      ...box('ftyp', chars('isom')),
+      ...box('moov', box('udta', box('meta', chars('SECRET-NESTED')))),
+      ...box('mdat', chars('MEDIA')),
+    ]);
+
+    const { bytes: stripped } = stripIsobmff(nested);
+    expect(inspectIsobmff(stripped)).toEqual([]);
+    expect(new TextDecoder().decode(stripped)).not.toContain('SECRET-NESTED');
+  });
+
   it('is idempotent: stripping a stripped file changes nothing', () => {
     const bytes = makeMp4({ gps: '+1+2/', creationTime: RECORDED_AT, uuid: true });
     const once = stripIsobmff(bytes).bytes;
@@ -191,5 +208,16 @@ describe('isobmff parser hostility', () => {
     bytes.set([0x66, 0x74, 0x79, 0x70], 4);
     bytes.set([0xff, 0xff, 0xff, 0xff], 8); // high word of largesize
     expect(() => parseBoxes(bytes, 0, bytes.length)).toThrow(MalformedFileError);
+  });
+
+  it('refuses a box tree nested far deeper than any real file', () => {
+    // Recursing once per level takes the tab down with a stack overflow, which
+    // is the one outcome an adversarial-input path must never have.
+    const chars = (text: string): number[] => [...text].map((c) => c.charCodeAt(0));
+    let payload: number[] = chars('x');
+    for (let i = 0; i < 200; i += 1) payload = box('moov', payload);
+    const deep = new Uint8Array([...box('ftyp', chars('isom')), ...payload]);
+
+    expect(() => inspectIsobmff(deep)).toThrow(MalformedFileError);
   });
 });
