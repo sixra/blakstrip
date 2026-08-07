@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { downloadBytes, redactedFileName } from '../../src/lib/pdf/download';
+import { downloadPdf, redactedFileName } from '../../src/lib/pdf/download';
 import { exportRedactedPdf } from '../../src/lib/pdf/export';
 import { buildRedactedPdf } from '../../src/lib/pdf/redact';
 import { loadPdf } from '../../src/lib/pdf/render';
@@ -218,7 +218,7 @@ describe('redact + export + verify', () => {
       });
     const revokeUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     try {
-      downloadBytes(new Uint8Array([37, 80, 68, 70]), 'report-redacted.pdf');
+      downloadPdf(new Uint8Array([37, 80, 68, 70]), 'report-redacted.pdf');
       expect(anchors).toHaveLength(1);
       expect(anchors[0].download).toBe('report-redacted.pdf');
       expect(anchors[0].getAttribute('href')).toBe('blob:mock-url');

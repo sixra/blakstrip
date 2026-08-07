@@ -1,3 +1,8 @@
+// Finding and its enums are shared with the media engine, which runs the same
+// audit/act/verify flow. Imported for use below and re-exported so the existing
+// `from './types'` call sites keep working unchanged.
+import type { Finding } from '../types';
+
 /**
  * Shared data contracts for the redaction engine: plain, serializable shapes
  * with no pdf.js / pdf-lib / DOM types, so the UI and tests can pass them around
@@ -32,21 +37,7 @@ export interface RedactionRect {
   term?: string;
 }
 
-export type FindingSeverity = 'high' | 'medium';
-
-export type FindingCategory =
-  'metadata' | 'xmp' | 'attachment' | 'annotation' | 'javascript' | 'structure';
-
-/** One thing discovered hiding in a document (audit) or still present (verify). */
-export interface Finding {
-  id: string;
-  severity: FindingSeverity;
-  category: FindingCategory;
-  /** Short, human title, e.g. "Author metadata". */
-  title: string;
-  /** Specifics, e.g. the actual value or a count. */
-  detail: string;
-}
+export type { Finding, FindingCategory, FindingSeverity } from '../types';
 
 /** Result of inspecting a document on load. */
 export interface AuditReport {

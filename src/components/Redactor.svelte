@@ -2,7 +2,7 @@
   import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
   import { onDestroy, type Snippet } from 'svelte';
   import { canRedo, canUndo, commit as commitHistory, initHistory, redo, undo } from '@lib/history';
-  import { downloadBytes, redactedFileName } from '@lib/pdf/download';
+  import { downloadPdf, redactedFileName } from '@lib/pdf/download';
   import { loadPdf, renderPageToCanvas, renderPageToImageCanvas } from '@lib/pdf/render';
   import { collectRedactedText, searchDocumentRects } from '@lib/pdf/textlayer';
   import type { AuditReport, RedactionRect, VerifyReport } from '@lib/pdf/types';
@@ -400,7 +400,7 @@
 
   function confirmDownload() {
     if (pendingBytes) {
-      downloadBytes(pendingBytes, redactedFileName(fileName));
+      downloadPdf(pendingBytes, redactedFileName(fileName));
       downloadedRects = rects;
     }
     closeVerify();
