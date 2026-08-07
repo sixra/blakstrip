@@ -10,6 +10,7 @@ import {
 } from '../../src/lib/media';
 import { MalformedFileError } from '../../src/lib/media/bytes';
 import { makeJpeg } from '../support/testjpeg';
+import { makeMp4 } from '../support/testmp4';
 import { makePng } from '../support/testpng';
 import { makeWebp } from '../support/testwebp';
 
@@ -18,6 +19,7 @@ describe('format detection', () => {
     expect(detectFormat(await makeJpeg())).toBe('jpeg');
     expect(detectFormat(await makePng())).toBe('png');
     expect(detectFormat(await makeWebp())).toBe('webp');
+    expect(detectFormat(makeMp4())).toBe('mp4');
   });
 
   it('returns undefined for anything else', () => {
@@ -46,6 +48,8 @@ describe('format detection', () => {
     expect(mimeTypeFor('jpeg')).toBe('image/jpeg');
     expect(mimeTypeFor('png')).toBe('image/png');
     expect(mimeTypeFor('webp')).toBe('image/webp');
+    // Not image/mp4, which is what a templated MIME type would have produced.
+    expect(mimeTypeFor('mp4')).toBe('video/mp4');
   });
 
   it('covers every supported format, so none can be added without a MIME type', () => {
@@ -63,6 +67,7 @@ describe('audit, strip, verify across every format', () => {
     ['jpeg', () => makeJpeg({ exif: { make: 'ACME', gps: { lat: 44.8, lon: 20.4 } }, xmp: true })],
     ['png', () => makePng({ text: { Author: 'Jane' }, exif: { make: 'ACME' }, time: true })],
     ['webp', () => makeWebp({ exif: { make: 'ACME', gps: { lat: 1, lon: 2 } }, xmp: true })],
+    ['mp4', () => makeMp4({ gps: '+44.8+020.4/', uuid: true })],
   ] as const;
 
   for (const [format, make] of loaded) {
@@ -82,11 +87,13 @@ describe('audit, strip, verify across every format', () => {
       expect(report.clean).toBe(true);
     });
 
-    it(`${format}: a clean file stays clean and stays smaller than the dirty one`, async () => {
+    it(`${format}: stripping twice changes nothing`, async () => {
       const bytes = await make();
       const { bytes: stripped } = stripMedia(bytes);
-      expect(stripped.length).toBeLessThan(bytes.length);
-      // Stripping twice changes nothing: the second pass has nothing to remove.
+      // Deliberately not asserting the output shrank. The image formats drop
+      // bytes; ISOBMFF blanks them in place because its chunk offsets are
+      // absolute, so a size assertion here would encode an image-only
+      // assumption as if it were a rule.
       expect(stripMedia(stripped).bytes).toEqual(stripped);
     });
   }

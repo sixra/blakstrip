@@ -8,12 +8,13 @@
  * lets you check.
  */
 import type { Finding } from '../types';
+import { inspectIsobmff, isIsobmff, stripIsobmff } from './isobmff';
 import { inspectJpeg, isJpeg, stripJpeg } from './jpeg';
 import { inspectPng, isPng, stripPng } from './png';
 import type { KeepOptions, StripResult } from './types';
 import { inspectWebp, isWebp, stripWebp } from './webp';
 
-export type MediaFormat = 'jpeg' | 'png' | 'webp';
+export type MediaFormat = 'jpeg' | 'png' | 'webp' | 'mp4';
 
 /** A file whose format this tool does not handle. */
 export class UnsupportedFormatError extends Error {
@@ -34,6 +35,9 @@ export function detectFormat(bytes: Uint8Array): MediaFormat | undefined {
   if (isJpeg(bytes)) return 'jpeg';
   if (isPng(bytes)) return 'png';
   if (isWebp(bytes)) return 'webp';
+  // Checked last: its marker sits at offset 4 rather than 0, so it is the only
+  // one that could in principle collide with another format's payload.
+  if (isIsobmff(bytes)) return 'mp4';
   return undefined;
 }
 
@@ -50,6 +54,8 @@ const MIME_TYPES: Record<MediaFormat, string> = {
   jpeg: 'image/jpeg',
   png: 'image/png',
   webp: 'image/webp',
+  // The reason this is a map: the template would have made this `image/mp4`.
+  mp4: 'video/mp4',
 };
 
 export function mimeTypeFor(format: MediaFormat): string {
@@ -57,7 +63,7 @@ export function mimeTypeFor(format: MediaFormat): string {
 }
 
 /** Every format this engine handles, for the file picker and the refusal message. */
-export const SUPPORTED_FORMATS: readonly MediaFormat[] = ['jpeg', 'png', 'webp'];
+export const SUPPORTED_FORMATS: readonly MediaFormat[] = ['jpeg', 'png', 'webp', 'mp4'];
 
 function requireFormat(bytes: Uint8Array): MediaFormat {
   const format = detectFormat(bytes);
@@ -84,6 +90,8 @@ export function inspectMedia(bytes: Uint8Array): MediaAudit {
       return { format, findings: inspectPng(bytes) };
     case 'webp':
       return { format, findings: inspectWebp(bytes) };
+    case 'mp4':
+      return { format, findings: inspectIsobmff(bytes) };
   }
 }
 
@@ -97,6 +105,9 @@ export function stripMedia(bytes: Uint8Array, options: KeepOptions = {}): StripR
       return stripPng(bytes, options);
     case 'webp':
       return stripWebp(bytes, options);
+    case 'mp4':
+      // No colour profile to keep or drop: the option is image-only.
+      return stripIsobmff(bytes);
   }
 }
 
