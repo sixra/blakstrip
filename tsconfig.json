@@ -5,6 +5,7 @@
   "compilerOptions": {
     "paths": {
       "@lib/*": ["./src/lib/*"]
-    }
+    },
+    "noImplicitReturns": true
   }
 }

@@ -1,7 +1,13 @@
-import base from '@sixra/devkit/prettier';
-
+/**
+ * Inlined rather than imported from a shared package: a fork should be able to
+ * check out this repo and get identical formatting with no external config.
+ */
 export default {
-  ...base,
+  singleQuote: true,
+  semi: true,
+  printWidth: 100,
+  tabWidth: 2,
+  trailingComma: 'es5',
   // prettier-plugin-tailwindcss must stay last: it composes with the others.
   plugins: [
     '@ianvs/prettier-plugin-sort-imports',
@@ -17,4 +23,14 @@ export default {
     '^[./]',
   ],
   importOrderParserPlugins: ['typescript'],
+  overrides: [
+    {
+      files: '*.astro',
+      options: { parser: 'astro' },
+    },
+    {
+      files: '*.svelte',
+      options: { parser: 'svelte' },
+    },
+  ],
 };

@@ -1,2 +1,38 @@
-extends:
-  - node_modules/@sixra/devkit/lefthook/base.yml
+# Inlined rather than extended from a shared package: a fork gets the same
+# hooks from a clean checkout, with nothing to resolve first.
+#
+# pre-commit jobs run sequentially: eslint --fix first, then prettier --write
+# (both touch the same files; parallel would race two writers). `stage_fixed`
+# re-stages what they fix.
+pre-commit:
+  jobs:
+    - name: eslint
+      glob: '*.{js,mjs,ts,astro,svelte}'
+      run: pnpm exec eslint --fix {staged_files}
+      stage_fixed: true
+    - name: prettier
+      glob: '*.{js,mjs,ts,astro,svelte,json,md,css,yml,yaml}'
+      run: pnpm exec prettier --write {staged_files}
+      stage_fixed: true
+
+# Conventional Commits. `{1}` is the commit-message file path.
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: pnpm exec commitlint --edit {1}
+
+# Full verification before pushing main; other branches push freely.
+# `follow` streams output live so a multi-minute build doesn't look frozen.
+pre-push:
+  follow: true
+  jobs:
+    - name: verify-main
+      run: |
+        # Detached HEAD resolves to "detached" and still verifies: an unknown
+        # state must fail closed, not silently skip the gate.
+        branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo detached)
+        if [ "$branch" != "main" ] && [ "$branch" != "detached" ]; then
+          echo "Skipping pre-push checks (not on main)"
+          exit 0
+        fi
+        pnpm verify
