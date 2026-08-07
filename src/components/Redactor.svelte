@@ -454,6 +454,15 @@
   {#if status === 'idle' || status === 'error'}
     <DropZone
       error={status === 'error' ? errorMsg : ''}
+      prompt="Drop a PDF to redact"
+      accept="application/pdf"
+      inputLabel="Choose a PDF file"
+      validate={(file) =>
+        // Some platforms hand over a PDF with an empty type, so fall back to the
+        // extension. Anything else gets a visible reason rather than silence.
+        file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+          ? undefined
+          : `${file.name} is not a PDF.`}
       onFile={(file) => void openFile(file)}
       onReject={(reason) => {
         status = 'error';

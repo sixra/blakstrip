@@ -29,6 +29,11 @@ export default defineConfig({
         isDev ? "connect-src 'self' ws: wss:" : "connect-src 'none'",
         "worker-src 'self' blob:", // service worker + pdf.js worker
         "img-src 'self' data: blob:", // canvas raster + icons
+        // Video preview for the media tool. Without it these fall back to
+        // default-src 'self' and a blob: URL is refused, so the user is asked to
+        // trust a strip on a file they were never shown. A capability, not
+        // egress: connect-src 'none' still forbids sending anything anywhere.
+        "media-src 'self' blob:",
         "font-src 'self'",
         "manifest-src 'self'",
         "object-src 'none'",

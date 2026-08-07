@@ -1,0 +1,59 @@
+---
+import Header from '../components/Header.astro';
+import MediaStripper from '../components/MediaStripper.svelte';
+import Base from '../layouts/Base.astro';
+
+const appSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  // Same @id as the landing page declares, so this is the one application seen
+  // from a third URL rather than a separate one with a similar name.
+  '@id': 'https://blakstrip.com/#app',
+  name: 'blakstrip · photo and video metadata remover',
+  applicationCategory: 'UtilitiesApplication',
+  operatingSystem: 'Any modern web browser',
+  browserRequirements: 'Requires JavaScript',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  description:
+    'Drop in a photo or video and see what it is carrying: GPS location, camera serial, timestamps, hidden preview images. Remove it all in your browser, without re-compressing the picture.',
+  url: 'https://blakstrip.com/media-strip',
+  isPartOf: { '@type': 'WebSite', name: 'blakstrip', url: 'https://blakstrip.com' },
+  creator: {
+    '@type': 'Organization',
+    name: 'sixra.dev',
+    url: 'https://sixra.dev',
+  },
+};
+const jsonLd = JSON.stringify(appSchema).replace(/</g, '\\u003c');
+---
+
+<Base
+  title="Remove Photo and Video Metadata Online, Free and Private · blakstrip"
+  description="Drop in a photo or video and see what it is carrying: GPS location, camera serial, timestamps, hidden preview images. Remove it all in your browser, without re-compressing the picture."
+>
+  <main id="main" class="mx-auto w-full max-w-6xl px-4 py-10">
+    <header class="mb-8">
+      <Header />
+      <p class="mt-8 text-center text-xs text-neutral-600">Your file never leaves your device</p>
+      {
+        /* The honesty boundary, stated once as static HTML rather than inside
+           the island: a caveat reprinted above every file dilutes the findings
+           next to it, and this costs no JavaScript here. Overclaiming is the
+           fastest way for a privacy tool to lose the only thing it sells. */
+      }
+      <p class="mx-auto mt-2 max-w-prose text-center text-xs text-neutral-500">
+        Removing metadata does not make a photo anonymous: what the picture shows is still in the
+        picture.
+      </p>
+    </header>
+    <!--
+      client:only rather than client:visible: the island's whole job starts with a
+      file the server has never seen, so there is no meaningful HTML to render at
+      build time and a server pass would only produce an empty shell to hydrate.
+      Matches how the PDF tool mounts.
+    -->
+    <MediaStripper client:only="svelte" />
+  </main>
+
+  <script type="application/ld+json" is:inline set:html={jsonLd} />
+</Base>
