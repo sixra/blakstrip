@@ -287,7 +287,8 @@ export function stripJpeg(bytes: Uint8Array, options: JpegKeepOptions = {}): Str
         header[2] = ((payload.length + 2) >> 8) & 0xff;
         header[3] = (payload.length + 2) & 0xff;
         chunks.push(header, payload);
-        notes.push(KEPT_ORIENTATION);
+        // Copied, not referenced: each result owns its notes.
+        notes.push({ ...KEPT_ORIENTATION });
       }
       continue;
     }

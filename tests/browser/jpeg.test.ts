@@ -182,6 +182,21 @@ describe('jpeg strip', () => {
     expect(exif?.payloadLength).toBeLessThan(64);
   });
 
+  it('gives each result its own notes rather than a shared object', async () => {
+    // Pushing the module constant by reference would mean a consumer editing a
+    // note - localising it, marking it dismissed in UI state - silently changed
+    // every other result and the constant itself.
+    const a = await makeJpeg({ exif: { orientation: 6 } });
+    const b = await makeJpeg({ exif: { orientation: 8 } });
+
+    const first = stripJpeg(a).notes[0];
+    expect(first).toBeDefined();
+    if (!first) return;
+    first.title = 'MUTATED';
+
+    expect(stripJpeg(b).notes[0]?.title).toBe('Rotation kept');
+  });
+
   it('does not re-add an EXIF block when the orientation is the default', async () => {
     const bytes = await makeJpeg({ exif: { orientation: 1, make: 'ACME' } });
     const { bytes: stripped, notes } = stripJpeg(bytes);

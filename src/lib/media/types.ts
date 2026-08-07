@@ -28,10 +28,17 @@ export interface StripResult {
   notes: StripNote[];
 }
 
-/** The single note any engine currently produces. */
-export const KEPT_ORIENTATION: StripNote = {
+/**
+ * The single note any engine currently produces.
+ *
+ * Frozen because it is a template, not a value: engines copy it into each
+ * result rather than pushing this reference, so a consumer that edits a note
+ * (localising it, marking it dismissed in UI state) changes one result instead
+ * of every result and the module constant with them.
+ */
+export const KEPT_ORIENTATION: Readonly<StripNote> = Object.freeze({
   id: 'kept-orientation',
   title: 'Rotation kept',
   detail:
     'This photo stores its pixels rotated and relies on a tag to turn them upright, so that one tag was kept. It records no location, device or time.',
-};
+});

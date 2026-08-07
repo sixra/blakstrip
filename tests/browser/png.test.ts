@@ -130,6 +130,13 @@ describe('png strip', () => {
     expect(types(stripPng(bytes, { keepColorProfile: false }).bytes)).not.toContain('gAMA');
   });
 
+  it('reports no notes: this format keeps nothing the user would not expect', async () => {
+    // JPEG keeps an orientation tag and says so. Nothing here has an
+    // equivalent, so an empty notes list is the contract, not an oversight.
+    const bytes = await makePng();
+    expect(stripPng(bytes).notes).toEqual([]);
+  });
+
   it('leaves an already-clean file structurally intact', async () => {
     const bytes = await makePng();
     expect(types(stripPng(bytes).bytes)).toEqual(types(bytes));

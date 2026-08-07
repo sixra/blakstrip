@@ -134,6 +134,13 @@ describe('webp strip', () => {
     );
   });
 
+  it('reports no notes: this format keeps nothing the user would not expect', async () => {
+    // JPEG keeps an orientation tag and says so. Nothing here has an
+    // equivalent, so an empty notes list is the contract, not an oversight.
+    const bytes = await makeWebp();
+    expect(stripWebp(bytes).notes).toEqual([]);
+  });
+
   it('leaves an already-clean file structurally intact', async () => {
     const bytes = await makeWebp();
     expect(fourccs(stripWebp(bytes).bytes)).toEqual(fourccs(bytes));
