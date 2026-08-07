@@ -145,6 +145,11 @@ export interface JpegKeepOptions {
 type SegmentKind =
   'structural' | 'jfif' | 'icc' | 'adobe' | 'exif' | 'xmp' | 'iptc' | 'comment' | 'unknown';
 
+/**
+ * Exported for test: the keep/drop decision is the security boundary, and the
+ * suite asserts on kinds directly so a misclassification shows up as a named
+ * failure rather than as a byte-length difference nobody can interpret.
+ */
 export function classifySegment(bytes: Uint8Array, segment: JpegSegment): SegmentKind {
   if (isStructural(segment.marker)) return 'structural';
   if (segment.marker === APP0 && payloadHas(bytes, segment, 'JFIF')) return 'jfif';
@@ -180,10 +185,24 @@ export function inspectJpeg(bytes: Uint8Array): Finding[] {
     switch (kind) {
       case 'exif': {
         if (segment.payloadAt === undefined) break;
-        // EXIF offsets are relative to the TIFF header, which follows the prefix.
-        findings.push(
-          ...exifFindings(summarizeExif(bytes, segment.payloadAt + EXIF_PREFIX.length))
-        );
+        try {
+          // EXIF offsets are relative to the TIFF header, which follows the prefix.
+          findings.push(
+            ...exifFindings(summarizeExif(bytes, segment.payloadAt + EXIF_PREFIX.length))
+          );
+        } catch {
+          // An EXIF block we cannot read must still be reported, not thrown on.
+          // The strip removes it either way, so refusing to describe the file
+          // would lose every other finding and offer nothing in exchange, and
+          // silence would read as "nothing here" on a block that plainly exists.
+          findings.push({
+            id: 'exif-unreadable',
+            severity: 'medium',
+            category: 'exif',
+            title: 'Damaged EXIF block',
+            detail: `${segment.payloadLength} bytes this tool cannot read, so its contents are unknown. It will be removed in full.`,
+          });
+        }
         break;
       }
       case 'xmp':
@@ -251,7 +270,8 @@ export function stripJpeg(bytes: Uint8Array, options: JpegKeepOptions = {}): Jpe
     const kind = classifySegment(bytes, segment);
 
     // The one rebuild: a photo stored rotated needs its Orientation tag or it
-    // displays sideways. Emitted right after SOI so it precedes the frame data.
+    // displays sideways. Emitted in the original block's place, so it keeps
+    // whatever position in the segment order the camera chose.
     if (kind === 'exif' && segment.payloadAt !== undefined) {
       let orientation: number | undefined;
       try {

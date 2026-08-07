@@ -26,12 +26,3 @@ export function downloadBytes(bytes: Uint8Array, filename: string, mimeType: str
   // when href is assigned, so the download already holds its own reference.
   URL.revokeObjectURL(url);
 }
-
-/** Insert a suffix before a filename's extension, e.g. photo.jpg -> photo-clean.jpg */
-export function suffixFileName(name: string, suffix: string): string {
-  const dot = name.lastIndexOf('.');
-  // No dot, or a leading dot with no extension (".gitignore"): append instead of
-  // splitting, so the whole name is preserved rather than treated as a suffix.
-  if (dot <= 0) return `${name}${suffix}`;
-  return `${name.slice(0, dot)}${suffix}${name.slice(dot)}`;
-}

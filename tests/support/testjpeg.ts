@@ -21,16 +21,6 @@ class ExifWriter {
   u32(value: number): void {
     this.bytes.push((value >> 24) & 0xff, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff);
   }
-  ascii(text: string): void {
-    for (let i = 0; i < text.length; i += 1) this.bytes.push(text.charCodeAt(i) & 0xff);
-    this.bytes.push(0);
-  }
-  get length(): number {
-    return this.bytes.length;
-  }
-  at(index: number, value: number): void {
-    this.bytes[index] = value & 0xff;
-  }
   toArray(): Uint8Array {
     return new Uint8Array(this.bytes);
   }

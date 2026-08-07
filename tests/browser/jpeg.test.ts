@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MalformedFileError } from '../../src/lib/media/bytes';
+import { MalformedFileError, u8, u16be } from '../../src/lib/media/bytes';
 import { EXIF_PREFIX, summarizeExif } from '../../src/lib/media/exif';
 import {
   classifySegment,
@@ -161,9 +161,47 @@ describe('jpeg strip', () => {
   });
 });
 
+describe('bounds-checked readers', () => {
+  const four = new Uint8Array([1, 2, 3, 4]);
+
+  // A range-only guard passes NaN, because `NaN < 0` and `NaN + n > len` are
+  // both false. The read then yields `undefined` typed as `number` and shows up
+  // as 0 somewhere much later, which is the exact failure these readers exist
+  // to prevent.
+  it('rejects a NaN offset rather than reading undefined', () => {
+    expect(() => u8(four, Number.NaN)).toThrow(MalformedFileError);
+    expect(() => u16be(four, Number.NaN)).toThrow(MalformedFileError);
+  });
+
+  it('rejects a fractional offset rather than silently reading 0', () => {
+    expect(() => u16be(four, 0.5)).toThrow(MalformedFileError);
+  });
+
+  it('rejects a negative offset', () => {
+    expect(() => u8(four, -1)).toThrow(MalformedFileError);
+  });
+
+  it('rejects a read that runs past the end', () => {
+    expect(() => u16be(four, 3)).toThrow(MalformedFileError);
+  });
+});
+
 describe('jpeg parser hostility', () => {
   it('rejects a file that is not a JPEG', () => {
     expect(() => parseJpegSegments(new Uint8Array([1, 2, 3, 4]))).toThrow(MalformedFileError);
+  });
+
+  it('drops anything appended after EOI', async () => {
+    // Appending payload past the end-of-image marker is a real hiding place:
+    // decoders stop at EOI, so the data is invisible but travels with the file.
+    const base = await makeJpeg();
+    const secret = new TextEncoder().encode('SECRET-PAYLOAD-AFTER-EOI');
+    const withTrailer = new Uint8Array(base.length + secret.length);
+    withTrailer.set(base, 0);
+    withTrailer.set(secret, base.length);
+
+    const { bytes: stripped } = stripJpeg(withTrailer);
+    expect(new TextDecoder().decode(stripped)).not.toContain('SECRET-PAYLOAD-AFTER-EOI');
   });
 
   it('rejects a truncated file rather than reading past the end', async () => {
@@ -197,12 +235,17 @@ describe('jpeg parser hostility', () => {
     expect(kinds(stripJpeg(copy).bytes)).not.toContain('exif');
   });
 
-  it('rejects EXIF whose byte-order mark is corrupt during audit', async () => {
-    const bytes = await makeJpeg({ exif: { make: 'ACME' } });
+  it('reports unreadable EXIF instead of refusing to audit the file', async () => {
+    const bytes = await makeJpeg({ exif: { make: 'ACME' }, comment: 'still readable' });
     const exif = parseJpegSegments(bytes).find((s) => classifySegment(bytes, s) === 'exif');
     const copy = new Uint8Array(bytes);
     if (exif?.payloadAt !== undefined) copy[exif.payloadAt + 6] = 0x00;
-    expect(() => inspectJpeg(copy)).toThrow(MalformedFileError);
+
+    // Throwing here would lose the comment finding too, and leave the user with
+    // nothing on a file the strip handles perfectly well.
+    const ids = inspectJpeg(copy).map((f) => f.id);
+    expect(ids).toContain('exif-unreadable');
+    expect(ids).toContain('jpeg-comment');
   });
 });
 

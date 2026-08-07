@@ -16,6 +16,14 @@ export class MalformedFileError extends Error {
 }
 
 function need(bytes: Uint8Array, at: number, count: number, what: string): void {
+  // The integer check is not paranoia: `NaN < 0` and `NaN + count > length` are
+  // both false, so a NaN offset would sail through a range-only guard and index
+  // to `undefined` typed as `number`. A fractional offset does the same. Either
+  // one would then propagate silently as 0 through the rest of the parse, which
+  // is precisely the failure mode these readers exist to prevent.
+  if (!Number.isInteger(at)) {
+    throw new MalformedFileError(`bad ${what} offset: ${at} is not an integer`);
+  }
   if (at < 0 || at + count > bytes.length) {
     throw new MalformedFileError(
       `truncated ${what}: needed ${count} byte(s) at ${at}, file is ${bytes.length}`
