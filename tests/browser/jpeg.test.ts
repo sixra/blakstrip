@@ -2,20 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { MalformedFileError, u8, u16be } from '../../src/lib/media/bytes';
 import { EXIF_PREFIX, summarizeExif } from '../../src/lib/media/exif';
 import {
-  classifySegment,
+  classifyJpegSegment,
   inspectJpeg,
   parseJpegSegments,
   stripJpeg,
 } from '../../src/lib/media/jpeg';
 import { decodeToPixels } from '../support/decode';
-import { makeJpeg } from '../support/testjpeg';
+import { appSegment, makeJpeg } from '../support/testjpeg';
 
 function findingIds(bytes: Uint8Array): string[] {
   return inspectJpeg(bytes).map((f) => f.id);
 }
 
 function kinds(bytes: Uint8Array): string[] {
-  return parseJpegSegments(bytes).map((s) => classifySegment(bytes, s));
+  return parseJpegSegments(bytes).map((s) => classifyJpegSegment(bytes, s));
 }
 
 describe('jpeg audit', () => {
@@ -45,9 +45,10 @@ describe('jpeg audit', () => {
         'jpeg-xmp',
         'jpeg-iptc',
         'jpeg-comment',
-        'jpeg-app-e7',
       ])
     );
+    // Offset-qualified, so matched by prefix rather than exact id.
+    expect(findingIds(bytes).some((id) => id.startsWith('jpeg-app-e7'))).toBe(true);
   });
 
   it('reports GPS as coordinates a person can recognise', async () => {
@@ -72,6 +73,21 @@ describe('jpeg audit', () => {
 
   it('finds nothing in an image that carries nothing', async () => {
     expect(findingIds(await makeJpeg())).toEqual([]);
+  });
+
+  it('gives every finding a distinct id, even for repeated segment markers', async () => {
+    // Two unknown APP segments sharing a marker would otherwise produce the same
+    // id twice and collide as keys in the list the UI renders.
+    const base = await makeJpeg({ unknownApp: true });
+    const extra = appSegment(0xe7, new TextEncoder().encode('second-vendor-blob'));
+    const doubled = new Uint8Array(base.length + extra.length);
+    doubled.set(base.subarray(0, 2), 0);
+    doubled.set(extra, 2);
+    doubled.set(base.subarray(2), 2 + extra.length);
+
+    const ids = findingIds(doubled);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
   });
 });
 
@@ -145,7 +161,9 @@ describe('jpeg strip', () => {
     // The rebuilt block carries the rotation and nothing else: no device, no
     // time, no location.
     expect(inspectJpeg(stripped)).toEqual([]);
-    const exif = parseJpegSegments(stripped).find((s) => classifySegment(stripped, s) === 'exif');
+    const exif = parseJpegSegments(stripped).find(
+      (s) => classifyJpegSegment(stripped, s) === 'exif'
+    );
     expect(exif).toBeDefined();
     expect(exif?.payloadLength).toBeLessThan(64);
   });
@@ -240,7 +258,7 @@ describe('jpeg parser hostility', () => {
   it('survives EXIF whose TIFF header is corrupt', async () => {
     const bytes = await makeJpeg({ exif: { make: 'ACME' } });
     const segments = parseJpegSegments(bytes);
-    const exif = segments.find((s) => classifySegment(bytes, s) === 'exif');
+    const exif = segments.find((s) => classifyJpegSegment(bytes, s) === 'exif');
     const copy = new Uint8Array(bytes);
     // Break the II/MM byte-order mark inside an otherwise valid segment.
     if (exif?.payloadAt !== undefined) copy[exif.payloadAt + 6] = 0x00;
@@ -251,7 +269,7 @@ describe('jpeg parser hostility', () => {
 
   it('reports unreadable EXIF instead of refusing to audit the file', async () => {
     const bytes = await makeJpeg({ exif: { make: 'ACME' }, comment: 'still readable' });
-    const exif = parseJpegSegments(bytes).find((s) => classifySegment(bytes, s) === 'exif');
+    const exif = parseJpegSegments(bytes).find((s) => classifyJpegSegment(bytes, s) === 'exif');
     const copy = new Uint8Array(bytes);
     if (exif?.payloadAt !== undefined) copy[exif.payloadAt + 6] = 0x00;
 
@@ -279,7 +297,7 @@ describe('exif fixture builder', () => {
       },
     });
 
-    const exif = parseJpegSegments(bytes).find((s) => classifySegment(bytes, s) === 'exif');
+    const exif = parseJpegSegments(bytes).find((s) => classifyJpegSegment(bytes, s) === 'exif');
     const payloadAt = exif?.payloadAt;
     expect(payloadAt).toBeDefined();
     if (payloadAt === undefined) return;

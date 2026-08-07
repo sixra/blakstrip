@@ -180,9 +180,46 @@ describe('webp parser hostility', () => {
     for (let i = 0; i < 4; i += 1) bytes[i] = 'RIFF'.charCodeAt(i);
     for (let i = 0; i < 4; i += 1) bytes[8 + i] = 'WEBP'.charCodeAt(i);
     bytes.set(chunk, 12);
-    // Claim far more payload than the file holds.
-    new DataView(bytes.buffer).setUint32(16, 0x0000ffff, true);
+    const view = new DataView(bytes.buffer);
+    // An honest RIFF size, so the walk is not cut short before it reaches the
+    // chunk. Leaving this at zero would bound the walk to nothing and the test
+    // would pass without exercising the check it is named for.
+    view.setUint32(4, bytes.length - 8, true);
+    // Then claim far more payload in the chunk than the file holds.
+    view.setUint32(16, 0x0000ffff, true);
     expect(() => parseWebpChunks(bytes)).toThrow(MalformedFileError);
+  });
+
+  it('refuses a file shorter than its RIFF header declares, and says so', async () => {
+    // Asserting the message, not just that something threw. The bounds-checked
+    // readers would reject a truncated file anyway, a few chunks later, with
+    // "truncated ascii: needed 4 bytes at 174". This guard exists to fail at the
+    // header with a reason a person can act on, so a test that accepted any
+    // error would pass with the guard deleted.
+    const bytes = await makeWebp({ xmp: true });
+    const chunks = parseWebpChunks(bytes);
+    const last = chunks[chunks.length - 1];
+    expect(last).toBeDefined();
+    if (!last) return;
+
+    expect(() => parseWebpChunks(bytes.subarray(0, last.start))).toThrow(
+      /truncated WebP: header declares/
+    );
+  });
+
+  it('ignores anything appended past the declared RIFF size', async () => {
+    // The same hiding place as JPEG's post-EOI and PNG's post-IEND trailer. The
+    // walk is bounded by the declared size, so the payload is never parsed at
+    // all rather than parsed and then happening to be dropped.
+    const base = await makeWebp();
+    const secret = new TextEncoder().encode('SECRET-PAYLOAD-AFTER-RIFF');
+    const withTrailer = new Uint8Array(base.length + secret.length);
+    withTrailer.set(base, 0);
+    withTrailer.set(secret, base.length);
+
+    expect(fourccs(withTrailer)).toEqual(fourccs(base));
+    const stripped = stripWebp(withTrailer);
+    expect(new TextDecoder().decode(stripped)).not.toContain('SECRET-PAYLOAD-AFTER-RIFF');
   });
 
   it('handles an odd-sized chunk without losing its pad byte', async () => {

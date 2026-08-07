@@ -67,13 +67,30 @@ export function isWebp(bytes: Uint8Array): boolean {
 export function parseWebpChunks(bytes: Uint8Array): WebpChunk[] {
   if (!isWebp(bytes)) throw new MalformedFileError('not a WebP: bad RIFF/WEBP header');
 
+  // RIFF states its own length, which gives WebP a truncation check the other
+  // two formats reach differently (PNG demands an IEND, JPEG fails on the marker
+  // read). A file shorter than it claims has lost data, and continuing would
+  // emit a confidently rebuilt fragment of it.
+  const declared = u32le(bytes, SIZE_AT);
+  const available = bytes.length - SIZE_COUNTS_FROM;
+  if (declared > available) {
+    throw new MalformedFileError(
+      `truncated WebP: header declares ${declared} bytes from offset 8, file has ${available}`
+    );
+  }
+
+  // Anything past the declared size is not part of the file, whatever it looks
+  // like. Bounding the walk here is what keeps an appended payload from being
+  // parsed at all, rather than parsed and then happening to be dropped.
+  const limit = SIZE_COUNTS_FROM + declared;
+
   const chunks: WebpChunk[] = [];
   let at = 12;
 
-  while (at < bytes.length) {
+  while (at < limit) {
     // A trailing byte or two cannot hold a header, so stop rather than throw:
     // the pad byte of the last chunk is already consumed by `end` below.
-    if (at + 8 > bytes.length) break;
+    if (at + 8 > limit) break;
 
     const fourcc = ascii(bytes, at, 4);
     const size = u32le(bytes, at + 4);
@@ -81,7 +98,7 @@ export function parseWebpChunks(bytes: Uint8Array): WebpChunk[] {
     const dataAt = at + 8;
     // Odd payloads carry a single pad byte so the next chunk starts even.
     const end = dataAt + size + (size % 2);
-    if (dataAt + size > bytes.length) {
+    if (dataAt + size > limit) {
       throw new MalformedFileError(`chunk ${fourcc} at ${at} runs past end`);
     }
 

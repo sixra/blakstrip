@@ -150,7 +150,7 @@ type SegmentKind =
  * suite asserts on kinds directly so a misclassification shows up as a named
  * failure rather than as a byte-length difference nobody can interpret.
  */
-export function classifySegment(bytes: Uint8Array, segment: JpegSegment): SegmentKind {
+export function classifyJpegSegment(bytes: Uint8Array, segment: JpegSegment): SegmentKind {
   if (isStructural(segment.marker)) return 'structural';
   if (segment.marker === APP0 && payloadHas(bytes, segment, 'JFIF')) return 'jfif';
   if (segment.marker === APP2 && payloadHas(bytes, segment, 'ICC_PROFILE')) return 'icc';
@@ -181,7 +181,7 @@ export function inspectJpeg(bytes: Uint8Array): Finding[] {
   const findings: Finding[] = [];
 
   for (const segment of segments) {
-    const kind = classifySegment(bytes, segment);
+    const kind = classifyJpegSegment(bytes, segment);
     switch (kind) {
       case 'exif': {
         if (segment.payloadAt === undefined) break;
@@ -234,7 +234,10 @@ export function inspectJpeg(bytes: Uint8Array): Finding[] {
         break;
       case 'unknown':
         findings.push({
-          id: `jpeg-app-${segment.marker.toString(16)}`,
+          // Offset-qualified: a file can carry several unknown segments sharing
+          // one marker, and duplicate ids would collide as keys in the list the
+          // UI renders.
+          id: `jpeg-app-${segment.marker.toString(16)}-${segment.start}`,
           severity: 'medium',
           category: 'container',
           title: `Unrecognised segment (0x${segment.marker.toString(16).toUpperCase()})`,
@@ -267,7 +270,7 @@ export function stripJpeg(bytes: Uint8Array, options: JpegKeepOptions = {}): Jpe
   let keptOrientation = false;
 
   for (const segment of segments) {
-    const kind = classifySegment(bytes, segment);
+    const kind = classifyJpegSegment(bytes, segment);
 
     // The one rebuild: a photo stored rotated needs its Orientation tag or it
     // displays sideways. Emitted in the original block's place, so it keeps

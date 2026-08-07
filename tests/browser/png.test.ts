@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MalformedFileError } from '../../src/lib/media/bytes';
 import {
-  classifyChunk,
+  classifyPngChunk,
   inspectPng,
   isPng,
   parsePngChunks,
@@ -178,26 +178,26 @@ describe('png parser hostility', () => {
 describe('png chunk classification', () => {
   it('treats colour chunks as rendering, not identity', () => {
     for (const type of ['gAMA', 'cHRM', 'sRGB', 'iCCP', 'pHYs']) {
-      expect(classifyChunk(type)).toBe('color');
+      expect(classifyPngChunk(type)).toBe('color');
     }
   });
 
   it('treats every text variant as identity', () => {
     for (const type of ['tEXt', 'zTXt', 'iTXt']) {
-      expect(classifyChunk(type)).toBe('text');
+      expect(classifyPngChunk(type)).toBe('text');
     }
   });
 
   it('treats anything it does not know as unknown, so the allowlist drops it', () => {
-    expect(classifyChunk('vNDr')).toBe('unknown');
-    expect(classifyChunk('caBX')).toBe('unknown');
+    expect(classifyPngChunk('vNDr')).toBe('unknown');
+    expect(classifyPngChunk('caBX')).toBe('unknown');
   });
 
   it('keeps APNG animation chunks, which are image data and not metadata', () => {
     // Dropping these turns an animation into a still image: real damage to the
     // picture, done silently, by a tool that promises only to remove metadata.
     for (const type of ['acTL', 'fcTL', 'fdAT']) {
-      expect(classifyChunk(type)).toBe('structural');
+      expect(classifyPngChunk(type)).toBe('structural');
     }
   });
 });

@@ -111,7 +111,7 @@ type ChunkKind = 'structural' | 'color' | 'text' | 'exif' | 'time' | 'unknown';
  * Exported for test: the keep/drop decision is the security boundary, so the
  * suite asserts on kinds rather than on byte lengths nobody can interpret.
  */
-export function classifyChunk(type: string): ChunkKind {
+export function classifyPngChunk(type: string): ChunkKind {
   if (STRUCTURAL.has(type)) return 'structural';
   if (COLOR.has(type)) return 'color';
   if (TEXT.has(type)) return 'text';
@@ -144,7 +144,7 @@ export function inspectPng(bytes: Uint8Array): Finding[] {
   const findings: Finding[] = [];
 
   for (const chunk of chunks) {
-    switch (classifyChunk(chunk.type)) {
+    switch (classifyPngChunk(chunk.type)) {
       case 'text':
         findings.push({
           id: `png-text-${chunk.type}-${chunk.start}`,
@@ -208,7 +208,7 @@ export function stripPng(bytes: Uint8Array, options: PngKeepOptions = {}): Uint8
   const out: Uint8Array[] = [bytes.subarray(0, SIGNATURE.length)];
 
   for (const chunk of chunks) {
-    if (isKept(classifyChunk(chunk.type), options)) {
+    if (isKept(classifyPngChunk(chunk.type), options)) {
       out.push(bytes.subarray(chunk.start, chunk.end));
     }
   }
