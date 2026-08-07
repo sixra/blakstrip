@@ -4,6 +4,7 @@ import {
   inspectMedia,
   mimeTypeFor,
   stripMedia,
+  SUPPORTED_FORMATS,
   UnsupportedFormatError,
   verifyMedia,
 } from '../../src/lib/media';
@@ -45,6 +46,15 @@ describe('format detection', () => {
     expect(mimeTypeFor('jpeg')).toBe('image/jpeg');
     expect(mimeTypeFor('png')).toBe('image/png');
     expect(mimeTypeFor('webp')).toBe('image/webp');
+  });
+
+  it('covers every supported format, so none can be added without a MIME type', () => {
+    // The guard against `image/${format}`-style guessing: a new format has to
+    // appear here deliberately, rather than silently resolving to something
+    // plausible-looking and wrong.
+    for (const format of SUPPORTED_FORMATS) {
+      expect(mimeTypeFor(format)).toMatch(/^(image|video)\/[a-z0-9+.-]+$/);
+    }
   });
 });
 

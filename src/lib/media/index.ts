@@ -37,12 +37,26 @@ export function detectFormat(bytes: Uint8Array): MediaFormat | undefined {
   return undefined;
 }
 
-/** The MIME type to hand a Blob for this format, for preview and download. */
+/**
+ * The MIME type to hand a Blob for this format, for preview and download.
+ *
+ * Spelled out per format rather than built as `image/${format}`. That template
+ * happens to be right for every format here and becomes wrong the moment a
+ * video is added, producing `image/mp4`: a download the OS opens with the wrong
+ * application, and a preview `<video>` refuses. A map cannot be wrong quietly,
+ * because a new format will not compile until it is listed.
+ */
+const MIME_TYPES: Record<MediaFormat, string> = {
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+};
+
 export function mimeTypeFor(format: MediaFormat): string {
-  return `image/${format}`;
+  return MIME_TYPES[format];
 }
 
-/** Human-facing name, for the "we cannot read this" message and the file picker. */
+/** Every format this engine handles, for the file picker and the refusal message. */
 export const SUPPORTED_FORMATS: readonly MediaFormat[] = ['jpeg', 'png', 'webp'];
 
 function requireFormat(bytes: Uint8Array): MediaFormat {
