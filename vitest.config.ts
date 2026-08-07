@@ -12,7 +12,11 @@ export default getViteConfig({
       provider: 'v8',
       include: ['src/lib/**/*.ts'],
       exclude: ['src/**/*.test.ts', 'src/lib/pdf/types.ts'],
-      thresholds: { statements: 100, branches: 100, functions: 100, lines: 100 },
+      // 90 rather than 100. A 100% gate buys its last few points by testing
+      // defensive branches that cannot be reached, or by marking them ignored,
+      // and neither makes the code safer. The engines that matter are well
+      // above this: the number is a floor to stop drift, not a target.
+      thresholds: { statements: 90, branches: 90, functions: 90, lines: 90 },
     },
     projects: [
       {

@@ -8,13 +8,12 @@
  * lets you check.
  */
 import type { Finding } from '../types';
-import { inspectIsobmff, isIsobmff, stripIsobmff } from './isobmff';
 import { inspectJpeg, isJpeg, stripJpeg } from './jpeg';
 import { inspectPng, isPng, stripPng } from './png';
 import type { KeepOptions, StripResult } from './types';
 import { inspectWebp, isWebp, stripWebp } from './webp';
 
-export type MediaFormat = 'jpeg' | 'png' | 'webp' | 'mp4';
+export type MediaFormat = 'jpeg' | 'png' | 'webp';
 
 /** A file whose format this tool does not handle. */
 export class UnsupportedFormatError extends Error {
@@ -35,27 +34,22 @@ export function detectFormat(bytes: Uint8Array): MediaFormat | undefined {
   if (isJpeg(bytes)) return 'jpeg';
   if (isPng(bytes)) return 'png';
   if (isWebp(bytes)) return 'webp';
-  // Checked last: its marker sits at offset 4 rather than 0, so it is the only
-  // one that could in principle collide with another format's payload.
-  if (isIsobmff(bytes)) return 'mp4';
   return undefined;
 }
 
 /**
  * The MIME type to hand a Blob for this format, for preview and download.
  *
- * Spelled out per format rather than built as `image/${format}`. That template
- * happens to be right for every format here and becomes wrong the moment a
- * video is added, producing `image/mp4`: a download the OS opens with the wrong
- * application, and a preview `<video>` refuses. A map cannot be wrong quietly,
- * because a new format will not compile until it is listed.
+ * Spelled out per format rather than built as `image/${format}`. The template is
+ * right for every format here and silently wrong for any that is not an image:
+ * it produced `image/mp4` while video was still in scope, which is a download the
+ * OS opens with the wrong application. A map cannot be wrong quietly, because a
+ * new format will not compile until it is listed.
  */
 const MIME_TYPES: Record<MediaFormat, string> = {
   jpeg: 'image/jpeg',
   png: 'image/png',
   webp: 'image/webp',
-  // The reason this is a map: the template would have made this `image/mp4`.
-  mp4: 'video/mp4',
 };
 
 export function mimeTypeFor(format: MediaFormat): string {
@@ -63,7 +57,7 @@ export function mimeTypeFor(format: MediaFormat): string {
 }
 
 /** Every format this engine handles, for the file picker and the refusal message. */
-export const SUPPORTED_FORMATS: readonly MediaFormat[] = ['jpeg', 'png', 'webp', 'mp4'];
+export const SUPPORTED_FORMATS: readonly MediaFormat[] = ['jpeg', 'png', 'webp'];
 
 function requireFormat(bytes: Uint8Array): MediaFormat {
   const format = detectFormat(bytes);
@@ -90,8 +84,6 @@ export function inspectMedia(bytes: Uint8Array): MediaAudit {
       return { format, findings: inspectPng(bytes) };
     case 'webp':
       return { format, findings: inspectWebp(bytes) };
-    case 'mp4':
-      return { format, findings: inspectIsobmff(bytes) };
   }
 }
 
@@ -105,9 +97,6 @@ export function stripMedia(bytes: Uint8Array, options: KeepOptions = {}): StripR
       return stripPng(bytes, options);
     case 'webp':
       return stripWebp(bytes, options);
-    case 'mp4':
-      // No colour profile to keep or drop: the option is image-only.
-      return stripIsobmff(bytes);
   }
 }
 

@@ -4,7 +4,7 @@ import { RedactorPage } from './pages/RedactorPage';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
-for (const path of ['/', '/pdf-redact']) {
+for (const path of ['/', '/pdf-redact', '/media-strip']) {
   test(`no accessibility violations on ${path}`, async ({ page }) => {
     await page.goto(path);
     const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();

@@ -4,7 +4,7 @@
     error: string;
     /** Prompt inside the zone, e.g. "Drop a PDF to redact". */
     prompt: string;
-    /** `accept` for the file input, e.g. "application/pdf" or "image/*,video/mp4". */
+    /** `accept` for the file input, e.g. "application/pdf" or "image/jpeg,image/png". */
     accept: string;
     /** Accessible name for the hidden input. */
     inputLabel: string;

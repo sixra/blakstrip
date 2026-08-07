@@ -18,7 +18,7 @@ export type FindingCategory =
   | 'annotation'
   | 'javascript'
   | 'structure'
-  // Image and video containers
+  // Image containers
   | 'exif'
   | 'gps'
   | 'iptc'

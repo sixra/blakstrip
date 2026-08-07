@@ -9,13 +9,13 @@ const appSchema = {
   // Same @id as the landing page declares, so this is the one application seen
   // from a third URL rather than a separate one with a similar name.
   '@id': 'https://blakstrip.com/#app',
-  name: 'blakstrip · photo and video metadata remover',
+  name: 'blakstrip · photo metadata remover',
   applicationCategory: 'UtilitiesApplication',
   operatingSystem: 'Any modern web browser',
   browserRequirements: 'Requires JavaScript',
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   description:
-    'Drop in a photo or video and see what it is carrying: GPS location, camera serial, timestamps, hidden preview images. Remove it all in your browser, without re-compressing the picture.',
+    'Drop in a photo and see what it is carrying: GPS location, camera serial, timestamps, hidden preview images. Remove it all in your browser, without re-compressing the picture.',
   url: 'https://blakstrip.com/media-strip',
   isPartOf: { '@type': 'WebSite', name: 'blakstrip', url: 'https://blakstrip.com' },
   creator: {
@@ -28,8 +28,8 @@ const jsonLd = JSON.stringify(appSchema).replace(/</g, '\\u003c');
 ---
 
 <Base
-  title="Remove Photo and Video Metadata Online, Free and Private · blakstrip"
-  description="Drop in a photo or video and see what it is carrying: GPS location, camera serial, timestamps, hidden preview images. Remove it all in your browser, without re-compressing the picture."
+  title="Remove Photo Metadata Online, Free and Private · blakstrip"
+  description="Drop in a photo and see what it is carrying: GPS location, camera serial, timestamps, hidden preview images. Remove it all in your browser, without re-compressing the picture."
 >
   <main id="main" class="mx-auto w-full max-w-6xl px-4 py-10">
     <header class="mb-8">

@@ -23,11 +23,10 @@
   let cleaned: Uint8Array | undefined;
 
   // Object URLs for the preview. Held so they can be revoked: each one pins its
-  // blob in memory until released, and a few phone videos would add up.
+  // blob in memory until released.
   let originalUrl = $state<string | undefined>();
   let cleanedUrl = $state<string | undefined>();
 
-  const isVideo = $derived(format === 'mp4');
   const previewUrl = $derived(cleanedUrl ?? originalUrl);
 
   function releaseUrls(): void {
@@ -120,9 +119,9 @@
   {#if status === 'idle' || status === 'error'}
     <DropZone
       error={status === 'error' ? errorMsg : ''}
-      prompt="Drop a photo or video"
-      accept="image/jpeg,image/png,image/webp,video/mp4,.jpg,.jpeg,.png,.webp,.mp4,.mov,.m4v"
-      inputLabel="Choose a photo or video"
+      prompt="Drop a photo"
+      accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+      inputLabel="Choose a photo"
       validate={(file) =>
         // Checked here only to fail fast on an obvious mismatch. The real
         // decision is made from the bytes once the file is read, because a name
@@ -166,21 +165,11 @@
 
     {#if previewUrl}
       <figure class="mb-4">
-        {#if isVideo}
-          <!-- This plays the user's own file, which arrived seconds ago with no
-               caption track and no way for us to make one. An empty <track> would
-               satisfy the rule by claiming captions exist, which is worse than
-               saying plainly that there are none. -->
-          <!-- svelte-ignore a11y_media_has_caption -->
-          <video src={previewUrl} controls class="max-h-96 w-full rounded-xl bg-neutral-900"
-          ></video>
-        {:else}
-          <img
-            src={previewUrl}
-            alt={status === 'done' ? 'The cleaned file' : 'The file you opened'}
-            class="max-h-96 w-full rounded-xl object-contain"
-          />
-        {/if}
+        <img
+          src={previewUrl}
+          alt={status === 'done' ? 'The cleaned file' : 'The file you opened'}
+          class="max-h-96 w-full rounded-xl object-contain"
+        />
         <figcaption class="mt-2 text-center text-xs text-neutral-600">
           {status === 'done' ? 'After cleaning' : 'Before cleaning'} · never uploaded
         </figcaption>
