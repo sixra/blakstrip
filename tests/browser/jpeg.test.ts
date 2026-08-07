@@ -7,7 +7,8 @@ import {
   parseJpegSegments,
   stripJpeg,
 } from '../../src/lib/media/jpeg';
-import { decodeToPixels, makeJpeg } from '../support/testjpeg';
+import { decodeToPixels } from '../support/decode';
+import { makeJpeg } from '../support/testjpeg';
 
 function findingIds(bytes: Uint8Array): string[] {
   return inspectJpeg(bytes).map((f) => f.id);
@@ -121,7 +122,9 @@ describe('jpeg strip', () => {
   it('decodes to identical pixels after stripping', async () => {
     const bytes = await makeJpeg({ exif: { make: 'ACME', gps: { lat: 1, lon: 2 } }, iptc: true });
     const { bytes: stripped } = stripJpeg(bytes);
-    expect(await decodeToPixels(stripped)).toEqual(await decodeToPixels(bytes));
+    expect(await decodeToPixels(stripped, 'image/jpeg')).toEqual(
+      await decodeToPixels(bytes, 'image/jpeg')
+    );
   });
 
   it('keeps the colour profile by default and drops it only when asked', async () => {
