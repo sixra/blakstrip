@@ -203,7 +203,7 @@ describe('redact + export + verify', () => {
     const realCreate = document.createElement.bind(document);
     const createSpy = vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
       const el = realCreate(tag as 'a');
-      if (tag === 'a') anchors.push(el as HTMLAnchorElement);
+      if (tag === 'a') anchors.push(el);
       return el;
     });
     const clickSpy = vi

@@ -195,6 +195,9 @@ describe('textlayer', () => {
     // What the snap actually defends against is measurement that is short *within*
     // the run, which is what condensed and substituted fonts produce. Model that
     // by under-reporting substrings while leaving the full run honest.
+    // Capturing the prototype method to patch it is the point; `this` is
+    // supplied explicitly by the .call below, which is what the rule guards.
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     const original = CanvasRenderingContext2D.prototype.measureText;
     CanvasRenderingContext2D.prototype.measureText = function (text: string) {
       const { width } = original.call(this, text);
