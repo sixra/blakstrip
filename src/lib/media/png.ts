@@ -12,7 +12,7 @@
 import type { Finding } from '../types';
 import { ascii, concat, MalformedFileError, u32be } from './bytes';
 import { exifFindings, summarizeExif } from './exif';
-import type { StripResult } from './types';
+import type { KeepOptions, StripResult } from './types';
 
 /** The 8-byte signature every PNG starts with. */
 const SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -101,11 +101,6 @@ export function parsePngChunks(bytes: Uint8Array): PngChunk[] {
   return chunks;
 }
 
-export interface PngKeepOptions {
-  /** Keep the colour chunks. On by default: dropping them shifts the image. */
-  keepColorProfile?: boolean;
-}
-
 type ChunkKind = 'structural' | 'color' | 'text' | 'exif' | 'time' | 'unknown';
 
 /**
@@ -121,7 +116,7 @@ export function classifyPngChunk(type: string): ChunkKind {
   return 'unknown';
 }
 
-function isKept(kind: ChunkKind, options: PngKeepOptions): boolean {
+function isKept(kind: ChunkKind, options: KeepOptions): boolean {
   if (kind === 'structural') return true;
   if (kind === 'color') return options.keepColorProfile !== false;
   return false;
@@ -204,7 +199,7 @@ export function inspectPng(bytes: Uint8Array): Finding[] {
  * including their CRC, so no checksum is recomputed and the image data is
  * bit-identical to the input's.
  */
-export function stripPng(bytes: Uint8Array, options: PngKeepOptions = {}): StripResult {
+export function stripPng(bytes: Uint8Array, options: KeepOptions = {}): StripResult {
   const chunks = parsePngChunks(bytes);
   const out: Uint8Array[] = [bytes.subarray(0, SIGNATURE.length)];
 

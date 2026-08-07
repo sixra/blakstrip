@@ -13,7 +13,7 @@
 import type { Finding } from '../types';
 import { concat, MalformedFileError, matches, u8, u16be } from './bytes';
 import { buildOrientationExif, EXIF_PREFIX, exifFindings, summarizeExif } from './exif';
-import { KEPT_ORIENTATION, type StripNote, type StripResult } from './types';
+import { KEPT_ORIENTATION, type KeepOptions, type StripNote, type StripResult } from './types';
 
 const SOI = 0xd8;
 const EOI = 0xd9;
@@ -60,6 +60,16 @@ function isStructural(marker: number): boolean {
   if (marker >= 0xc0 && marker <= 0xcf) return true;
   if (marker >= 0xdb && marker <= 0xdf) return true;
   return false;
+}
+
+/**
+ * Does this look like a JPEG? Cheap magic-byte check for format dispatch, so a
+ * caller can choose an engine without catching an exception to find out.
+ */
+export function isJpeg(bytes: Uint8Array): boolean {
+  // SOI, then the first marker's 0xFF. Two bytes alone would also match a
+  // truncated file, so the third byte earns its place.
+  return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === SOI && bytes[2] === 0xff;
 }
 
 /**
@@ -134,14 +144,6 @@ function payloadHas(bytes: Uint8Array, segment: JpegSegment, prefix: string): bo
   return segment.payloadAt !== undefined && matches(bytes, segment.payloadAt, prefix);
 }
 
-export interface JpegKeepOptions {
-  /**
-   * Keep the ICC colour profile. On by default: it is not identifying, and
-   * dropping it visibly shifts colour on wide-gamut images.
-   */
-  keepColorProfile?: boolean;
-}
-
 /** What a segment is, for both the keep decision and the audit wording. */
 type SegmentKind =
   'structural' | 'jfif' | 'icc' | 'adobe' | 'exif' | 'xmp' | 'iptc' | 'comment' | 'unknown';
@@ -163,7 +165,7 @@ export function classifyJpegSegment(bytes: Uint8Array, segment: JpegSegment): Se
   return 'unknown';
 }
 
-function isKept(kind: SegmentKind, options: JpegKeepOptions): boolean {
+function isKept(kind: SegmentKind, options: KeepOptions): boolean {
   switch (kind) {
     case 'structural':
     case 'jfif':
@@ -259,7 +261,7 @@ export function inspectJpeg(bytes: Uint8Array): Finding[] {
  * The scan data is copied verbatim, so the output's pixels are bit-identical to
  * the input's. Verified by test rather than asserted.
  */
-export function stripJpeg(bytes: Uint8Array, options: JpegKeepOptions = {}): StripResult {
+export function stripJpeg(bytes: Uint8Array, options: KeepOptions = {}): StripResult {
   const segments = parseJpegSegments(bytes);
   const chunks: Uint8Array[] = [];
   const notes: StripNote[] = [];

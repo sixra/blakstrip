@@ -29,6 +29,22 @@ export interface StripResult {
 }
 
 /**
+ * What the caller may ask an engine to keep beyond the essentials.
+ *
+ * One type rather than one per format: every engine faces the same question,
+ * and three identical interfaces would drift the moment a fourth option
+ * appeared in only two of them.
+ */
+export interface KeepOptions {
+  /**
+   * Keep the embedded colour profile. On by default. It identifies nobody, and
+   * dropping it visibly shifts colour on anything wide-gamut, so removing it is
+   * a deliberate choice rather than part of "strip the metadata".
+   */
+  keepColorProfile?: boolean;
+}
+
+/**
  * The single note any engine currently produces.
  *
  * Frozen because it is a template, not a value: engines copy it into each

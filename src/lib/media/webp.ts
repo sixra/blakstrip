@@ -16,7 +16,7 @@
 import type { Finding } from '../types';
 import { ascii, concat, MalformedFileError, matches, u32le } from './bytes';
 import { EXIF_PREFIX, exifFindings, summarizeExif } from './exif';
-import type { StripResult } from './types';
+import type { KeepOptions, StripResult } from './types';
 
 /**
  * Chunks needed to reconstruct the picture.
@@ -110,11 +110,6 @@ export function parseWebpChunks(bytes: Uint8Array): WebpChunk[] {
   return chunks;
 }
 
-export interface WebpKeepOptions {
-  /** Keep the ICC profile. On by default: dropping it shifts colour. */
-  keepColorProfile?: boolean;
-}
-
 type WebpChunkKind = 'structural' | 'color' | 'exif' | 'xmp' | 'unknown';
 
 /**
@@ -130,7 +125,7 @@ export function classifyWebpChunk(fourcc: string): WebpChunkKind {
   return 'unknown';
 }
 
-function isKept(kind: WebpChunkKind, options: WebpKeepOptions): boolean {
+function isKept(kind: WebpChunkKind, options: KeepOptions): boolean {
   if (kind === 'structural') return true;
   if (kind === 'color') return options.keepColorProfile !== false;
   return false;
@@ -217,7 +212,7 @@ function rewriteVp8x(bytes: Uint8Array, chunk: WebpChunk, keptIcc: boolean): Uin
  * the RIFF size field and the VP8X flags both describe what the file contains,
  * so both change when its contents do.
  */
-export function stripWebp(bytes: Uint8Array, options: WebpKeepOptions = {}): StripResult {
+export function stripWebp(bytes: Uint8Array, options: KeepOptions = {}): StripResult {
   const chunks = parseWebpChunks(bytes);
   const keptIcc = options.keepColorProfile !== false && chunks.some((c) => c.fourcc === COLOR);
 
