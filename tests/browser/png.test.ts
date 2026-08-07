@@ -30,7 +30,15 @@ describe('png audit', () => {
     const ids = findingIds(bytes);
     expect(ids).toEqual(expect.arrayContaining(['exif-gps', 'exif-device', 'png-time']));
     expect(ids.filter((id) => id.startsWith('png-text-'))).toHaveLength(2);
-    expect(ids).toContain('png-chunk-vNDr');
+    expect(ids.some((id) => id.startsWith('png-chunk-vNDr'))).toBe(true);
+  });
+
+  it('gives every finding a distinct id, even for repeated chunk types', async () => {
+    // Duplicate ids would collide as keys in the list the UI renders, so the
+    // offset qualifies them.
+    const bytes = await makePng({ text: { Author: 'Jane', Comment: 'note' }, unknownChunk: true });
+    const ids = findingIds(bytes);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it('names the keyword a text chunk is filed under', async () => {
@@ -183,5 +191,25 @@ describe('png chunk classification', () => {
   it('treats anything it does not know as unknown, so the allowlist drops it', () => {
     expect(classifyChunk('vNDr')).toBe('unknown');
     expect(classifyChunk('caBX')).toBe('unknown');
+  });
+
+  it('keeps APNG animation chunks, which are image data and not metadata', () => {
+    // Dropping these turns an animation into a still image: real damage to the
+    // picture, done silently, by a tool that promises only to remove metadata.
+    for (const type of ['acTL', 'fcTL', 'fdAT']) {
+      expect(classifyChunk(type)).toBe('structural');
+    }
+  });
+});
+
+describe('png truncation', () => {
+  it('refuses a file that never reaches IEND', async () => {
+    // Continuing would emit a PNG with no terminator; appending one would hide
+    // that image data went missing with it. Refusing says so out loud.
+    const base = await makePng();
+    const iend = parsePngChunks(base).find((c) => c.type === 'IEND');
+    expect(iend).toBeDefined();
+    if (!iend) return;
+    expect(() => parsePngChunks(base.subarray(0, iend.start))).toThrow(MalformedFileError);
   });
 });

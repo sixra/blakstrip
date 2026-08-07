@@ -24,7 +24,23 @@ const SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
  * and dropping them shifts the image. `pHYs` carries intended physical size, so
  * removing it changes how large the image prints. None of them identify anyone.
  */
-const STRUCTURAL = new Set(['IHDR', 'PLTE', 'IDAT', 'IEND', 'tRNS', 'sBIT', 'bKGD', 'hIST']);
+const STRUCTURAL = new Set([
+  'IHDR',
+  'PLTE',
+  'IDAT',
+  'IEND',
+  'tRNS',
+  'sBIT',
+  'bKGD',
+  'hIST',
+  // APNG. These are image data, not metadata: acTL carries the frame and loop
+  // counts, fcTL the per-frame size, delay and compositing, fdAT the frames
+  // themselves. Dropping them turns an animation into a still image, which is
+  // exactly the kind of silent damage this tool must not do.
+  'acTL',
+  'fcTL',
+  'fdAT',
+]);
 const COLOR = new Set(['gAMA', 'cHRM', 'sRGB', 'iCCP', 'pHYs']);
 
 /** Text chunks, all of which carry free-form author-supplied content. */
@@ -72,6 +88,13 @@ export function parsePngChunks(bytes: Uint8Array): PngChunk[] {
     chunks.push({ type, start: at, end, dataAt, dataLength: length });
     at = end;
     if (type === 'IEND') break;
+  }
+
+  // A PNG that never reaches IEND is truncated. Refusing it is the honest
+  // outcome: continuing would emit a file missing its terminator, and silently
+  // repairing one would hide that image data went missing with it.
+  if (chunks[chunks.length - 1]?.type !== 'IEND') {
+    throw new MalformedFileError('truncated PNG: no IEND chunk');
   }
 
   return chunks;
@@ -157,7 +180,10 @@ export function inspectPng(bytes: Uint8Array): Finding[] {
         break;
       case 'unknown':
         findings.push({
-          id: `png-chunk-${chunk.type}`,
+          // Offset-qualified, like the text chunks above: a file can carry
+          // several unknown chunks of one type, and duplicate ids would collide
+          // as keys in the list the UI renders.
+          id: `png-chunk-${chunk.type}-${chunk.start}`,
           severity: 'medium',
           category: 'container',
           title: `Unrecognised chunk (${chunk.type})`,

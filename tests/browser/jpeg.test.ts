@@ -194,6 +194,17 @@ describe('jpeg parser hostility', () => {
     expect(() => parseJpegSegments(new Uint8Array([1, 2, 3, 4]))).toThrow(MalformedFileError);
   });
 
+  it('refuses a file whose scan data never reaches EOI', async () => {
+    // The PNG parser rejects a missing IEND with an explicit check. JPEG gets
+    // there by a different route: the scan runs to the end and the next marker
+    // read finds no 0xFF. Asserted so the two formats are known to agree on
+    // truncation rather than assumed to.
+    const bytes = await makeJpeg();
+    expect(() => parseJpegSegments(bytes.subarray(0, bytes.length - 2))).toThrow(
+      MalformedFileError
+    );
+  });
+
   it('drops anything appended after EOI', async () => {
     // Appending payload past the end-of-image marker is a real hiding place:
     // decoders stop at EOI, so the data is invisible but travels with the file.
