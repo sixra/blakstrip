@@ -12,6 +12,7 @@
 import type { Finding } from '../types';
 import { ascii, concat, MalformedFileError, u32be } from './bytes';
 import { exifFindings, summarizeExif } from './exif';
+import type { StripResult } from './types';
 
 /** The 8-byte signature every PNG starts with. */
 const SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -203,7 +204,7 @@ export function inspectPng(bytes: Uint8Array): Finding[] {
  * including their CRC, so no checksum is recomputed and the image data is
  * bit-identical to the input's.
  */
-export function stripPng(bytes: Uint8Array, options: PngKeepOptions = {}): Uint8Array {
+export function stripPng(bytes: Uint8Array, options: PngKeepOptions = {}): StripResult {
   const chunks = parsePngChunks(bytes);
   const out: Uint8Array[] = [bytes.subarray(0, SIGNATURE.length)];
 
@@ -213,5 +214,7 @@ export function stripPng(bytes: Uint8Array, options: PngKeepOptions = {}): Uint8
     }
   }
 
-  return concat(out);
+  // No note to make: PNG has no equivalent of JPEG's orientation tag, so the
+  // strip here never keeps anything the user would be surprised by.
+  return { bytes: concat(out), notes: [] };
 }

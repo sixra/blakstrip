@@ -21,9 +21,10 @@
  *     "gzipKB": { "html": 70, "css": 25, "js": 10 },
  *     "rawKB": { "images": 800, "videos": 30000 }
  *   }
- * Compressible categories (html, css, js) are budgeted on gzip size; media
- * categories (fonts, images, videos) on raw size. "total" is allowed in
- * either table. Raise a budget deliberately; never to silence a failure.
+ * Compressible categories (html, css, js, wasm) are budgeted on gzip size; media
+ * categories (fonts, images, videos) on raw size, because those bytes are
+ * already compressed. "total" is allowed in either table. Raise a budget
+ * deliberately; never to silence a failure.
  */
 import { existsSync, lstatSync, readdirSync, readFileSync } from 'fs';
 import { extname, join } from 'path';
@@ -33,13 +34,18 @@ const CATEGORIES = {
   html: ['.html'],
   css: ['.css'],
   js: ['.js', '.mjs'],
+  // Its own line rather than lumped into `other`: the image codecs are the
+  // largest thing this site will ship, and a category is what makes them
+  // budgetable.
+  wasm: ['.wasm'],
   fonts: ['.woff2', '.woff', '.ttf', '.otf'],
   images: ['.avif', '.webp', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico'],
   videos: ['.mp4', '.webm'],
 };
 
 // Only gzip what actually ships compressed; media is already-compressed bytes.
-const GZIPPED = new Set(['html', 'css', 'js', 'other']);
+// wasm is served compressed like the text categories, so budget it on gzip.
+const GZIPPED = new Set(['html', 'css', 'js', 'wasm', 'other']);
 
 function parseArgs(argv) {
   const args = { dist: 'dist', budgets: 'size-budgets.json', check: true };

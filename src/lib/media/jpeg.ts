@@ -13,6 +13,7 @@
 import type { Finding } from '../types';
 import { concat, MalformedFileError, matches, u8, u16be } from './bytes';
 import { buildOrientationExif, EXIF_PREFIX, exifFindings, summarizeExif } from './exif';
+import { KEPT_ORIENTATION, type StripNote, type StripResult } from './types';
 
 const SOI = 0xd8;
 const EOI = 0xd9;
@@ -252,22 +253,16 @@ export function inspectJpeg(bytes: Uint8Array): Finding[] {
   return findings;
 }
 
-export interface JpegStripResult {
-  bytes: Uint8Array;
-  /** True when an orientation-only EXIF block was re-added. */
-  keptOrientation: boolean;
-}
-
 /**
  * Rebuild the JPEG with only the allowlisted segments.
  *
  * The scan data is copied verbatim, so the output's pixels are bit-identical to
  * the input's. Verified by test rather than asserted.
  */
-export function stripJpeg(bytes: Uint8Array, options: JpegKeepOptions = {}): JpegStripResult {
+export function stripJpeg(bytes: Uint8Array, options: JpegKeepOptions = {}): StripResult {
   const segments = parseJpegSegments(bytes);
   const chunks: Uint8Array[] = [];
-  let keptOrientation = false;
+  const notes: StripNote[] = [];
 
   for (const segment of segments) {
     const kind = classifyJpegSegment(bytes, segment);
@@ -292,7 +287,7 @@ export function stripJpeg(bytes: Uint8Array, options: JpegKeepOptions = {}): Jpe
         header[2] = ((payload.length + 2) >> 8) & 0xff;
         header[3] = (payload.length + 2) & 0xff;
         chunks.push(header, payload);
-        keptOrientation = true;
+        notes.push(KEPT_ORIENTATION);
       }
       continue;
     }
@@ -300,5 +295,5 @@ export function stripJpeg(bytes: Uint8Array, options: JpegKeepOptions = {}): Jpe
     if (isKept(kind, options)) chunks.push(bytes.subarray(segment.start, segment.end));
   }
 
-  return { bytes: concat(chunks), keptOrientation };
+  return { bytes: concat(chunks), notes };
 }

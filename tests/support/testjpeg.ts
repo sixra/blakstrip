@@ -36,6 +36,11 @@ export interface ExifOptions {
   gps?: { lat: number; lon: number };
   /** Adds an IFD1 describing a thumbnail of this many bytes. */
   thumbnailBytes?: number;
+  /**
+   * Width of the thumbnail-length tag. The spec says LONG, but writers differ,
+   * and a reader that assumes LONG picks up the two bytes after a SHORT.
+   */
+  thumbnailLengthType?: 'short' | 'long';
 }
 
 const TAG = {
@@ -166,7 +171,12 @@ export function buildExifPayload(options: ExifOptions): Uint8Array {
   const ifd1: PendingEntry[] = [];
   if (options.thumbnailBytes !== undefined) {
     ifd1.push({ tag: TAG.thumbOffset, type: TYPE.long, count: 1, inline: 0 });
-    ifd1.push({ tag: TAG.thumbLength, type: TYPE.long, count: 1, inline: options.thumbnailBytes });
+    ifd1.push({
+      tag: TAG.thumbLength,
+      type: options.thumbnailLengthType === 'short' ? TYPE.short : TYPE.long,
+      count: 1,
+      inline: options.thumbnailBytes,
+    });
   }
   const ifd1At = ifd1.length > 0 ? ifd0At + ifd0Size : 0;
   const ifd1Size = ifd1.length > 0 ? 2 + ifd1.length * 12 + 4 : 0;

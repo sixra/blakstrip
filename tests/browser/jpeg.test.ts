@@ -75,6 +75,20 @@ describe('jpeg audit', () => {
     expect(findingIds(await makeJpeg())).toEqual([]);
   });
 
+  it('reads a tag at the width its type declares, not the width the spec suggests', async () => {
+    // The thumbnail length is specified LONG, but writers differ. Reading a
+    // SHORT as 32 bits swallows the two bytes after it and reports a wildly
+    // wrong size, so the value is read at its declared width.
+    const long = await makeJpeg({ exif: { thumbnailBytes: 4096 } });
+    const short = await makeJpeg({ exif: { thumbnailBytes: 4096, thumbnailLengthType: 'short' } });
+
+    const sizeOf = (bytes: Uint8Array): string =>
+      inspectJpeg(bytes).find((f) => f.id === 'exif-thumbnail')?.detail ?? '';
+
+    expect(sizeOf(long)).toContain('4096 bytes');
+    expect(sizeOf(short)).toContain('4096 bytes');
+  });
+
   it('gives every finding a distinct id, even for repeated segment markers', async () => {
     // Two unknown APP segments sharing a marker would otherwise produce the same
     // id twice and collide as keys in the list the UI renders.
@@ -155,9 +169,9 @@ describe('jpeg strip', () => {
     const bytes = await makeJpeg({
       exif: { orientation: 6, make: 'ACME', dateTime: '2026:01:01' },
     });
-    const { bytes: stripped, keptOrientation } = stripJpeg(bytes);
+    const { bytes: stripped, notes } = stripJpeg(bytes);
 
-    expect(keptOrientation).toBe(true);
+    expect(notes.map((n) => n.id)).toEqual(['kept-orientation']);
     // The rebuilt block carries the rotation and nothing else: no device, no
     // time, no location.
     expect(inspectJpeg(stripped)).toEqual([]);
@@ -170,8 +184,8 @@ describe('jpeg strip', () => {
 
   it('does not re-add an EXIF block when the orientation is the default', async () => {
     const bytes = await makeJpeg({ exif: { orientation: 1, make: 'ACME' } });
-    const { bytes: stripped, keptOrientation } = stripJpeg(bytes);
-    expect(keptOrientation).toBe(false);
+    const { bytes: stripped, notes } = stripJpeg(bytes);
+    expect(notes).toEqual([]);
     expect(kinds(stripped)).not.toContain('exif');
   });
 

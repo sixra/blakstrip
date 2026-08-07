@@ -69,7 +69,7 @@ describe('webp strip', () => {
     });
     expect(findingIds(bytes).length).toBeGreaterThan(0);
 
-    const stripped = stripWebp(bytes);
+    const stripped = stripWebp(bytes).bytes;
 
     expect(inspectWebp(stripped)).toEqual([]);
     for (const gone of ['EXIF', 'XMP ', 'vNDr']) {
@@ -81,7 +81,7 @@ describe('webp strip', () => {
     // A stale size is the one corruption this rebuild can introduce, and it
     // would surface only in some other decoder, long after the fact.
     const bytes = await makeWebp({ exif: { make: 'ACME' }, xmp: true, unknownChunk: true });
-    const stripped = stripWebp(bytes);
+    const stripped = stripWebp(bytes).bytes;
     expect(u32le(stripped, 4)).toBe(stripped.length - 8);
     expect(stripped.length).toBeLessThan(bytes.length);
   });
@@ -92,7 +92,7 @@ describe('webp strip', () => {
     const bytes = await makeWebp({ exif: { make: 'ACME' }, xmp: true, icc: true });
     expect(vp8xFlags(bytes)).toBe(FLAG_ICC | FLAG_EXIF | FLAG_XMP);
 
-    const flags = vp8xFlags(stripWebp(bytes));
+    const flags = vp8xFlags(stripWebp(bytes).bytes);
     expect(flags).toBeDefined();
     expect((flags ?? 0) & FLAG_EXIF).toBe(0);
     expect((flags ?? 0) & FLAG_XMP).toBe(0);
@@ -102,19 +102,19 @@ describe('webp strip', () => {
 
   it('clears the ICC flag too when the profile is dropped on request', async () => {
     const bytes = await makeWebp({ icc: true, exif: { make: 'ACME' } });
-    const flags = vp8xFlags(stripWebp(bytes, { keepColorProfile: false }));
+    const flags = vp8xFlags(stripWebp(bytes, { keepColorProfile: false }).bytes);
     expect((flags ?? 0) & FLAG_ICC).toBe(0);
-    expect(fourccs(stripWebp(bytes, { keepColorProfile: false }))).not.toContain('ICCP');
+    expect(fourccs(stripWebp(bytes, { keepColorProfile: false }).bytes)).not.toContain('ICCP');
   });
 
   it('keeps the colour profile by default', async () => {
     const bytes = await makeWebp({ icc: true, exif: { make: 'ACME' } });
-    expect(fourccs(stripWebp(bytes))).toContain('ICCP');
+    expect(fourccs(stripWebp(bytes).bytes)).toContain('ICCP');
   });
 
   it('is lossless: the image bitstream chunk is byte-identical', async () => {
     const bytes = await makeWebp({ exif: { make: 'ACME' }, xmp: true });
-    const stripped = stripWebp(bytes);
+    const stripped = stripWebp(bytes).bytes;
 
     const imageOf = (buf: Uint8Array): Uint8Array | undefined => {
       const chunk = parseWebpChunks(buf).find(
@@ -129,14 +129,14 @@ describe('webp strip', () => {
 
   it('decodes to identical pixels after stripping', async () => {
     const bytes = await makeWebp({ exif: { make: 'ACME' }, xmp: true });
-    expect(await decodeToPixels(stripWebp(bytes), 'image/webp')).toEqual(
+    expect(await decodeToPixels(stripWebp(bytes).bytes, 'image/webp')).toEqual(
       await decodeToPixels(bytes, 'image/webp')
     );
   });
 
   it('leaves an already-clean file structurally intact', async () => {
     const bytes = await makeWebp();
-    expect(fourccs(stripWebp(bytes))).toEqual(fourccs(bytes));
+    expect(fourccs(stripWebp(bytes).bytes)).toEqual(fourccs(bytes));
   });
 });
 
@@ -218,7 +218,7 @@ describe('webp parser hostility', () => {
     withTrailer.set(secret, base.length);
 
     expect(fourccs(withTrailer)).toEqual(fourccs(base));
-    const stripped = stripWebp(withTrailer);
+    const stripped = stripWebp(withTrailer).bytes;
     expect(new TextDecoder().decode(stripped)).not.toContain('SECRET-PAYLOAD-AFTER-RIFF');
   });
 

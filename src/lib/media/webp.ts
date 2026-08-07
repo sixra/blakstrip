@@ -16,6 +16,7 @@
 import type { Finding } from '../types';
 import { ascii, concat, MalformedFileError, matches, u32le } from './bytes';
 import { EXIF_PREFIX, exifFindings, summarizeExif } from './exif';
+import type { StripResult } from './types';
 
 /**
  * Chunks needed to reconstruct the picture.
@@ -216,7 +217,7 @@ function rewriteVp8x(bytes: Uint8Array, chunk: WebpChunk, keptIcc: boolean): Uin
  * the RIFF size field and the VP8X flags both describe what the file contains,
  * so both change when its contents do.
  */
-export function stripWebp(bytes: Uint8Array, options: WebpKeepOptions = {}): Uint8Array {
+export function stripWebp(bytes: Uint8Array, options: WebpKeepOptions = {}): StripResult {
   const chunks = parseWebpChunks(bytes);
   const keptIcc = options.keepColorProfile !== false && chunks.some((c) => c.fourcc === COLOR);
 
@@ -245,5 +246,5 @@ export function stripWebp(bytes: Uint8Array, options: WebpKeepOptions = {}): Uin
   if (u32le(out, SIZE_AT) !== out.length - SIZE_COUNTS_FROM) {
     throw new MalformedFileError('internal: rebuilt RIFF size does not match output length');
   }
-  return out;
+  return { bytes: out, notes: [] };
 }

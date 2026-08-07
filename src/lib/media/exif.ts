@@ -122,6 +122,21 @@ function findEntry(entries: Entry[], tag: number): Entry | undefined {
 }
 
 /**
+ * A single numeric value, read at the width its type declares.
+ *
+ * Tags that "are" SHORT or LONG in the spec are not always written that way:
+ * Orientation is specified SHORT and the thumbnail length LONG, but writers
+ * differ, and reading a SHORT as a 32-bit value picks up the two bytes after it.
+ * Undefined for any other type, so the caller omits the field rather than
+ * reporting a number it invented.
+ */
+function readNumber(entry: Entry, r: Reader): number | undefined {
+  if (entry.type === 3) return r.u16(entry.valueAt);
+  if (entry.type === 4) return r.u32(entry.valueAt);
+  return undefined;
+}
+
+/**
  * Summarize an EXIF block. `bytes` is the whole file; `tiffAt` points at the
  * TIFF header (the `II`/`MM`), which is where all internal offsets are relative
  * to.
@@ -147,7 +162,7 @@ export function summarizeExif(bytes: Uint8Array, tiffAt: number): ExifSummary {
   };
 
   const orientation = findEntry(ifd0, TAG_ORIENTATION);
-  if (orientation && orientation.type === 3) summary.orientation = r.u16(orientation.valueAt);
+  if (orientation) summary.orientation = readNumber(orientation, r);
 
   const make = findEntry(ifd0, TAG_MAKE);
   if (make) summary.make = readAscii(bytes, make, tiffAt, r) || undefined;
@@ -197,7 +212,7 @@ export function summarizeExif(bytes: Uint8Array, tiffAt: number): ExifSummary {
     const ifd1 = readEntries(tiffAt + ifd1Offset, r);
     const length = findEntry(ifd1, TAG_THUMB_LENGTH);
     const offset = findEntry(ifd1, TAG_THUMB_OFFSET);
-    if (length && offset) summary.thumbnailBytes = r.u32(length.valueAt);
+    if (length && offset) summary.thumbnailBytes = readNumber(length, r);
   }
 
   return summary;

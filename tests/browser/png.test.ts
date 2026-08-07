@@ -83,7 +83,7 @@ describe('png strip', () => {
     });
     expect(findingIds(bytes).length).toBeGreaterThan(0);
 
-    const stripped = stripPng(bytes);
+    const stripped = stripPng(bytes).bytes;
 
     // Re-inspecting the output is the proof, not a claim about the input.
     expect(inspectPng(stripped)).toEqual([]);
@@ -98,12 +98,12 @@ describe('png strip', () => {
   it('drops an unrecognised chunk, because the allowlist names what stays', async () => {
     const bytes = await makePng({ unknownChunk: true });
     expect(types(bytes)).toContain('vNDr');
-    expect(types(stripPng(bytes))).not.toContain('vNDr');
+    expect(types(stripPng(bytes).bytes)).not.toContain('vNDr');
   });
 
   it('is lossless: the IDAT chunks are byte-identical', async () => {
     const bytes = await makePng({ text: { Author: 'Jane' }, time: true });
-    const stripped = stripPng(bytes);
+    const stripped = stripPng(bytes).bytes;
 
     const idatOf = (buf: Uint8Array): Uint8Array[] =>
       parsePngChunks(buf)
@@ -117,7 +117,7 @@ describe('png strip', () => {
 
   it('decodes to identical pixels after stripping', async () => {
     const bytes = await makePng({ text: { Author: 'Jane' }, exif: { make: 'ACME' } });
-    expect(await decodeToPixels(stripPng(bytes), 'image/png')).toEqual(
+    expect(await decodeToPixels(stripPng(bytes).bytes, 'image/png')).toEqual(
       await decodeToPixels(bytes, 'image/png')
     );
   });
@@ -126,13 +126,13 @@ describe('png strip', () => {
     const bytes = await makePng({ gamma: true, text: { Author: 'Jane' } });
     // Dropping gAMA shifts how the stored values map to colour, so it is not
     // identity data and must survive the default strip.
-    expect(types(stripPng(bytes))).toContain('gAMA');
-    expect(types(stripPng(bytes, { keepColorProfile: false }))).not.toContain('gAMA');
+    expect(types(stripPng(bytes).bytes)).toContain('gAMA');
+    expect(types(stripPng(bytes, { keepColorProfile: false }).bytes)).not.toContain('gAMA');
   });
 
   it('leaves an already-clean file structurally intact', async () => {
     const bytes = await makePng();
-    expect(types(stripPng(bytes))).toEqual(types(bytes));
+    expect(types(stripPng(bytes).bytes)).toEqual(types(bytes));
   });
 });
 
@@ -170,7 +170,7 @@ describe('png parser hostility', () => {
     withTrailer.set(base, 0);
     withTrailer.set(secret, base.length);
 
-    const stripped = stripPng(withTrailer);
+    const stripped = stripPng(withTrailer).bytes;
     expect(new TextDecoder().decode(stripped)).not.toContain('SECRET-PAYLOAD-AFTER-IEND');
   });
 });
