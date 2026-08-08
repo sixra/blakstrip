@@ -3,6 +3,17 @@ import Header from '../components/Header.astro';
 import MediaStripper from '../components/MediaStripper.svelte';
 import Base from '../layouts/Base.astro';
 
+// One string for the meta description and the JSON-LD. They were identical
+// copies, which is how the "without re-compressing" line survived in both places
+// after the tool gained a compressor.
+//
+// The lossless claim is kept because it is still true and it is the difference
+// from every other tool: the strip rewrites the container and never touches the
+// image data. Compression is a separate, optional step, and saying so is what
+// stops the two from reading as a contradiction.
+const description =
+  'Drop in a photo and see what it is carrying: GPS location, camera serial, timestamps, hidden preview images. Remove it all in your browser without touching the picture itself, then optionally shrink the file.';
+
 const appSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebApplication',
@@ -14,8 +25,7 @@ const appSchema = {
   operatingSystem: 'Any modern web browser',
   browserRequirements: 'Requires JavaScript',
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-  description:
-    'Drop in a photo and see what it is carrying: GPS location, camera serial, timestamps, hidden preview images. Remove it all in your browser, without re-compressing the picture.',
+  description,
   url: 'https://blakstrip.com/media-strip',
   isPartOf: { '@type': 'WebSite', name: 'blakstrip', url: 'https://blakstrip.com' },
   creator: {
@@ -27,10 +37,7 @@ const appSchema = {
 const jsonLd = JSON.stringify(appSchema).replace(/</g, '\\u003c');
 ---
 
-<Base
-  title="Remove Photo Metadata Online, Free and Private · blakstrip"
-  description="Drop in a photo and see what it is carrying: GPS location, camera serial, timestamps, hidden preview images. Remove it all in your browser, without re-compressing the picture."
->
+<Base title="Remove Photo Metadata Online, Free and Private · blakstrip" {description}>
   <main id="main" class="mx-auto w-full max-w-6xl px-4 py-10">
     <header class="mb-8">
       <Header />

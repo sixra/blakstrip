@@ -11,7 +11,17 @@ export default getViteConfig({
     coverage: {
       provider: 'v8',
       include: ['src/lib/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/lib/pdf/types.ts'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/lib/pdf/types.ts',
+        // The v8 provider cannot see inside a Worker, so this file reports 0%
+        // while being one of the most exercised in the repo: not one test in
+        // tests/browser/compress.test.ts can pass unless it decodes, resizes and
+        // encodes. Left in, it is a false zero that drags the gate down and
+        // spends headroom that should be protecting code the gate can actually
+        // measure. Its behaviour is covered there; only the numbers are missing.
+        'src/lib/media/compress.worker.ts',
+      ],
       // 90 rather than 100. A 100% gate buys its last few points by testing
       // defensive branches that cannot be reached, or by marking them ignored,
       // and neither makes the code safer. The engines that matter are well

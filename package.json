@@ -56,11 +56,16 @@
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",
     "@astrojs/svelte": "^9.0.1",
+    "@jsquash/avif": "^2.1.1",
+    "@jsquash/jpeg": "^1.6.0",
+    "@jsquash/oxipng": "^2.3.0",
+    "@jsquash/webp": "^1.5.0",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.1.5",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.2.108",
-    "svelte": "^5.56.8"
+    "svelte": "^5.56.8",
+    "wasm-feature-detect": "^1.8.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",

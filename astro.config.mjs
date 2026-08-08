@@ -5,6 +5,7 @@ import sitemap from '@astrojs/sitemap';
 import svelte from '@astrojs/svelte';
 import tailwindcss from '@tailwindcss/vite';
 import AstroPWA from '@vite-pwa/astro';
+import wasmBytes from './vite-plugin-wasm-bytes.mjs';
 
 // In production the CSP locks network egress to nothing; the dev branch below
 // keeps a websocket open for Vite's HMR in case the policy is emitted there.
@@ -27,6 +28,13 @@ export default defineConfig({
       directives: [
         "default-src 'self'",
         isDev ? "connect-src 'self' ws: wss:" : "connect-src 'none'",
+        // No 'wasm-unsafe-eval', deliberately. Compiling wasm on the *page* is
+        // blocked by this policy (measured: WebAssembly.compile throws), but the
+        // codecs only ever run in a worker, and a worker loaded from a same-origin
+        // URL does not inherit the document policy (measured: the same compile is
+        // allowed there). Adding the directive would relax the page for nothing.
+        // The trap is blob: workers, which do inherit: the codec worker has to stay
+        // a real emitted file, never `?worker&inline`.
         "worker-src 'self' blob:", // service worker + pdf.js worker
         "img-src 'self' data: blob:", // canvas raster + icons
         "font-src 'self'",
@@ -90,6 +98,24 @@ export default defineConfig({
   ],
 
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [tailwindcss(), wasmBytes()],
+    // jSquash's own README calls for this: pre-bundling rewrites the codec glue's
+    // wasm resolution and it fails at runtime with "Invalid URL".
+    optimizeDeps: {
+      exclude: ['@jsquash/jpeg', '@jsquash/webp', '@jsquash/oxipng'],
+    },
+    worker: {
+      // ES, not the 'iife' default, to match the `type: 'module'` the Worker is
+      // constructed with. Measured: iife builds and runs here too, because
+      // rolldown folds the codec glue's dynamic imports (webp's SIMD variant,
+      // oxipng's threaded one) into the single bundle. That is incidental, and
+      // depending on it would mean a worker declared one way and emitted another.
+      format: 'es',
+      // `plugins` above applies to workers in dev only; a build gives each worker
+      // its own rolldown pass, which needs its own instances. Without this the
+      // wasm imports resolve to nothing and the build fails with
+      // UNLOADABLE_DEPENDENCY, which is at least loud.
+      plugins: () => [wasmBytes()],
+    },
   },
 });

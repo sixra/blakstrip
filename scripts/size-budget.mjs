@@ -16,6 +16,13 @@
  * grows with every dependency bump, so the ceiling is what turns that from an
  * unnoticed drift into a failed build.
  *
+ * The wasm budget is deliberately 0, which is a tripwire rather than a size
+ * limit. Every codec is inlined into the worker bundle as base64 by
+ * `vite-plugin-wasm-bytes.mjs`, so a `.wasm` file appearing in the output means
+ * that plugin stopped matching the codec glue and the binaries are shipping
+ * twice, once used and once precached and never requested. Nothing else would
+ * notice: the build still works, it just quietly gains a megabyte.
+ *
  * Budget file (size-budgets.json in the repo root, all values in KB):
  *   {
  *     "gzipKB": { "html": 70, "css": 25, "js": 10 },

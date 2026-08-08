@@ -1,7 +1,8 @@
 {
   "gzipKB": {
     "html": 45,
-    "js": 800
+    "js": 1150,
+    "wasm": 0
   },
   "rawKB": {
     "images": 200

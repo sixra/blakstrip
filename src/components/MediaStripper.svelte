@@ -3,6 +3,7 @@
   import { inspectMedia, mimeTypeFor, stripMedia, verifyMedia, type MediaFormat } from '@lib/media';
   import type { StripNote } from '@lib/media/types';
   import type { Finding } from '@lib/types';
+  import CompressPanel from './CompressPanel.svelte';
   import DropZone from './DropZone.svelte';
   import FindingsList from './FindingsList.svelte';
 
@@ -16,11 +17,12 @@
   let notes = $state.raw<StripNote[]>([]);
   let remaining = $state.raw<Finding[]>([]);
 
-  // The file bytes are large and only ever replaced wholesale, so they are kept
-  // out of the reactive graph: proxying a multi-megabyte buffer to watch for
-  // mutations that never happen is pure overhead.
+  // The file bytes are large and only ever replaced wholesale, so they never go
+  // through a proxy: watching a multi-megabyte buffer for mutations that never
+  // happen is pure overhead. `cleaned` is `$state.raw` rather than a plain
+  // variable only because the compression panel is handed it as a prop.
   let original: Uint8Array | undefined;
-  let cleaned: Uint8Array | undefined;
+  let cleaned = $state.raw<Uint8Array | undefined>();
 
   // Object URLs for the preview. Held so they can be revoked: each one pins its
   // blob in memory until released.
@@ -213,6 +215,12 @@
         class="w-full rounded-xl bg-neutral-900 px-4 py-3 font-medium text-white hover:bg-neutral-800"
         onclick={save}>Download the clean file</button
       >
+
+      {#if cleaned && format}
+        <div class="mt-6">
+          <CompressPanel bytes={cleaned} {format} {fileName} sourceUrl={cleanedUrl} />
+        </div>
+      {/if}
     {/if}
   {/if}
 </div>
