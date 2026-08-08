@@ -55,3 +55,27 @@ test('the precached HTML is revisioned so a new build replaces it', async ({ req
     expect(sw).toMatch(new RegExp(`url:"${route}",revision:"[0-9a-f]{32}"`));
   }
 });
+
+test('the page and the tools share one record of unsaved work', async ({ request }) => {
+  // The prompt behaviour rests entirely on the registration script and the island
+  // seeing the *same* module instance of the unsaved-work registry. If the bundler
+  // ever inlines it into each chunk instead of sharing one, hasUnsavedWork() in
+  // the registration script always answers false, and the app silently goes back
+  // to reloading without asking, discarding whatever was open.
+  //
+  // Nothing else would catch that. It is invisible in review, invisible in types,
+  // and only reproducible with two builds and a file open.
+  const html = await (await request.get('/media-strip')).text();
+  const base = html.match(/src="(\/_astro\/Base\.astro[^"]*\.js)"/)?.[1];
+  const island = html.match(/component-url="(\/_astro\/MediaStripper[^"]*\.js)"/)?.[1];
+  expect(base, 'registration script').toBeTruthy();
+  expect(island, 'media island').toBeTruthy();
+
+  const registryChunk = async (url: string): Promise<string | undefined> =>
+    (await (await request.get(url)).text()).match(/unsaved\.[A-Za-z0-9_-]+\.js/)?.[0];
+
+  const fromPage = await registryChunk(base!);
+  // Absent means it was inlined rather than shared, which is the broken case.
+  expect(fromPage, 'the registry should be its own shared chunk').toBeTruthy();
+  expect(await registryChunk(island!)).toBe(fromPage);
+});
