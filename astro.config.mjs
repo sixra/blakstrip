@@ -93,6 +93,22 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Set explicitly because `registerType: 'autoUpdate'` did not do it, despite
+        // the vite-pwa docs saying it forces both. Measured on the generated sw.js:
+        // the only mention of skipWaiting was a `message` listener waiting to be
+        // told, and clientsClaim was absent entirely. The consequence is not subtle.
+        // A returning visitor installed the new worker and it sat in `waiting`
+        // forever while the old one kept serving: no reload, no cache eviction, and
+        // for an installed PWA no way out until every window of it is closed. So the
+        // site could not push an update to anyone who already had it.
+        //
+        // skipWaiting lets the new worker activate instead of queueing behind the
+        // old one; clientsClaim hands it the already-open pages. Together with
+        // cleanupOutdatedCaches (which vite-pwa does enable) that evicts the stale
+        // precache, and the registration's `activated` handler reloads the page onto
+        // the new build. Verified end to end with a two-build upgrade simulation.
+        clientsClaim: true,
+        skipWaiting: true,
         // pdf.js ships its worker as .mjs; without that extension the app installs
         // but cannot open a PDF offline, which is the whole point of installing it.
         globPatterns: ['**/*.{js,mjs,css,html,ico,png,svg,woff2,wasm}'],
