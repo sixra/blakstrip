@@ -144,6 +144,24 @@ describe('compressing through the worker', () => {
 
     expect(detectFormat(result.bytes)).toBe('webp');
   }, 30_000);
+
+  it('encodes AVIF, which is lazily loaded and cannot be read back', async () => {
+    // AVIF is the one output format this app can write but not parse, so it is
+    // deliberately absent from MediaFormat and reachable only through
+    // OutputFormat. `detectFormat` returning undefined here is the point: it
+    // proves the engine is not claiming to understand the file it just made.
+    const source = await baseJpeg(320, 240);
+
+    const result = await withCompressor((compressor) =>
+      compressor.compress(source, 'jpeg', options({ format: 'avif', quality: 50 }))
+    );
+
+    expect(result.format).toBe('avif');
+    expect(result.bytes.length).toBeGreaterThan(0);
+    expect(detectFormat(result.bytes)).toBeUndefined();
+    // The ISOBMFF brand is the honest check available without a parser.
+    expect(String.fromCharCode(...result.bytes.subarray(4, 12))).toContain('ftyp');
+  }, 120_000);
 });
 
 describe('compression and metadata', () => {

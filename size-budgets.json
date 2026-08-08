@@ -2,7 +2,8 @@
   "gzipKB": {
     "html": 45,
     "js": 1150,
-    "wasm": 0
+    "wasm": 0,
+    "avif": 1550
   },
   "rawKB": {
     "images": 200

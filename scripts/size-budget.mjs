@@ -45,6 +45,8 @@ const CATEGORIES = {
   // largest thing this site will ship, and a category is what makes them
   // budgetable.
   wasm: ['.wasm'],
+  // Matched by filename in categoryFor, not by extension, so the list is empty.
+  avif: [],
   fonts: ['.woff2', '.woff', '.ttf', '.otf'],
   images: ['.avif', '.webp', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico'],
   videos: ['.mp4', '.webm'],
@@ -52,7 +54,7 @@ const CATEGORIES = {
 
 // Only gzip what actually ships compressed; media is already-compressed bytes.
 // wasm is served compressed like the text categories, so budget it on gzip.
-const GZIPPED = new Set(['html', 'css', 'js', 'wasm', 'other']);
+const GZIPPED = new Set(['html', 'css', 'js', 'wasm', 'avif', 'other']);
 
 function parseArgs(argv) {
   const args = { dist: 'dist', budgets: 'size-budgets.json', check: true };
@@ -65,6 +67,13 @@ function parseArgs(argv) {
 }
 
 function categoryFor(file) {
+  // The AVIF codec is lazily imported and excluded from the precache, so nobody
+  // downloads it unless they pick that format. Counting it under `js` would put
+  // 1.5 MB into the number that is supposed to mean "what a visitor fetches",
+  // and raising `js` to cover it would let the eager bundle grow unnoticed
+  // behind it. Its own line keeps both numbers honest.
+  if (/^avif-.*\.js$/.test(file)) return 'avif';
+
   const ext = extname(file).toLowerCase();
   for (const [category, exts] of Object.entries(CATEGORIES)) {
     if (exts.includes(ext)) return category;

@@ -1,12 +1,14 @@
 <script lang="ts">
   import { downloadBytes } from '@lib/download';
-  import { mimeTypeFor, verifyMedia, type MediaFormat } from '@lib/media';
+  import { verifyMedia, type MediaFormat } from '@lib/media';
   import {
     compressedFileName,
     optionsForPreset,
+    outputMimeType,
     percentSaved,
     type CompressOptions,
     type CompressPreset,
+    type OutputFormat,
   } from '@lib/media/compress';
   import { Compressor, SupersededError } from '@lib/media/compressor';
   import type { Finding } from '@lib/types';
@@ -33,7 +35,7 @@
     { id: 'best', label: 'Best quality', hint: 'Barely visible change' },
   ];
 
-  const FORMATS: MediaFormat[] = ['jpeg', 'png', 'webp'];
+  const FORMATS: OutputFormat[] = ['jpeg', 'png', 'webp', 'avif'];
 
   let preset = $state<CompressPreset>('balanced');
 
@@ -66,6 +68,8 @@
 
   let compressedSize = $state(0);
   let compressedDims = $state<{ width: number; height: number } | undefined>();
+  /** False for a format this app can write but not read back. */
+  let wasVerified = $state(true);
   let remaining = $state.raw<Finding[]>([]);
 
   // Same reasoning as MediaStripper: multi-megabyte buffers are replaced
@@ -100,13 +104,20 @@
       // construction. Re-reading it anyway is the point of the tool: a claim you
       // are asked to take on faith is worth less than one you can check.
       //
+      // AVIF is the exception, and it is stated plainly in the UI rather than
+      // quietly skipped. This app has no AVIF parser, so `verifyMedia` would
+      // throw "unsupported file" at the person who chose it. The encode is still
+      // from raw pixels, so the claim holds; what is missing is the proof, and
+      // pretending otherwise would undercut the one thing this tool sells.
+      //
       // Everything is computed before any of it is displayed. Assigning as we go
       // meant a throw here left the results panel half updated: a size and a
       // percentage on screen next to an error, with the previous preview already
       // revoked and no new one to replace it.
-      const verified = verifyMedia(result.bytes).remaining;
+      const readable = result.format !== 'avif';
+      const verified = readable ? verifyMedia(result.bytes).remaining : [];
       const url = URL.createObjectURL(
-        new Blob([result.bytes as BlobPart], { type: mimeTypeFor(result.format) })
+        new Blob([result.bytes as BlobPart], { type: outputMimeType(result.format) })
       );
 
       releaseCompressed();
@@ -114,6 +125,7 @@
       compressedSize = result.bytes.length;
       compressedDims = { width: result.width, height: result.height };
       remaining = verified;
+      wasVerified = readable;
       compressedUrl = url;
       busy = false;
     } catch (error) {
@@ -138,7 +150,7 @@
 
   function save(): void {
     if (!compressed) return;
-    downloadBytes(compressed, outputName, mimeTypeFor(options.format));
+    downloadBytes(compressed, outputName, outputMimeType(options.format));
   }
 
   $effect(() => () => {
@@ -194,10 +206,12 @@
           id="compress-format"
           class="border-line rounded-lg border px-2 py-1.5 text-sm"
           value={options.format}
-          onchange={(event) => update({ format: event.currentTarget.value as MediaFormat })}
+          onchange={(event) => update({ format: event.currentTarget.value as OutputFormat })}
         >
           {#each FORMATS as value (value)}
-            <option {value}>{value.toUpperCase()}</option>
+            <option {value}>
+              {value.toUpperCase()}{value === 'avif' ? ' · smallest, much slower' : ''}
+            </option>
           {/each}
         </select>
       </div>
@@ -279,8 +293,12 @@
     </p>
   {/if}
 
-  {#if busy && compressedSize === 0}
-    <p class="text-muted mt-3 text-sm">Compressing…</p>
+  {#if busy}
+    <p class="text-muted mt-3 text-sm">
+      Compressing…{#if options.format === 'avif'}
+        AVIF takes far longer than the others: about 20 seconds for a photo straight off a phone.
+      {/if}
+    </p>
   {/if}
 
   {#if compressedSize > 0}
@@ -361,9 +379,11 @@
             : 'border-danger bg-danger-surface text-danger'
         }`}
       >
-        {remaining.length === 0
-          ? 'Re-read the compressed file: still nothing identifying in it.'
-          : `${remaining.length} thing${remaining.length === 1 ? '' : 's'} survived into the compressed file.`}
+        {!wasVerified
+          ? 'Encoded from raw pixels, so nothing was carried over. This is the one format blakstrip cannot read back, so unlike the others it is not re-checked here.'
+          : remaining.length === 0
+            ? 'Re-read the compressed file: still nothing identifying in it.'
+            : `${remaining.length} thing${remaining.length === 1 ? '' : 's'} survived into the compressed file.`}
       </p>
 
       <button

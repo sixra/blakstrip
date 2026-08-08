@@ -118,6 +118,11 @@ async function encode(pixels: ImageData, request: CompressRequest): Promise<Arra
     case 'webp':
       await readyWebp();
       return encodeWebp(pixels, { quality });
+    case 'avif':
+      // Dynamic import on purpose: this is the one codec not inlined into the
+      // worker bundle, because it is larger than the other three together. The
+      // chunk is fetched the first time someone chooses AVIF and never otherwise.
+      return (await import('./avif')).encodeAvif(pixels, quality);
     case 'png':
       // No quality: PNG is lossless, so `effort` buys the only reduction there
       // is. OxiPNG takes the raw pixels directly, which skips encoding a PNG

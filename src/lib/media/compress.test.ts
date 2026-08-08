@@ -3,6 +3,7 @@ import {
   compressedFileName,
   fitWithin,
   optionsForPreset,
+  outputMimeType,
   percentSaved,
   type CompressPreset,
 } from './compress';
@@ -125,5 +126,23 @@ describe('percentSaved', () => {
 
   it('does not divide by zero on an empty input', () => {
     expect(percentSaved(0, 100)).toBe(0);
+  });
+});
+
+describe('outputMimeType', () => {
+  it('maps every output format, including the one the engine cannot read', () => {
+    expect(outputMimeType('jpeg')).toBe('image/jpeg');
+    expect(outputMimeType('png')).toBe('image/png');
+    expect(outputMimeType('webp')).toBe('image/webp');
+    // AVIF is absent from MediaFormat on purpose, so it cannot go through the
+    // engine's own MIME map. Getting this wrong hands the OS a file it opens
+    // with the wrong application.
+    expect(outputMimeType('avif')).toBe('image/avif');
+  });
+});
+
+describe('compressedFileName for AVIF', () => {
+  it('replaces the extension rather than appending one', () => {
+    expect(compressedFileName('holiday.jpg', 'avif')).toBe('holiday-small.avif');
   });
 });

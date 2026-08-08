@@ -21,6 +21,10 @@ export default getViteConfig({
         // spends headroom that should be protecting code the gate can actually
         // measure. Its behaviour is covered there; only the numbers are missing.
         'src/lib/media/compress.worker.ts',
+        // Same blind spot, same reason: this is dynamically imported *by* the
+        // worker, so it executes where v8 cannot see it. The AVIF test in
+        // tests/browser/compress.test.ts cannot pass unless it runs.
+        'src/lib/media/avif.ts',
       ],
       // 90 globally rather than 100. A 100% gate buys its last few points by
       // testing defensive branches that cannot be reached, or by marking them

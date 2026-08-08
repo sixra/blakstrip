@@ -109,6 +109,14 @@ export default defineConfig({
         // pdf.js ships its worker as .mjs; without that extension the app installs
         // but cannot open a PDF offline, which is the whole point of installing it.
         globPatterns: ['**/*.{js,mjs,css,html,ico,png,svg,woff2,wasm}'],
+        // The AVIF codec is deliberately not precached. It is 4.65 MB on its own,
+        // more than the entire rest of the site, and most people never choose the
+        // format. Precaching it would make every install pay for it, and workbox
+        // refuses assets over the ceiling below anyway, which fails the build.
+        //
+        // The cost is stated in the UI rather than hidden: AVIF is the one format
+        // that needs one online use before it works offline.
+        globIgnores: ['**/avif-*.js'],
         // The worker is ~1.3 MB and grows each release; workbox silently skips
         // anything over its 2 MiB default, so pin the ceiling rather than drift into it.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,

@@ -12,9 +12,20 @@ import type { MediaFormat } from './index';
 
 export type CompressPreset = 'smallest' | 'balanced' | 'best';
 
+/**
+ * What compression can write, which is deliberately wider than what the engine
+ * can read.
+ *
+ * `MediaFormat` means "a container this app can parse, strip and verify". AVIF is
+ * none of those: there is no AVIF parser here, so it can be produced but not
+ * audited. Keeping it a separate type is what stops it leaking into `detectFormat`
+ * or `stripMedia`, where it would promise something untrue.
+ */
+export type OutputFormat = MediaFormat | 'avif';
+
 export interface CompressOptions {
   /** The container to encode into, which need not be the source format. */
-  format: MediaFormat;
+  format: OutputFormat;
   /**
    * 1 to 100, higher is better looking and larger. Ignored for PNG, which is
    * encoded losslessly: its size comes from `effort` instead.
@@ -83,10 +94,11 @@ export function optionsForPreset(preset: CompressPreset, source: MediaFormat): C
   }
 }
 
-const EXTENSIONS: Record<MediaFormat, string> = {
+const EXTENSIONS: Record<OutputFormat, string> = {
   jpeg: 'jpg',
   png: 'png',
   webp: 'webp',
+  avif: 'avif',
 };
 
 /**
@@ -96,7 +108,7 @@ const EXTENSIONS: Record<MediaFormat, string> = {
  * frequently not the input's: leaving `holiday.png` on WebP bytes produces a
  * file that some applications refuse to open and others open only by sniffing.
  */
-export function compressedFileName(name: string, format: MediaFormat): string {
+export function compressedFileName(name: string, format: OutputFormat): string {
   const dot = name.lastIndexOf('.');
   const stem = dot > 0 ? name.slice(0, dot) : name;
   return `${stem}-small.${EXTENSIONS[format]}`;
@@ -143,7 +155,7 @@ export interface CompressSuccess {
   id: number;
   ok: true;
   bytes: Uint8Array;
-  format: MediaFormat;
+  format: OutputFormat;
   /** The encoded size, which is the resized size when a cap applied. */
   width: number;
   height: number;
@@ -156,3 +168,8 @@ export interface CompressFailure {
 }
 
 export type CompressResponse = CompressSuccess | CompressFailure;
+
+/** The MIME type for an output format, including the one the engine cannot read. */
+export function outputMimeType(format: OutputFormat): string {
+  return format === 'avif' ? 'image/avif' : `image/${format}`;
+}
