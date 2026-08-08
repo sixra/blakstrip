@@ -43,10 +43,11 @@ export default getViteConfig({
         lines: 90,
         // The redaction engine is at 100% today and this is what keeps it there.
         'src/lib/pdf/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
-        // Pinned at where the media engine actually is, not where it should be:
-        // set to 90 it fails immediately on `exif.ts` (69% branch). This stops
-        // further drift; raise it as those branches get tests.
-        'src/lib/media/**': { statements: 94, branches: 88, functions: 94, lines: 96 },
+        // Raised after covering the EXIF parser's little-endian path and its Exif
+        // sub-IFD, which took the module from 69% to 88% branch and the directory
+        // from 88.2% to 93.5%. Pinned just under the real figures so the gain
+        // cannot quietly erode.
+        'src/lib/media/**': { statements: 98, branches: 93, functions: 98, lines: 99 },
       },
     },
     projects: [

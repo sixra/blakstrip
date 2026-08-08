@@ -8,18 +8,28 @@
  * is in the same place, and the same shape, as in a real photo.
  */
 
-/** A big-endian TIFF/EXIF writer, only as complete as the fixtures need. */
+/**
+ * A TIFF/EXIF writer, only as complete as the fixtures need.
+ *
+ * Byte order is a constructor argument because real cameras use both, and a
+ * parser that only ever sees one of them has half its reader untested. Canon and
+ * Nikon write `MM`, most phones write `II`.
+ */
 class ExifWriter {
   private readonly bytes: number[] = [];
+
+  constructor(private readonly littleEndian = false) {}
 
   u8(value: number): void {
     this.bytes.push(value & 0xff);
   }
   u16(value: number): void {
-    this.bytes.push((value >> 8) & 0xff, value & 0xff);
+    const be = [(value >> 8) & 0xff, value & 0xff];
+    this.bytes.push(...(this.littleEndian ? be.reverse() : be));
   }
   u32(value: number): void {
-    this.bytes.push((value >> 24) & 0xff, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff);
+    const be = [(value >> 24) & 0xff, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff];
+    this.bytes.push(...(this.littleEndian ? be.reverse() : be));
   }
   toArray(): Uint8Array {
     return new Uint8Array(this.bytes);
@@ -41,6 +51,22 @@ export interface ExifOptions {
    * and a reader that assumes LONG picks up the two bytes after a SHORT.
    */
   thumbnailLengthType?: 'short' | 'long';
+  /**
+   * TIFF byte order. `MM` (big-endian) by default because that is what the
+   * original fixtures used; `II` exercises the other half of `readerFor`.
+   */
+  byteOrder?: 'II' | 'MM';
+  /**
+   * The Exif sub-IFD, which IFD0 points at through tag 0x8769. This is where a
+   * camera puts most of what identifies it, and none of it is reachable from
+   * IFD0 alone.
+   */
+  subIfd?: {
+    makerNote?: boolean;
+    dateTimeOriginal?: string;
+    bodySerial?: string;
+    lensSerial?: string;
+  };
 }
 
 const TAG = {
@@ -52,9 +78,14 @@ const TAG = {
   gpsIfd: 0x8825,
   thumbOffset: 0x0201,
   thumbLength: 0x0202,
+  exifIfd: 0x8769,
+  makerNote: 0x927c,
+  dateTimeOriginal: 0x9003,
+  bodySerial: 0xa431,
+  lensSerial: 0xa435,
 } as const;
 
-const TYPE = { ascii: 2, short: 3, long: 4, rational: 5 } as const;
+const TYPE = { ascii: 2, short: 3, long: 4, rational: 5, undefinedType: 7 } as const;
 
 interface PendingEntry {
   tag: number;
@@ -123,6 +154,12 @@ function writeIfd(
   for (const byte of trailing) w.u8(byte);
 }
 
+/** A 32-bit value as raw bytes in the file's declared order. */
+function u32Bytes(value: number, littleEndian: boolean): number[] {
+  const be = [(value >> 24) & 0xff, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff];
+  return littleEndian ? be.reverse() : be;
+}
+
 function asciiBytes(text: string): number[] {
   const out: number[] = [];
   for (let i = 0; i < text.length; i += 1) out.push(text.charCodeAt(i) & 0xff);
@@ -132,14 +169,15 @@ function asciiBytes(text: string): number[] {
 
 /** Build a complete `Exif\0\0` + TIFF payload for a JPEG APP1 segment. */
 export function buildExifPayload(options: ExifOptions): Uint8Array {
-  const w = new ExifWriter();
+  const littleEndian = options.byteOrder === 'II';
+  const w = new ExifWriter(littleEndian);
   for (const ch of 'Exif') w.u8(ch.charCodeAt(0));
   w.u8(0);
   w.u8(0);
 
-  // TIFF header: big-endian, magic 42, IFD0 immediately after.
-  w.u8(0x4d);
-  w.u8(0x4d);
+  // TIFF header: byte-order mark, magic 42, IFD0 immediately after.
+  w.u8(littleEndian ? 0x49 : 0x4d);
+  w.u8(littleEndian ? 0x49 : 0x4d);
   w.u16(0x2a);
   w.u32(8);
 
@@ -164,6 +202,47 @@ export function buildExifPayload(options: ExifOptions): Uint8Array {
   const gpsPlaceholderIndex = options.gps ? ifd0.length : -1;
   if (options.gps) ifd0.push({ tag: TAG.gpsIfd, type: TYPE.long, count: 1, inline: 0 });
 
+  const exifEntries: PendingEntry[] = [];
+  if (options.subIfd) {
+    const { makerNote, dateTimeOriginal, bodySerial, lensSerial } = options.subIfd;
+    if (makerNote) {
+      // Contents are opaque to the audit, which only reports that one is present:
+      // a MakerNote is a vendor blob with no public schema.
+      exifEntries.push({
+        tag: TAG.makerNote,
+        type: TYPE.undefinedType,
+        count: 6,
+        data: [1, 2, 3, 4, 5, 6],
+      });
+    }
+    for (const [tag, value] of [
+      [TAG.dateTimeOriginal, dateTimeOriginal],
+      [TAG.bodySerial, bodySerial],
+      [TAG.lensSerial, lensSerial],
+    ] as const) {
+      if (value === undefined) continue;
+      const data = asciiBytes(value);
+      exifEntries.push({ tag, type: TYPE.ascii, count: data.length, data });
+    }
+  }
+  const gpsEntries: PendingEntry[] = [];
+  if (options.gps) {
+    const { lat, lon } = options.gps;
+    const rational = (value: number): number[] =>
+      dmsRationals(value).flatMap((n) => u32Bytes(n, littleEndian));
+    gpsEntries.push(
+      { tag: 0x0001, type: TYPE.ascii, count: 2, data: asciiBytes(lat < 0 ? 'S' : 'N') },
+      { tag: 0x0002, type: TYPE.rational, count: 3, data: rational(lat) },
+      { tag: 0x0003, type: TYPE.ascii, count: 2, data: asciiBytes(lon < 0 ? 'W' : 'E') },
+      { tag: 0x0004, type: TYPE.rational, count: 3, data: rational(lon) }
+    );
+  }
+
+  const exifPlaceholderIndex = exifEntries.length > 0 ? ifd0.length : -1;
+  if (exifEntries.length > 0) {
+    ifd0.push({ tag: TAG.exifIfd, type: TYPE.long, count: 1, inline: 0 });
+  }
+
   const ifd0At = 8;
   const ifd0Size =
     2 + ifd0.length * 12 + 4 + ifd0.reduce((sum, entry) => sum + trailingLength(entry), 0);
@@ -187,39 +266,27 @@ export function buildExifPayload(options: ExifOptions): Uint8Array {
     if (entry) entry.inline = gpsAt;
   }
 
+  // The sub-IFD goes last, so its offset needs the GPS block's size first. Sized
+  // from the entries themselves with the same helper IFD0 uses: a hardcoded count
+  // here was wrong the moment it was written.
+  const gpsSize =
+    gpsEntries.length > 0
+      ? 2 +
+        gpsEntries.length * 12 +
+        4 +
+        gpsEntries.reduce((sum, entry) => sum + trailingLength(entry), 0)
+      : 0;
+  const exifAt = gpsAt + gpsSize;
+  if (exifPlaceholderIndex >= 0) {
+    const entry = ifd0[exifPlaceholderIndex];
+    if (entry) entry.inline = exifAt;
+  }
+
   writeIfd(w, ifd0, ifd0At, ifd1At);
   if (ifd1.length > 0) writeIfd(w, ifd1, ifd1At, 0);
 
-  if (options.gps) {
-    const { lat, lon } = options.gps;
-    const gps: PendingEntry[] = [
-      { tag: 0x0001, type: TYPE.ascii, count: 2, data: asciiBytes(lat < 0 ? 'S' : 'N') },
-      {
-        tag: 0x0002,
-        type: TYPE.rational,
-        count: 3,
-        data: dmsRationals(lat).flatMap((n) => [
-          (n >> 24) & 0xff,
-          (n >> 16) & 0xff,
-          (n >> 8) & 0xff,
-          n & 0xff,
-        ]),
-      },
-      { tag: 0x0003, type: TYPE.ascii, count: 2, data: asciiBytes(lon < 0 ? 'W' : 'E') },
-      {
-        tag: 0x0004,
-        type: TYPE.rational,
-        count: 3,
-        data: dmsRationals(lon).flatMap((n) => [
-          (n >> 24) & 0xff,
-          (n >> 16) & 0xff,
-          (n >> 8) & 0xff,
-          n & 0xff,
-        ]),
-      },
-    ];
-    writeIfd(w, gps, gpsAt, 0);
-  }
+  if (gpsEntries.length > 0) writeIfd(w, gpsEntries, gpsAt, 0);
+  if (exifEntries.length > 0) writeIfd(w, exifEntries, exifAt, 0);
 
   return w.toArray();
 }
