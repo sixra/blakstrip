@@ -80,8 +80,9 @@ const description =
         <p class="text-faint mb-5 font-mono text-xs tracking-[0.2em] uppercase">
           Fully private · free · works offline
         </p>
+        {/* -ml-2 cancels the strip's padding so "Nothing" aligns with "your" below. */}
         <h1 class="text-5xl font-bold tracking-tight sm:text-7xl">
-          Nothing leaves<br />your <span class="bg-redact text-surface px-2">device</span>.
+          <span class="bg-redact text-surface -ml-2 px-2">Nothing</span> leaves<br />your device.
         </h1>
         <p class="text-muted mt-6 max-w-2xl text-lg">
           Files carry more than you put in them. blakstrip finds it, removes it, and then re-reads
