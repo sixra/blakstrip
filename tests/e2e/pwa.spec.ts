@@ -24,10 +24,17 @@ test('the service worker precaches the pdf.js worker', async ({ request }) => {
 test('the service worker can take over from a previous version', async ({ request }) => {
   const sw = await (await request.get('/sw.js')).text();
 
-  // Called at the top level, not merely referenced inside a message handler: the
-  // broken build contained the string `skipWaiting` and still could not activate.
-  expect(sw).toMatch(/self\.skipWaiting\(\)/);
-  expect(sw).toMatch(/clientsClaim\(\)/);
+  // The broken build *did* contain `self.skipWaiting()` — inside a `message`
+  // listener, waiting to be told. So matching that call proves nothing, and an
+  // earlier version of this test asserted it while claiming otherwise.
+  //
+  // What separates the two builds is the listener itself: waiting to be messaged
+  // is the shape prompt-mode uses, and an auto-updating worker should activate on
+  // its own instead. Its absence, plus clientsClaim (missing entirely before), is
+  // what the broken output could not satisfy.
+  expect(sw).not.toContain('SKIP_WAITING');
+  expect(sw).toContain('self.skipWaiting()');
+  expect(sw).toContain('clientsClaim()');
 
   // Without this the previous version's precache survives alongside the new one.
   expect(sw).toContain('cleanupOutdatedCaches');

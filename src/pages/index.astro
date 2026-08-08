@@ -122,7 +122,11 @@ const description =
                           />
                           <span class="text-ink font-medium">{finding.title}</span>
                         </span>
-                        <span class="text-faint pl-[0.875rem] text-xs sm:ml-auto sm:truncate sm:pl-0">
+                        {/* Indented to line up under the title: the dot's own width
+                            plus the gap after it. Written as the sum rather than the
+                            total so it stays correct if either changes; a hardcoded
+                            0.875rem was 4px short. */}
+                        <span class="text-faint pl-[calc(0.375rem+0.75rem)] text-xs sm:ml-auto sm:truncate sm:pl-0">
                           {finding.detail}
                         </span>
                       </li>

@@ -12,8 +12,7 @@ import { expect, test } from '@playwright/test';
 import { TOOLS } from '../../src/config/tools';
 
 const attr = (html: string, selector: string): string | undefined =>
-  html.match(new RegExp(`<meta[^>]*${selector}[^>]*content="([^"]*)"`))?.[1] ??
-  html.match(new RegExp(`<meta[^>]*content="([^"]*)"[^>]*${selector}`))?.[1];
+  html.match(new RegExp(`<meta[^>]*${selector}[^>]*content="([^"]*)"`))?.[1];
 
 const ROUTES = ['/', ...TOOLS.map((tool) => tool.href)];
 
