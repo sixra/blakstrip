@@ -67,11 +67,10 @@
        screen readers, and this is the only feedback a failed open gets. -->
   <button
     type="button"
-    class="flex min-h-72 w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-10 text-center transition"
-    class:border-line={!dragOver}
-    class:bg-raised={!dragOver}
-    class:border-redact={dragOver}
-    class:bg-line={dragOver}
+    class={[
+      'flex min-h-72 w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-10 text-center transition',
+      dragOver ? 'border-redact bg-line' : 'border-line bg-raised',
+    ]}
     ondragover={(e) => {
       e.preventDefault();
       dragOver = true;

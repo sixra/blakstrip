@@ -1,13 +1,13 @@
 ---
+import { inspectMedia } from '@lib/media';
+import samplePdf from '@lib/pdf/__fixtures__/text-secrets.pdf?bytes';
+import { inspectStructure } from '@lib/pdf/inspect';
+import type { Finding } from '@lib/types';
 import samplePhoto from '../assets/samples/sample-photo.jpg?bytes';
 import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
 import { TOOLS, type ToolHref } from '../config/tools';
 import Base from '../layouts/Base.astro';
-import { inspectMedia } from '../lib/media';
-import samplePdf from '../lib/pdf/__fixtures__/text-secrets.pdf?bytes';
-import { inspectStructure } from '../lib/pdf/inspect';
-import type { Finding } from '../lib/types';
 
 // The cards show what the tools actually find, not a picture of what they find.
 //
@@ -75,7 +75,7 @@ const description =
       <Header />
     </header>
 
-    <main id="main" class="flex flex-1 flex-col justify-center py-12">
+    <main id="main" class="flex flex-1 flex-col py-12">
       <div class="max-w-3xl">
         <p class="text-faint mb-5 font-mono text-xs tracking-[0.2em] uppercase">
           Fully private · free · works offline
@@ -104,18 +104,27 @@ const description =
                   <p class="text-faint font-mono text-xs">
                     {sampleName[tool.href]} · {findings[tool.href].length} found
                   </p>
+                  {/* Each finding stacks on a phone and sits on one row from `sm` up.
+                      Sharing a row at 390px squeezed the value column until it
+                      truncated, and the value is the persuasive half: "51.50897,
+                      -0...." makes the point far less well than the coordinate does.
+                      Only the wide layout truncates, where there is room not to. */}
                   <ul class="mt-3 space-y-2">
                     {findings[tool.href].slice(0, 5).map((finding) => (
-                      <li class="flex items-baseline gap-3 text-sm">
-                        <span
-                          class:list={[
-                            'mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full',
-                            finding.severity === 'high' ? 'bg-danger' : 'bg-warning',
-                          ]}
-                          aria-hidden="true"
-                        />
-                        <span class="text-ink font-medium">{finding.title}</span>
-                        <span class="text-faint ml-auto truncate text-xs">{finding.detail}</span>
+                      <li class="flex flex-col text-sm sm:flex-row sm:items-baseline sm:gap-3">
+                        <span class="flex items-baseline gap-3">
+                          <span
+                            class:list={[
+                              'mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full',
+                              finding.severity === 'high' ? 'bg-danger' : 'bg-warning',
+                            ]}
+                            aria-hidden="true"
+                          />
+                          <span class="text-ink font-medium">{finding.title}</span>
+                        </span>
+                        <span class="text-faint pl-[0.875rem] text-xs sm:ml-auto sm:truncate sm:pl-0">
+                          {finding.detail}
+                        </span>
                       </li>
                     ))}
                   </ul>

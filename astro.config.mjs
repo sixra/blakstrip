@@ -16,8 +16,13 @@ export default defineConfig({
   site: 'https://blakstrip.com',
   trailingSlash: 'never',
   build: { format: 'file', inlineStylesheets: 'always' },
-  // No prefetch: it would fetch() pages, which `connect-src 'none'` blocks.
-  // The no-egress guarantee (verifiable in devtools) matters more than a hint.
+  // No prefetch, and the reason is the product rather than the policy. Prefetching
+  // would put page requests in the network panel this site invites people to open
+  // and watch stay empty; a faster second navigation is not worth undermining the
+  // one claim everything else rests on. (Astro prefetches with
+  // `<link rel="prefetch">` where the browser supports it and only falls back to
+  // `fetch()` in Safari, so `connect-src 'none'` would block it there and not
+  // elsewhere. Either way it is requests we do not want.)
   // No markdown yet, and Shiki's inline styles violate the strict CSP.
   markdown: { syntaxHighlight: false },
 

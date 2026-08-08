@@ -22,11 +22,32 @@ export default getViteConfig({
         // measure. Its behaviour is covered there; only the numbers are missing.
         'src/lib/media/compress.worker.ts',
       ],
-      // 90 rather than 100. A 100% gate buys its last few points by testing
-      // defensive branches that cannot be reached, or by marking them ignored,
-      // and neither makes the code safer. The engines that matter are well
-      // above this: the number is a floor to stop drift, not a target.
-      thresholds: { statements: 90, branches: 90, functions: 90, lines: 90 },
+      // 90 globally rather than 100. A 100% gate buys its last few points by
+      // testing defensive branches that cannot be reached, or by marking them
+      // ignored, and neither makes the code safer. The number is a floor to stop
+      // drift, not a target.
+      //
+      // One global floor was not enough, because aggregation hid both ends at
+      // once. `lib/pdf` sits at 100% and `lib/media` at 88.2% branch, which is
+      // already *under* the global floor and passes only because pdf's 100%
+      // lifts the mean to 92.9%. So the redaction engine could lose ten points
+      // unnoticed, while the least-covered file in the repo stayed invisible.
+      //
+      // Glob thresholds are checked *in addition* to the global ones (the global
+      // set still covers every file, glob-matched or not), so this constrains
+      // rather than relaxes. Note glob entries do not inherit `perFile`.
+      thresholds: {
+        statements: 90,
+        branches: 90,
+        functions: 90,
+        lines: 90,
+        // The redaction engine is at 100% today and this is what keeps it there.
+        'src/lib/pdf/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
+        // Pinned at where the media engine actually is, not where it should be:
+        // set to 90 it fails immediately on `exif.ts` (69% branch). This stops
+        // further drift; raise it as those branches get tests.
+        'src/lib/media/**': { statements: 94, branches: 88, functions: 94, lines: 96 },
+      },
     },
     projects: [
       {

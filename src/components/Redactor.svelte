@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
   import { onDestroy, type Snippet } from 'svelte';
+  import { downloadBytes } from '@lib/download';
   import { canRedo, canUndo, commit as commitHistory, initHistory, redo, undo } from '@lib/history';
-  import { downloadPdf, redactedFileName } from '@lib/pdf/download';
+  import { redactedFileName } from '@lib/pdf/download';
   import { loadPdf, renderPageToCanvas, renderPageToImageCanvas } from '@lib/pdf/render';
   import { collectRedactedText, searchDocumentRects } from '@lib/pdf/textlayer';
   import type { AuditReport, RedactionRect, VerifyReport } from '@lib/pdf/types';
@@ -400,7 +401,7 @@
 
   function confirmDownload() {
     if (pendingBytes) {
-      downloadPdf(pendingBytes, redactedFileName(fileName));
+      downloadBytes(pendingBytes, redactedFileName(fileName), 'application/pdf');
       downloadedRects = rects;
     }
     closeVerify();

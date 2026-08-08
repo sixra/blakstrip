@@ -22,7 +22,6 @@ export type FindingCategory =
   | 'exif'
   | 'gps'
   | 'iptc'
-  | 'icc'
   | 'thumbnail'
   | 'makernote'
   | 'container';

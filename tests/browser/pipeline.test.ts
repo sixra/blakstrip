@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { downloadPdf, redactedFileName } from '../../src/lib/pdf/download';
+import { downloadBytes } from '../../src/lib/download';
+import { redactedFileName } from '../../src/lib/pdf/download';
 import { exportRedactedPdf } from '../../src/lib/pdf/export';
 import { buildRedactedPdf } from '../../src/lib/pdf/redact';
 import { loadPdf } from '../../src/lib/pdf/render';
@@ -199,6 +200,9 @@ describe('redact + export + verify', () => {
   });
 
   it('downloads bytes as a PDF blob and revokes the object URL', () => {
+    // Aimed at `downloadBytes`, which is where this behaviour lives. It used to go
+    // through a `downloadPdf` wrapper that only supplied the MIME literal; asserting
+    // the blob type now checks the argument rather than a hardcoded string.
     const anchors: HTMLAnchorElement[] = [];
     const realCreate = document.createElement.bind(document);
     const createSpy = vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
@@ -218,7 +222,7 @@ describe('redact + export + verify', () => {
       });
     const revokeUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     try {
-      downloadPdf(new Uint8Array([37, 80, 68, 70]), 'report-redacted.pdf');
+      downloadBytes(new Uint8Array([37, 80, 68, 70]), 'report-redacted.pdf', 'application/pdf');
       expect(anchors).toHaveLength(1);
       expect(anchors[0].download).toBe('report-redacted.pdf');
       expect(anchors[0].getAttribute('href')).toBe('blob:mock-url');

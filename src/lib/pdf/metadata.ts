@@ -11,7 +11,7 @@ import type { PDFDocument } from 'pdf-lib';
 import { PDFArray, PDFDict, PDFName, PDFRef, PDFStream, type PDFObject } from 'pdf-lib';
 
 /** Blank the DocInfo dictionary (author, title, keywords, producer, dates, …). */
-export function stripDocInfo(doc: PDFDocument): void {
+function stripDocInfo(doc: PDFDocument): void {
   doc.setTitle('');
   doc.setAuthor('');
   doc.setSubject('');
@@ -29,12 +29,12 @@ export function stripDocInfo(doc: PDFDocument): void {
 }
 
 /** Remove the XMP metadata stream (pdf-lib has no XMP API). */
-export function stripXmp(doc: PDFDocument): void {
+function stripXmp(doc: PDFDocument): void {
   doc.catalog.delete(PDFName.of('Metadata'));
 }
 
 /** Remove all annotations (comments, links, widgets) and the AcroForm. */
-export function stripAnnotationsAndForms(doc: PDFDocument): void {
+function stripAnnotationsAndForms(doc: PDFDocument): void {
   doc.catalog.delete(PDFName.of('AcroForm'));
   for (const page of doc.getPages()) {
     page.node.delete(PDFName.of('Annots'));
@@ -53,14 +53,14 @@ function nameTree(doc: PDFDocument): PDFDict | undefined {
 }
 
 /** Remove document-level JavaScript and auto-run actions. */
-export function stripJavaScript(doc: PDFDocument): void {
+function stripJavaScript(doc: PDFDocument): void {
   doc.catalog.delete(PDFName.of('OpenAction'));
   doc.catalog.delete(PDFName.of('AA'));
   nameTree(doc)?.delete(PDFName.of('JavaScript'));
 }
 
 /** Remove embedded file attachments (both the name tree and /AF references). */
-export function stripAttachments(doc: PDFDocument): void {
+function stripAttachments(doc: PDFDocument): void {
   doc.catalog.delete(PDFName.of('AF')); // associated-files array points at filespecs directly
   nameTree(doc)?.delete(PDFName.of('EmbeddedFiles'));
 }
@@ -71,7 +71,7 @@ export function stripAttachments(doc: PDFDocument): void {
  * actions (`/AA`), and authoring-app page-piece data (`/PieceInfo`, where
  * Illustrator/InDesign/Acrobat stash editable copies of the original content).
  */
-export function stripPageExtras(doc: PDFDocument): void {
+function stripPageExtras(doc: PDFDocument): void {
   doc.catalog.delete(PDFName.of('PieceInfo'));
   for (const page of doc.getPages()) {
     page.node.delete(PDFName.of('Metadata'));
@@ -89,7 +89,7 @@ export function stripPageExtras(doc: PDFDocument): void {
  * Note: EXIF/GPS baked into the *bytes* of an embedded JPEG is not touched here;
  * that lives inside the compressed image data and would require re-encoding.
  */
-export function stripEmbeddedMetadata(doc: PDFDocument): void {
+function stripEmbeddedMetadata(doc: PDFDocument): void {
   for (const [, obj] of doc.context.enumerateIndirectObjects()) {
     if (obj instanceof PDFStream) obj.dict.delete(PDFName.of('Metadata'));
   }
@@ -137,7 +137,14 @@ export function garbageCollect(doc: PDFDocument): void {
   }
 }
 
-/** Apply every strip pass. Call right before saving the output document. */
+/**
+ * Apply every strip pass. Call right before saving the output document.
+ *
+ * This and `garbageCollect` are the whole interface. The individual passes above
+ * are deliberately module-private: nothing outside this file called them, not
+ * even the tests, which assert each pass's outcome through here. Exporting them
+ * widened the surface of a security-critical module for no caller.
+ */
 export function stripAll(doc: PDFDocument): void {
   stripDocInfo(doc);
   stripXmp(doc);
