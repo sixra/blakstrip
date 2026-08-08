@@ -1,7 +1,8 @@
 {
   "name": "blakstrip",
   "type": "module",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "private": true,
   "description": "Two in-browser privacy tools: a PDF redactor that erases content instead of covering it, and a photo metadata stripper. Nothing is uploaded.",
   "license": "MIT",
   "author": "sixra",
