@@ -21,8 +21,9 @@
   });
 
   const btn =
-    'rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-800 transition hover:border-neutral-400';
-  const alert = 'rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700';
+    'rounded-lg border border-line px-3 py-1.5 text-sm text-ink transition hover:border-line-strong';
+  const alert =
+    'rounded-lg border border-danger/40 bg-danger-surface px-3 py-2 text-sm text-danger';
 </script>
 
 <!-- Always mounted, contents gated: unmounting an open dialog would tear it out
@@ -31,20 +32,18 @@
   bind:this={dialogEl}
   aria-labelledby="verify-title"
   onclose={onCancel}
-  class="m-auto max-h-[85vh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-6 backdrop:bg-black/50"
+  class="border-line bg-raised backdrop:bg-scrim/50 m-auto max-h-[85vh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-2xl border p-6"
 >
   {#if report}
     <div>
-      <h2 id="verify-title" class="text-lg font-semibold text-neutral-900">
-        Verify before download
-      </h2>
-      <p class="mt-1 text-sm text-neutral-600">
+      <h2 id="verify-title" class="text-ink text-lg font-semibold">Verify before download</h2>
+      <p class="text-muted mt-1 text-sm">
         Everything below is still recoverable from the file you are about to download.
       </p>
 
       {#if report.clean}
         <p
-          class="mt-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800"
+          class="border-positive/40 bg-positive-surface text-positive mt-4 rounded-lg border px-3 py-2 text-sm"
         >
           ✓ No text, metadata, attachments, or scripts are recoverable, and none of your redacted
           terms survived.
@@ -81,7 +80,7 @@
                as an instruction rather than another alarm. -->
           {#each report.survivingElsewhere as s (s.term)}
             <p
-              class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+              class="border-warning bg-warning-surface text-warning rounded-lg border px-3 py-2 text-sm"
             >
               <strong>Also on {s.pages.length === 1 ? 'a page' : 'pages'} you didn't redact:</strong
               >
@@ -92,27 +91,27 @@
         </div>
       {/if}
 
-      <p class="mt-3 text-xs text-amber-700">
+      <p class="text-warning mt-3 text-xs">
         This re-reads the exported file: the text and hidden data left in it, and the pixels of
         every redacted page to confirm each box actually covers what's underneath. It can only check
         the text you redacted; review the recoverable text below for anything you missed.
       </p>
 
       <div class="mt-5">
-        <h3 class="text-sm font-medium text-neutral-700">
+        <h3 class="text-muted text-sm font-medium">
           Recoverable text ({report.recoverableStrings.length})
         </h3>
         {#if report.recoverableStrings.length === 0}
-          <p class="mt-1 text-sm text-neutral-600">None. The output has no extractable text.</p>
+          <p class="text-muted mt-1 text-sm">None. The output has no extractable text.</p>
         {:else}
           <ul
-            class="mt-2 max-h-48 space-y-0.5 overflow-y-auto rounded-lg border border-neutral-200 bg-neutral-100 p-3 font-mono text-xs text-neutral-700"
+            class="border-line bg-line text-muted mt-2 max-h-48 space-y-0.5 overflow-y-auto rounded-lg border p-3 font-mono text-xs"
           >
             {#each report.recoverableStrings as s, i (i)}
               <li class="truncate">{s}</li>
             {/each}
           </ul>
-          <p class="mt-1 text-xs text-neutral-600">
+          <p class="text-muted mt-1 text-xs">
             Pages you redacted became images, so their text is gone. Pages you didn't touch still
             have selectable text. Make sure nothing sensitive is listed above.
           </p>
@@ -122,7 +121,7 @@
       <div class="mt-6 flex justify-end gap-3">
         <button class={btn} onclick={onCancel}>Cancel</button>
         <button
-          class="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-700"
+          class="bg-redact text-surface rounded-lg px-4 py-2 text-sm font-semibold transition hover:opacity-90"
           onclick={onDownload}>{report.clean ? 'Download redacted PDF' : 'Download anyway'}</button
         >
       </div>

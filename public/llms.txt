@@ -1,12 +1,13 @@
 # blakstrip
 
-> A private, in-browser PDF redactor that removes content instead of covering it. Everything runs locally, nothing is uploaded, and it verifies the result before you download.
+> Two private, in-browser tools that remove what a file is carrying instead of hiding it: a PDF redactor that erases content rather than covering it, and a photo metadata stripper. Everything runs locally, nothing is uploaded, and both re-read the finished file to prove the result before you download it.
 
-blakstrip renders your PDF in the browser with pdf.js and rasterizes the pages you redact, so the underlying text and vectors on those pages are gone rather than sitting behind a black box. Before export it audits what is hiding in the file (author metadata and timestamps, XMP, annotations, form-field values, embedded JavaScript, attachments, EXIF/GPS in embedded images, optional-content layers) and strips what it can; after export it re-inspects the output and shows you exactly what is still recoverable, including anything it could not remove. A strict Content-Security-Policy (`connect-src 'none'`) blocks network egress from the page, with a matching response-header policy over the pdf.js worker that parses your file, and the app works fully offline as a PWA.
+blakstrip runs entirely in the browser. The PDF tool renders your document with pdf.js and rasterizes the pages you redact, so the underlying text and vectors on those pages are gone rather than sitting behind a black box; before export it audits what is hiding in the file (author metadata and timestamps, XMP, annotations, form-field values, embedded JavaScript, attachments, EXIF/GPS in embedded images, optional-content layers) and strips what it can. The photo tool walks the container itself (JPEG marker segments, PNG chunks, WebP RIFF chunks) and removes identifying data losslessly, copying the image bitstream byte for byte so nothing is re-encoded, with optional re-compression afterwards through wasm codecs that are inlined rather than fetched. Both tools re-inspect their own output and show you exactly what is still recoverable, including anything they could not remove. A strict Content-Security-Policy (`connect-src 'none'`) blocks network egress from the page, with a matching response-header policy over the workers that parse your file, and the app works fully offline as a PWA.
 
 ## Tools
 
 - [Redact a PDF](https://blakstrip.com/pdf-redact): Drop a PDF, draw boxes or search a term and redact every instance, then export a cleaned file. Audits hidden data on load and verifies the output before download.
+- [Strip a photo](https://blakstrip.com/media-strip): Drop a JPEG, PNG or WebP and see what it is carrying (GPS location, camera make and serial, timestamps, embedded thumbnails, editing history), then remove it without touching the image. Optionally compress or convert afterwards.
 
 ## About
 
@@ -15,6 +16,7 @@ blakstrip renders your PDF in the browser with pdf.js and rasterizes the pages y
 ## Notes
 
 - All processing is client-side. No files are uploaded, and no analytics are collected.
-- Redacted pages are rasterized (their text becomes an image); untouched pages keep selectable text.
-- Known limits: EXIF inside a photo is detected but not stripped, layer (optional-content) PDFs are not fully cleaned on copied pages, and encrypted PDFs are refused. All three are surfaced to the user rather than hidden.
+- Redacted PDF pages are rasterized (their text becomes an image); untouched pages keep selectable text.
+- Photo stripping is lossless: the pixels are untouched and only the container around them is rewritten. Compression is a separate, optional step that does re-encode.
+- Known limits: EXIF inside a photo *embedded in a PDF* is detected but not stripped, layer (optional-content) PDFs are not fully cleaned on copied pages, and encrypted PDFs are refused. All three are surfaced to the user rather than hidden.
 - Built by sixra.dev (https://sixra.dev)

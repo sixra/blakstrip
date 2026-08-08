@@ -9,7 +9,7 @@
   const { report }: Props = $props();
 
   const panelClass = $derived(
-    report.findings.length > 0 ? 'border-amber-300 bg-amber-50' : 'border-neutral-200 bg-white'
+    report.findings.length > 0 ? 'border-warning bg-warning-surface' : 'border-line bg-raised'
   );
 </script>
 
@@ -20,12 +20,12 @@
     emptyMessage="✓ No hidden metadata, annotations, attachments, or scripts found."
   />
   {#if report.hasTextLayer}
-    <p class="mt-2 text-xs text-neutral-600">
+    <p class="text-muted mt-2 text-xs">
       Has a text layer. Redacted pages are rasterized on export; untouched pages keep selectable
       text.
     </p>
   {:else}
-    <p class="mt-2 text-xs text-amber-700">
+    <p class="text-warning mt-2 text-xs">
       Looks like a scanned document (no text layer). Draw boxes over regions; flattening removes
       them safely.
     </p>

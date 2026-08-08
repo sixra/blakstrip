@@ -4,10 +4,11 @@
 /// <reference types="vitest/globals" />
 
 /**
- * A wasm binary inlined into the bundle as base64 by `vite-plugin-wasm-bytes`.
- * Returns a fresh ArrayBuffer to hand straight to a jSquash `init()`.
+ * Any binary file inlined into the bundle as base64 by `vite-plugin-inline-bytes`.
+ * Returns a fresh ArrayBuffer: a codec module for jSquash's `init()`, or a sample
+ * file for the build-time audits on the hub.
  */
-declare module '*.wasm?bytes' {
-  const wasmBytes: () => ArrayBuffer;
-  export default wasmBytes;
+declare module '*?bytes' {
+  const inlineBytes: () => ArrayBuffer;
+  export default inlineBytes;
 }

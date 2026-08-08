@@ -1,14 +1,55 @@
 @import 'tailwindcss';
 
-/* Design tokens: blakstrip is a black-on-light redaction brand. */
+/* Design tokens.
+ *
+ * blakstrip is a black-on-light redaction brand, and the wordmark is the thesis:
+ * "blak" in heavy type with "strip" knocked out of a solid black block. The name
+ * is the design. A bar only reads as a redaction when it is darker than what
+ * surrounds it, which is why the page stays light: black on light is the whole
+ * point, and it is the one thing here that cannot be inverted.
+ *
+ * Semantic names, not palette steps. Components ask for `bg-raised` and
+ * `text-muted` so the scheme moves from here. This is what was missing before:
+ * four tokens were declared and nothing used them, so ~183 hardcoded neutral
+ * classes were the real theme.
+ *
+ * Every foreground clears WCAG AA (4.5:1) against both `surface` and `raised`,
+ * computed rather than eyeballed. Tightest is `faint` at 4.85:1 on surface.
+ */
 @theme {
   --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
 
-  --color-canvas: #f4f4f4; /* page background */
-  --color-paper: #ffffff; /* raised surfaces (cards, panels, dialogs) */
-  --color-ink: #0a0a0a; /* near-black body text */
-  --color-redact: #000000; /* the load-bearing black of a redaction mark */
+  --color-surface: #f4f4f4; /* the page */
+  --color-raised: #ffffff; /* cards, panels, dialogs */
+  --color-line: #e5e5e5; /* hairlines */
+  --color-line-strong: #d4d4d4; /* hover and focus borders */
+
+  --color-ink: #0a0a0a; /* body text        18.00:1 / 19.80:1 */
+  --color-muted: #525252; /* secondary text    7.10:1 /  7.81:1 */
+  --color-faint: #6b6b6b; /* captions          4.85:1 /  5.33:1 */
+
+  /* The load-bearing black of a redaction mark, and the same value the wordmark
+     uses for its block. Kept separate from `ink` because they mean different
+     things: one is text you are meant to read, the other is a shape that exists
+     to make text unreadable. */
+  --color-redact: #000000;
+  --color-scrim: #000000; /* modal backdrops, used at an opacity */
+
+  /* The one non-neutral in the brand, for the sixra.dev credit. A token rather
+     than a literal because it was inlined in one place, drifted to a brighter
+     orange, and sat at 3.32:1 until axe caught it. 4.72:1 here. */
+  --color-accent: #c73a1a;
+
+  --color-positive: #15803d;
+  --color-positive-surface: #f0fdf4;
+  --color-warning: #a45309;
+  --color-warning-surface: #fffbeb;
+  /* A fill, not a text colour: the amber a destructive button is painted with.
+     `warning` above is dark enough to read as text and far too dark for this. */
+  --color-warning-solid: #fbbf24;
+  --color-danger: #b91c1c;
+  --color-danger-surface: #fef2f2;
 }
 
 /* Opt out of algorithmic dark mode. Chrome on Android will otherwise invert the

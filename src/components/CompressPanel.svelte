@@ -156,9 +156,9 @@
   void run();
 </script>
 
-<section class="rounded-xl border border-neutral-200 bg-white p-4" aria-label="Compression">
-  <h2 class="text-sm font-semibold text-neutral-900">Make it smaller</h2>
-  <p class="mt-1 text-xs text-neutral-600">
+<section class="border-line bg-raised rounded-xl border p-4" aria-label="Compression">
+  <h2 class="text-ink text-sm font-semibold">Make it smaller</h2>
+  <p class="text-muted mt-1 text-xs">
     Re-encodes the picture in your browser. Nothing is uploaded, and the result is checked for
     metadata again afterwards.
   </p>
@@ -170,14 +170,14 @@
         aria-pressed={activePreset === option.id}
         class={`rounded-lg border px-3 py-2 text-left text-sm ${
           activePreset === option.id
-            ? 'border-neutral-900 bg-neutral-900 text-white'
-            : 'border-neutral-300 hover:bg-neutral-100'
+            ? 'border-redact bg-redact text-surface'
+            : 'border-line hover:bg-line'
         }`}
         onclick={() => choosePreset(option.id)}
       >
         <span class="block font-medium">{option.label}</span>
         <span
-          class={`block text-xs ${activePreset === option.id ? 'text-neutral-300' : 'text-neutral-600'}`}
+          class={`block text-xs ${activePreset === option.id ? 'text-surface/70' : 'text-muted'}`}
           >{option.hint}</span
         >
       </button>
@@ -185,14 +185,14 @@
   </div>
 
   <details class="mt-3">
-    <summary class="cursor-pointer text-xs text-neutral-700">Settings</summary>
+    <summary class="text-muted cursor-pointer text-xs">Settings</summary>
 
     <div class="mt-3 grid gap-4 sm:grid-cols-2">
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-medium text-neutral-700" for="compress-format">Save as</label>
+        <label class="text-muted text-xs font-medium" for="compress-format">Save as</label>
         <select
           id="compress-format"
-          class="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+          class="border-line rounded-lg border px-2 py-1.5 text-sm"
           value={options.format}
           onchange={(event) => update({ format: event.currentTarget.value as MediaFormat })}
         >
@@ -204,7 +204,7 @@
 
       {#if options.format === 'png'}
         <div class="flex flex-col gap-1">
-          <label class="text-xs font-medium text-neutral-700" for="compress-effort">
+          <label class="text-muted text-xs font-medium" for="compress-effort">
             Effort: {options.effort}
           </label>
           <input
@@ -217,13 +217,13 @@
             aria-describedby="compress-effort-hint"
             oninput={(event) => update({ effort: event.currentTarget.valueAsNumber })}
           />
-          <span id="compress-effort-hint" class="text-xs text-neutral-600">
+          <span id="compress-effort-hint" class="text-muted text-xs">
             PNG is lossless, so this only trades time for size. No pixel changes.
           </span>
         </div>
       {:else}
         <div class="flex flex-col gap-1">
-          <label class="text-xs font-medium text-neutral-700" for="compress-quality">
+          <label class="text-muted text-xs font-medium" for="compress-quality">
             Quality: {options.quality}
           </label>
           <input
@@ -239,12 +239,10 @@
       {/if}
 
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-medium text-neutral-700" for="compress-max">
-          Longest side
-        </label>
+        <label class="text-muted text-xs font-medium" for="compress-max"> Longest side </label>
         <select
           id="compress-max"
-          class="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+          class="border-line rounded-lg border px-2 py-1.5 text-sm"
           value={String(options.maxDimension ?? '')}
           aria-describedby="compress-max-hint"
           onchange={(event) =>
@@ -260,7 +258,7 @@
           <option value="2048">2048 px</option>
           <option value="3200">3200 px</option>
         </select>
-        <span id="compress-max-hint" class="text-xs text-neutral-600">
+        <span id="compress-max-hint" class="text-muted text-xs">
           Smaller pictures are never enlarged to reach this.
         </span>
       </div>
@@ -276,42 +274,42 @@
   </p>
 
   {#if errorMsg}
-    <p class="mt-3 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+    <p class="border-danger bg-danger-surface text-danger mt-3 rounded-lg border p-3 text-sm">
       {errorMsg}
     </p>
   {/if}
 
   {#if busy && compressedSize === 0}
-    <p class="mt-3 text-sm text-neutral-600">Compressing…</p>
+    <p class="text-muted mt-3 text-sm">Compressing…</p>
   {/if}
 
   {#if compressedSize > 0}
     <div class={`mt-4 ${busy ? 'opacity-60' : ''}`}>
       <dl class="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
         <div class="flex gap-2">
-          <dt class="text-neutral-600">Before</dt>
+          <dt class="text-muted">Before</dt>
           <dd class="font-medium">{formatBytes(bytes.length)}</dd>
         </div>
         <div class="flex gap-2">
-          <dt class="text-neutral-600">After</dt>
+          <dt class="text-muted">After</dt>
           <dd class="font-medium">{formatBytes(compressedSize)}</dd>
         </div>
         <div class="flex gap-2">
-          <dt class="text-neutral-600">{saved >= 0 ? 'Saved' : 'Grew by'}</dt>
-          <dd class={`font-medium ${saved >= 0 ? 'text-green-700' : 'text-amber-700'}`}>
+          <dt class="text-muted">{saved >= 0 ? 'Saved' : 'Grew by'}</dt>
+          <dd class={`font-medium ${saved >= 0 ? 'text-positive' : 'text-warning'}`}>
             {Math.abs(saved)}%
           </dd>
         </div>
         {#if compressedDims}
           <div class="flex gap-2">
-            <dt class="text-neutral-600">Size</dt>
+            <dt class="text-muted">Size</dt>
             <dd class="font-medium">{compressedDims.width} × {compressedDims.height}</dd>
           </div>
         {/if}
       </dl>
 
       {#if saved < 0}
-        <p class="mt-2 text-xs text-amber-800">
+        <p class="text-warning mt-2 text-xs">
           This came out larger than the original. That happens when a file is already well
           compressed, or when a flat-colour image is saved as a photo format. Try a lower quality or
           a different format.
@@ -319,7 +317,7 @@
       {/if}
 
       <figure class="mt-3">
-        <div class="max-h-96 overflow-auto rounded-xl border border-neutral-200 bg-neutral-100">
+        <div class="border-line bg-line max-h-96 overflow-auto rounded-xl border">
           <img
             src={showOriginal ? sourceUrl : compressedUrl}
             alt={showOriginal ? 'The picture before compressing' : 'The compressed picture'}
@@ -327,7 +325,7 @@
           />
         </div>
         <figcaption
-          class="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-600"
+          class="text-muted mt-2 flex flex-wrap items-center justify-between gap-2 text-xs"
         >
           <span>
             Shown at full size, so scroll to judge the detail. A shrunken preview hides exactly the
@@ -336,7 +334,7 @@
           <button
             type="button"
             aria-pressed={showOriginal}
-            class="rounded-lg border border-neutral-300 px-2 py-1 hover:bg-neutral-100"
+            class="border-line hover:bg-line rounded-lg border px-2 py-1"
             onclick={() => (showOriginal = !showOriginal)}
           >
             {showOriginal ? 'Show compressed' : 'Compare with original'}
@@ -347,8 +345,8 @@
       <p
         class={`mt-3 rounded-lg border p-3 text-sm ${
           remaining.length === 0
-            ? 'border-green-300 bg-green-50 text-green-800'
-            : 'border-red-300 bg-red-50 text-red-800'
+            ? 'border-positive bg-positive-surface text-positive'
+            : 'border-danger bg-danger-surface text-danger'
         }`}
       >
         {remaining.length === 0
@@ -358,7 +356,7 @@
 
       <button
         type="button"
-        class="mt-3 w-full rounded-xl bg-neutral-900 px-4 py-3 font-medium text-white hover:bg-neutral-800 disabled:opacity-60"
+        class="bg-redact text-surface hover:bg-ink mt-3 w-full rounded-xl px-4 py-3 font-medium disabled:opacity-60"
         disabled={busy}
         onclick={save}
       >

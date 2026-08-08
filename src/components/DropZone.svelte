@@ -68,10 +68,10 @@
   <button
     type="button"
     class="flex min-h-72 w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-10 text-center transition"
-    class:border-neutral-300={!dragOver}
-    class:bg-white={!dragOver}
-    class:border-neutral-900={dragOver}
-    class:bg-neutral-100={dragOver}
+    class:border-line={!dragOver}
+    class:bg-raised={!dragOver}
+    class:border-redact={dragOver}
+    class:bg-line={dragOver}
     ondragover={(e) => {
       e.preventDefault();
       dragOver = true;
@@ -80,14 +80,14 @@
     ondrop={onDrop}
     onclick={() => fileInput?.click()}
   >
-    <span class="text-lg font-medium text-neutral-800">{prompt}</span>
-    <span class="text-sm text-neutral-600">
+    <span class="text-ink text-lg font-medium">{prompt}</span>
+    <span class="text-muted text-sm">
       or <span class="pp-click">click</span><span class="pp-tap">tap</span> to choose a file · nothing
       leaves your browser
     </span>
   </button>
   {#if error}
-    <p class="mt-3 text-center text-sm text-red-600" role="alert">
+    <p class="text-danger mt-3 text-center text-sm" role="alert">
       Could not open that file: {error}
     </p>
   {/if}

@@ -5,7 +5,7 @@ import sitemap from '@astrojs/sitemap';
 import svelte from '@astrojs/svelte';
 import tailwindcss from '@tailwindcss/vite';
 import AstroPWA from '@vite-pwa/astro';
-import wasmBytes from './vite-plugin-wasm-bytes.mjs';
+import inlineBytes from './vite-plugin-inline-bytes.mjs';
 
 // In production the CSP locks network egress to nothing; the dev branch below
 // keeps a websocket open for Vite's HMR in case the policy is emitted there.
@@ -68,9 +68,10 @@ export default defineConfig({
       // under the strict CSP (an injected inline script would be blocked).
       injectRegister: false,
       manifest: {
-        name: 'blakstrip · private PDF redactor',
+        name: 'blakstrip · private file tools',
         short_name: 'blakstrip',
-        description: 'Remove content from PDFs entirely, in your browser, nothing uploaded.',
+        description:
+          'Redact PDFs and strip photo metadata entirely in your browser. Nothing is uploaded.',
         theme_color: '#f4f4f4',
         background_color: '#f4f4f4',
         display: 'standalone',
@@ -98,7 +99,7 @@ export default defineConfig({
   ],
 
   vite: {
-    plugins: [tailwindcss(), wasmBytes()],
+    plugins: [tailwindcss(), inlineBytes()],
     // jSquash's own README calls for this: pre-bundling rewrites the codec glue's
     // wasm resolution and it fails at runtime with "Invalid URL".
     optimizeDeps: {
@@ -115,7 +116,7 @@ export default defineConfig({
       // its own rolldown pass, which needs its own instances. Without this the
       // wasm imports resolve to nothing and the build fails with
       // UNLOADABLE_DEPENDENCY, which is at least loud.
-      plugins: () => [wasmBytes()],
+      plugins: () => [inlineBytes()],
     },
   },
 });

@@ -1,56 +1,71 @@
 ---
+import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
 import MediaStripper from '../components/MediaStripper.svelte';
+import { TOOLS, toolSchema } from '../config/tools';
 import Base from '../layouts/Base.astro';
 
-// One string for the meta description and the JSON-LD. They were identical
-// copies, which is how the "without re-compressing" line survived in both places
-// after the tool gained a compressor.
-//
-// The lossless claim is kept because it is still true and it is the difference
-// from every other tool: the strip rewrites the container and never touches the
-// image data. Compression is a separate, optional step, and saying so is what
-// stops the two from reading as a contradiction.
-const description =
-  'Drop in a photo and see what it is carrying: GPS location, camera serial, timestamps, hidden preview images. Remove it all in your browser without touching the picture itself, then optionally shrink the file.';
+const tool = TOOLS[1];
+const jsonLd = JSON.stringify(toolSchema(tool)).replace(/</g, '\\u003c');
 
-const appSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'WebApplication',
-  // Same @id as the landing page declares, so this is the one application seen
-  // from a third URL rather than a separate one with a similar name.
-  '@id': 'https://blakstrip.com/#app',
-  name: 'blakstrip · photo metadata remover',
-  applicationCategory: 'UtilitiesApplication',
-  operatingSystem: 'Any modern web browser',
-  browserRequirements: 'Requires JavaScript',
-  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-  description,
-  url: 'https://blakstrip.com/media-strip',
-  isPartOf: { '@type': 'WebSite', name: 'blakstrip', url: 'https://blakstrip.com' },
-  creator: {
-    '@type': 'Organization',
-    name: 'sixra.dev',
-    url: 'https://sixra.dev',
+// This page had no copy at all: it dropped you straight onto a drop zone with
+// nothing explaining what it would do or why the lossless part matters.
+const features = [
+  {
+    title: 'Your location, in the file',
+    body: 'A photo from a phone usually records exactly where it was taken, to a few metres, along with the camera, its serial number, and the second you pressed the shutter. None of that is visible when you look at the picture.',
   },
-};
-const jsonLd = JSON.stringify(appSchema).replace(/</g, '\\u003c');
+  {
+    title: 'The picture is untouched',
+    body: 'Removing metadata rewrites the container around your image, not the image itself. The pixels come out byte for byte identical, so nothing is re-compressed and no quality is lost.',
+  },
+  {
+    title: 'Smaller too, if you want',
+    body: 'Once the file is clean you can optionally re-encode it: pick a preset or set quality and dimensions yourself, compare the result against the original at full size, and download whichever you prefer.',
+  },
+  {
+    title: 'Checked, not claimed',
+    body: 'After stripping, blakstrip re-reads the finished file from scratch and lists anything still in it. The clean verdict comes from reading the output, not from trusting the code that wrote it.',
+  },
+];
 ---
 
-<Base title="Remove Photo Metadata Online, Free and Private · blakstrip" {description}>
-  <main id="main" class="mx-auto w-full max-w-6xl px-4 py-10">
-    <header class="mb-8">
+<Base title={tool.title} description={tool.description}>
+  <div class="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-4">
+    <header class="pt-10 pb-6">
       <Header />
-      <p class="mt-8 text-center text-xs text-neutral-600">Your file never leaves your device</p>
     </header>
-    <!--
-      client:only rather than client:visible: the island's whole job starts with a
-      file the server has never seen, so there is no meaningful HTML to render at
-      build time and a server pass would only produce an empty shell to hydrate.
-      Matches how the PDF tool mounts.
-    -->
-    <MediaStripper client:only="svelte" />
-  </main>
+
+    <main id="main" class="flex-1 py-6">
+      <div class="mb-8 max-w-3xl">
+        <h1 class="text-4xl font-bold tracking-tight sm:text-5xl">
+          Your photo knows<br />where you <span class="bg-redact text-surface px-2">live</span>.
+        </h1>
+        <p class="text-muted mt-5 text-lg">
+          See exactly what a picture is carrying about you, then take it out without touching the
+          image itself. Your photo never leaves your device.
+        </p>
+      </div>
+
+      <MediaStripper client:only="svelte" />
+
+      <section class="mt-24" aria-labelledby="how">
+        <h2 id="how" class="text-2xl font-bold tracking-tight sm:text-3xl">What this removes</h2>
+        <div class="mt-6 grid gap-5 sm:grid-cols-2">
+          {
+            features.map((feature) => (
+              <article class="border-line bg-raised rounded-2xl border p-6">
+                <h3 class="text-base font-semibold">{feature.title}</h3>
+                <p class="text-muted mt-2 text-sm">{feature.body}</p>
+              </article>
+            ))
+          }
+        </div>
+      </section>
+    </main>
+
+    <Footer />
+  </div>
 
   <script type="application/ld+json" is:inline set:html={jsonLd} />
 </Base>

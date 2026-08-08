@@ -424,7 +424,7 @@
   }
 
   const btn =
-    'rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-800 transition hover:border-neutral-400 disabled:cursor-not-allowed disabled:opacity-40';
+    'rounded-lg border border-line px-3 py-1.5 text-sm text-ink transition hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-40';
 
   // Everything here happens asynchronously and is otherwise announced only by a
   // button label changing, which screen readers report unreliably. The region is
@@ -471,9 +471,8 @@
     />
   {:else}
     <div class="mb-4 flex flex-wrap items-center gap-3">
-      <span class="max-w-56 truncate text-sm text-neutral-700">{fileName}</span>
-      <span class="text-xs text-neutral-600"
-        >{rects.length} redaction{rects.length === 1 ? '' : 's'}</span
+      <span class="text-muted max-w-56 truncate text-sm">{fileName}</span>
+      <span class="text-muted text-xs">{rects.length} redaction{rects.length === 1 ? '' : 's'}</span
       >
       <div class="ml-auto flex items-center gap-2">
         <button class={btn} onclick={() => (history = undo(history))} disabled={!canUndo(history)}
@@ -483,7 +482,7 @@
           >Redo</button
         >
         <button
-          class="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40"
+          class="bg-redact text-surface rounded-lg px-3 py-1.5 text-sm font-semibold transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           onclick={exportPdf}
           disabled={exporting}
           >{exporting
@@ -498,7 +497,7 @@
 
     {#if errorMsg}
       <p
-        class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        class="border-danger/40 bg-danger-surface text-danger mb-4 rounded-lg border px-3 py-2 text-sm"
         role="alert"
       >
         {errorMsg}
@@ -520,7 +519,7 @@
         placeholder="Find text to redact across all pages…"
         aria-label="Find text to redact"
         aria-describedby={hasTextLayer ? undefined : 'no-text-layer-help'}
-        class="w-full max-w-72 rounded-lg border border-neutral-500 bg-white px-3 py-1.5 text-sm text-neutral-900 placeholder:text-neutral-500 focus:border-neutral-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-400"
+        class="border-line-strong bg-raised text-ink placeholder:text-faint focus:border-redact disabled:bg-line disabled:text-faint w-full max-w-72 rounded-lg border px-3 py-1.5 text-sm focus:outline-none disabled:cursor-not-allowed"
       />
       <button
         class={btn}
@@ -531,11 +530,11 @@
       </button>
       {#if searchMatches.length > 0}
         <button
-          class="rounded-lg bg-amber-400 px-3 py-1.5 text-sm font-semibold text-black transition hover:bg-amber-300"
+          class="bg-warning-solid text-ink rounded-lg px-3 py-1.5 text-sm font-semibold transition hover:opacity-90"
           onclick={redactAllMatches}>Redact all {searchMatches.length}</button
         >
       {:else if noMatches}
-        <span class="text-xs text-neutral-600">No matches</span>
+        <span class="text-muted text-xs">No matches</span>
       {/if}
       <button
         class={`${btn} ml-auto`}
@@ -545,7 +544,7 @@
         >Apply page to all</button
       >
       {#if auditReport && !hasTextLayer}
-        <p id="no-text-layer-help" class="basis-full text-xs text-amber-700">
+        <p id="no-text-layer-help" class="text-warning basis-full text-xs">
           This file has no text layer, so search can't find words. Draw boxes to redact instead.
         </p>
       {/if}
@@ -555,7 +554,7 @@
       <AuditPanel report={auditReport} />
     {:else if auditFailed}
       <p
-        class="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800"
+        class="border-warning bg-warning-surface text-warning mb-4 rounded-xl border p-4 text-sm"
         role="alert"
       >
         Couldn't inspect this file for hidden data, so nothing is listed above. That is not a clean
@@ -569,15 +568,13 @@
 
       <div bind:this={viewerEl}>
         <div class="relative inline-block">
-          <canvas
-            bind:this={pageCanvas}
-            class="block max-w-full rounded shadow-md ring-1 ring-neutral-200"
+          <canvas bind:this={pageCanvas} class="ring-line block max-w-full rounded shadow-md ring-1"
           ></canvas>
           <!-- Intentional: role="application" drawing surface with a documented keyboard model (see #redact-kb-help). -->
           <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
           <div
             bind:this={overlayEl}
-            class="absolute inset-0 cursor-crosshair touch-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:outline-none"
+            class="focus-visible:ring-redact absolute inset-0 cursor-crosshair touch-none focus-visible:ring-2 focus-visible:outline-none"
             data-page-ready={pageRendered}
             data-testid="redact-overlay"
             role="application"
@@ -609,7 +606,7 @@
           {/snippet}
           {#snippet deleteButton(r: RedactionRect)}
             <button
-              class="pointer-events-auto absolute -top-3 -right-3 flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-bold text-black opacity-0 ring-neutral-900 transition group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none"
+              class="bg-redact text-surface ring-redact pointer-events-auto absolute -top-3 -right-3 flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none"
               onclick={(e) => {
                 e.stopPropagation();
                 deleteRect(r);
@@ -619,18 +616,18 @@
           {/snippet}
           <div class="pointer-events-none absolute inset-0">
             {#each pageRects as r (r)}
-              {@render posBox(r, 'group absolute bg-black', deleteButton)}
+              {@render posBox(r, 'group absolute bg-redact', deleteButton)}
             {/each}
             {#if preview}
-              {@render posBox(preview, 'absolute border-2 border-neutral-900 bg-black/30')}
+              {@render posBox(preview, 'absolute border-2 border-redact bg-redact/30')}
             {/if}
             {#each searchPreview as r, i (`s${i}`)}
-              {@render posBox(r, 'absolute border-2 border-amber-700 bg-amber-400/25')}
+              {@render posBox(r, 'absolute border-2 border-warning bg-warning-solid/25')}
             {/each}
           </div>
         </div>
 
-        <div class="mt-3 flex items-center justify-center gap-3 text-sm text-neutral-700">
+        <div class="text-muted mt-3 flex items-center justify-center gap-3 text-sm">
           <button class={btn} onclick={() => goTo(currentPage - 1)} disabled={currentPage <= 1}
             >Prev</button
           >
@@ -646,7 +643,7 @@
   {/if}
 
   {#if status === 'loading'}
-    <p class="mt-4 text-center text-sm text-neutral-600">Opening…</p>
+    <p class="text-muted mt-4 text-center text-sm">Opening…</p>
   {/if}
 </div>
 

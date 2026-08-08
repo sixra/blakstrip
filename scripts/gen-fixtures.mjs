@@ -3,6 +3,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { PDFDocument, PDFName, PDFString, rgb, StandardFonts } from 'pdf-lib';
+import sharp from 'sharp';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const outDir = `${root}src/lib/pdf/__fixtures__`;
@@ -78,3 +79,42 @@ ap2.node.set(PDFName.of('Annots'), annotated.context.obj([annotated.context.regi
 const annBytes = await annotated.save();
 await writeFile(`${outDir}/annotated.pdf`, annBytes);
 console.log(`wrote src/lib/pdf/__fixtures__/annotated.pdf (${annBytes.length} bytes)`);
+
+// A photo carrying the things a phone actually records, for the hub card.
+//
+// The card shows real findings from the real engine, so it needs a real file to
+// find them in. Written here rather than committed as an opaque blob so anyone
+// can see exactly what was planted and check that the card is not just a picture
+// of some findings.
+//
+// GPS lives in IFD3 and is written as rationals: 51°30'32.30"N, 0°07'43.66"W.
+const photo = await sharp({
+  create: {
+    width: 1200,
+    height: 900,
+    channels: 3,
+    background: { r: 34, g: 58, b: 84 },
+  },
+})
+  .jpeg({ quality: 82 })
+  .withExif({
+    IFD0: {
+      Make: 'ACME',
+      Model: 'Pixelbird 9',
+      Software: 'Pixelbird Camera 4.2',
+      Artist: 'Jane Author',
+      Copyright: 'Jane Author',
+      DateTime: '2024:06:11 14:02:37',
+    },
+    IFD3: {
+      GPSLatitudeRef: 'N',
+      GPSLatitude: '51/1 30/1 3230/100',
+      GPSLongitudeRef: 'W',
+      GPSLongitude: '0/1 7/1 4366/100',
+    },
+  })
+  .toBuffer();
+
+await mkdir(`${root}src/assets/samples`, { recursive: true });
+await writeFile(`${root}src/assets/samples/sample-photo.jpg`, photo);
+console.log(`wrote src/assets/samples/sample-photo.jpg (${photo.length} bytes)`);

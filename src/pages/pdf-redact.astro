@@ -1,43 +1,73 @@
 ---
+import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
 import Redactor from '../components/Redactor.svelte';
+import { TOOLS, toolSchema } from '../config/tools';
 import Base from '../layouts/Base.astro';
 
-const appSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'WebApplication',
-  // Same @id as the landing page declares, so this is the one application seen
-  // from a second URL rather than a separate one with a similar name.
-  '@id': 'https://blakstrip.com/#app',
-  name: 'blakstrip · PDF redactor',
-  applicationCategory: 'UtilitiesApplication',
-  operatingSystem: 'Any modern web browser',
-  browserRequirements: 'Requires JavaScript',
-  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-  description:
-    'Drop in a PDF and redact it in your browser. Draw boxes or search a term to remove every match for good, strip metadata, and verify before download.',
-  url: 'https://blakstrip.com/pdf-redact',
-  isPartOf: { '@type': 'WebSite', name: 'blakstrip', url: 'https://blakstrip.com' },
-  creator: {
-    '@type': 'Organization',
-    name: 'sixra.dev',
-    url: 'https://sixra.dev',
+const tool = TOOLS[0];
+const jsonLd = JSON.stringify(toolSchema(tool)).replace(/</g, '\\u003c');
+
+// The pitch that used to be the whole landing page. It belongs with the tool it
+// describes: this page and the old home page were both titled "redact a PDF",
+// competing for one query, and a visitor had to click through marketing to reach
+// a drop zone that could have been the first thing they saw.
+const features = [
+  {
+    title: 'Removed, not covered',
+    body: "The parts you black out are erased from the page for good, not just hidden under a rectangle. There's nothing left to copy or recover.",
   },
-};
-const jsonLd = JSON.stringify(appSchema).replace(/</g, '\\u003c');
+  {
+    title: 'Stays on your device',
+    body: 'Your PDF is redacted right in your browser and never sent anywhere. You can check for yourself that nothing leaves your device, and it works offline too, with no account and no tracking.',
+  },
+  {
+    title: "Finds what's hidden",
+    body: "Before you start, blakstrip points out the hidden things in your file, like the author's name, comments, and attachments, and clears them out too.",
+  },
+  {
+    title: 'Proof, not promises',
+    body: "When you're done, blakstrip checks the finished file and shows you anything that could still be read, so you download knowing it's clean.",
+  },
+];
 ---
 
-<Base
-  title="Redact a PDF Online, Free and Private · blakstrip"
-  description="Drop in a PDF and redact it in your browser. Draw boxes or search a term to remove every match for good, strip metadata, and verify before download."
->
-  <main id="main" class="mx-auto w-full max-w-6xl px-4 py-10">
-    <header class="mb-8">
+<Base title={tool.title} description={tool.description}>
+  <div class="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-4">
+    <header class="pt-10 pb-6">
       <Header />
-      <p class="mt-8 text-center text-xs text-neutral-600">Your file never leaves your device</p>
     </header>
-    <Redactor client:only="svelte" />
-  </main>
+
+    <main id="main" class="flex-1 py-6">
+      <div class="mb-8 max-w-3xl">
+        <h1 class="text-4xl font-bold tracking-tight sm:text-5xl">
+          Redact a PDF.<br />Leave <span class="bg-redact text-surface px-2">nothing</span> behind.
+        </h1>
+        <p class="text-muted mt-5 text-lg">
+          Remove sensitive text and hidden details from any PDF, permanently. Your file never leaves
+          your device.
+        </p>
+      </div>
+
+      <Redactor client:only="svelte" />
+
+      <section class="mt-24" aria-labelledby="how">
+        <h2 id="how" class="text-2xl font-bold tracking-tight sm:text-3xl">How it works</h2>
+        <div class="mt-6 grid gap-5 sm:grid-cols-2">
+          {
+            features.map((feature) => (
+              <article class="border-line bg-raised rounded-2xl border p-6">
+                <h3 class="text-base font-semibold">{feature.title}</h3>
+                <p class="text-muted mt-2 text-sm">{feature.body}</p>
+              </article>
+            ))
+          }
+        </div>
+      </section>
+    </main>
+
+    <Footer />
+  </div>
 
   <script type="application/ld+json" is:inline set:html={jsonLd} />
 </Base>

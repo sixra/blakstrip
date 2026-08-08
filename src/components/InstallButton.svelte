@@ -85,11 +85,11 @@
       <div
         id="ios-install-hint"
         role="note"
-        class="absolute top-full right-0 z-20 mt-2 w-60 rounded-lg border border-neutral-200 bg-white p-3 text-left text-xs text-neutral-600 shadow-lg"
+        class="border-line bg-raised text-muted absolute top-full right-0 z-20 mt-2 w-60 rounded-lg border p-3 text-left text-xs shadow-lg"
       >
         On iPhone or iPad, tap the Share button, then
-        <strong class="font-semibold text-neutral-900">Add to Home Screen</strong>. blakstrip then
-        opens like an app and works offline.
+        <strong class="text-ink font-semibold">Add to Home Screen</strong>. blakstrip then opens
+        like an app and works offline.
       </div>
     {/if}
   </div>

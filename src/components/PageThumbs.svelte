@@ -16,14 +16,14 @@
 >
   {#each thumbs as t (t.page)}
     <button
-      class="block w-20 shrink-0 overflow-hidden rounded border bg-neutral-100 transition sm:mb-2 sm:w-full"
-      class:border-neutral-900={t.page === currentPage}
+      class="bg-line block w-20 shrink-0 overflow-hidden rounded border transition sm:mb-2 sm:w-full"
+      class:border-redact={t.page === currentPage}
       class:border-transparent={t.page !== currentPage}
       onclick={() => onSelect(t.page)}
       aria-current={t.page === currentPage ? 'page' : undefined}
     >
       <img src={t.url} alt={`Page ${t.page}`} class="block w-full" />
-      <span class="block py-1 text-center text-xs text-neutral-600">{t.page}</span>
+      <span class="text-muted block py-1 text-center text-xs">{t.page}</span>
     </button>
   {/each}
 </nav>

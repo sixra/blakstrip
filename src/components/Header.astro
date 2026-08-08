@@ -1,14 +1,10 @@
 ---
-// Shared site header: brand logo (links home), the tool links, and the quiet
-// install affordance. Used by every page so all three stay identical.
+// Shared site header: brand wordmark (links to the hub), the tool links, and the
+// quiet install affordance. Used by every page so all of them stay identical.
 import { Image } from 'astro:assets';
 import logo from '../assets/logo.png';
+import { TOOLS } from '../config/tools';
 import InstallButton from './InstallButton.svelte';
-
-const tools = [
-  { href: '/pdf-redact', label: 'PDF' },
-  { href: '/media-strip', label: 'Photos' },
-];
 
 // build.format is 'file', so a page is served at /foo from /foo.html. The
 // suffix is stripped before comparing, or the current tool never matches.
@@ -18,26 +14,27 @@ const here = Astro.url.pathname.replace(/\.html$/, '');
 <div class="flex items-center gap-4">
   <a href="/" aria-label="blakstrip home">
     {
-      /* Through astro:assets rather than public/, so the LCP image on the landing
-        page ships at the size it renders instead of 8x it. The link's aria-label
-        is the accessible name, so the alt text stays out of the way. */
+      /* Through astro:assets rather than public/, so the LCP image on the hub
+        ships at the size it renders instead of 8x it. The link's aria-label is
+        the accessible name, so the alt text stays out of the way. */
     }
     <Image src={logo} alt="" widths={[96, 192]} sizes="96px" class="h-12 w-auto" />
   </a>
   <nav aria-label="Tools" class="ml-auto">
     <ul class="flex items-center gap-1">
       {
-        tools.map((tool) => (
+        TOOLS.map((tool) => (
           <li>
-            {/* aria-current marks the tool you are already on, so a screen
-                reader announces it rather than offering a link to the page you
-                are already looking at. */}
+            {/* The tool you are on is marked with a solid bar, which is the same
+                device the rest of the site uses to mean "this is covered".
+                aria-current carries it for a screen reader, so it is announced
+                rather than offered as a link to the page already open. */}
             <a
               href={tool.href}
               aria-current={here === tool.href ? 'page' : undefined}
-              class="rounded-lg px-3 py-1.5 text-sm text-neutral-700 no-underline hover:bg-neutral-100 aria-[current=page]:bg-neutral-900 aria-[current=page]:text-white"
+              class="text-muted hover:bg-raised hover:text-ink aria-[current=page]:bg-redact aria-[current=page]:text-surface rounded-lg px-3 py-1.5 text-sm no-underline transition-colors"
             >
-              {tool.label}
+              {tool.nav}
             </a>
           </li>
         ))

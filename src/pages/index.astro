@@ -1,141 +1,161 @@
 ---
+import samplePhoto from '../assets/samples/sample-photo.jpg?bytes';
+import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
+import { TOOLS } from '../config/tools';
 import Base from '../layouts/Base.astro';
+import { inspectMedia } from '../lib/media';
+import samplePdf from '../lib/pdf/__fixtures__/text-secrets.pdf?bytes';
+import { inspectStructure } from '../lib/pdf/inspect';
+import type { Finding } from '../lib/types';
 
-const features = [
-  {
-    title: 'Removed, not covered',
-    body: "The parts you black out are erased from the page for good, not just hidden under a rectangle. There's nothing left to copy or recover.",
-  },
-  {
-    title: 'Stays on your device',
-    body: 'Your PDF is redacted right in your browser and never sent anywhere. You can check for yourself that nothing leaves your device, and it works offline too, with no account and no tracking.',
-  },
-  {
-    title: "Finds what's hidden",
-    body: "Before you start, blakstrip points out the hidden things in your file, like the author's name, comments, and attachments, and clears them out too.",
-  },
-  {
-    title: 'Proof, not promises',
-    body: "When you're done, blakstrip checks the finished file and shows you anything that could still be read, so you download knowing it's clean.",
-  },
-];
+// The cards show what the tools actually find, not a picture of what they find.
+//
+// Astro runs this in Node at build time, so the real engines audit real sample
+// files and their findings are rendered as plain HTML. Nothing ships to the
+// browser for it, and it cannot drift: change what an engine detects and this
+// page changes with it, or the build fails trying.
+//
+// The samples arrive as inlined bytes rather than through `fs`. This frontmatter
+// is bundled into `dist/.prerender`, where `import.meta.url` points at a chunk in
+// the output directory and a relative path to the source tree resolves to
+// nothing. That bundle is thrown away after the build, so none of it ships.
+const findings: Record<string, Finding[]> = {
+  '/pdf-redact': await inspectStructure(new Uint8Array(samplePdf())),
+  '/media-strip': inspectMedia(new Uint8Array(samplePhoto())).findings,
+};
 
-const appSchema = {
+const sampleName: Record<string, string> = {
+  '/pdf-redact': 'quarterly-report.pdf',
+  '/media-strip': 'holiday.jpg',
+};
+
+const site = 'https://blakstrip.com';
+
+// One WebSite entity that the tools hang off, rather than the single
+// WebApplication all three pages used to share. Two genuinely different programs
+// claiming one @id told search engines the photo tool *was* the PDF redactor.
+const siteSchema = {
   '@context': 'https://schema.org',
-  '@type': 'WebApplication',
-  // Shared id so the tool page references this entity instead of declaring a
-  // second, unlinked application.
-  '@id': 'https://blakstrip.com/#app',
+  '@type': 'WebSite',
+  '@id': `${site}/#website`,
   name: 'blakstrip',
-  applicationCategory: 'UtilitiesApplication',
-  operatingSystem: 'Any modern web browser',
-  browserRequirements: 'Requires JavaScript',
-  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: site,
   description:
-    'Free, private PDF redaction in your browser. blakstrip removes text and metadata for good instead of hiding it behind a black box. Nothing is uploaded.',
-  url: 'https://blakstrip.com',
+    'Private, in-browser tools that remove what a file is carrying. Nothing is uploaded, and you can check that for yourself.',
   publisher: {
     '@type': 'Organization',
+    '@id': `${site}/#org`,
     name: 'blakstrip',
-    url: 'https://blakstrip.com',
+    url: site,
     logo: {
       '@type': 'ImageObject',
-      url: 'https://blakstrip.com/android-chrome-512x512.png',
+      url: `${site}/android-chrome-512x512.png`,
       width: 512,
       height: 512,
     },
   },
-  creator: {
-    '@type': 'Organization',
-    name: 'sixra.dev',
-    url: 'https://sixra.dev',
-  },
+  hasPart: TOOLS.map((tool) => ({
+    '@type': 'WebApplication',
+    '@id': tool.entityId,
+    name: tool.name,
+    url: `${site}${tool.href}`,
+  })),
+  creator: { '@type': 'Organization', name: 'sixra.dev', url: 'https://sixra.dev' },
 };
-// Escape `<` so document data can never break out of the <script> element.
-const jsonLd = JSON.stringify(appSchema).replace(/</g, '\\u003c');
+const jsonLd = JSON.stringify(siteSchema).replace(/</g, '\\u003c');
+
+const description =
+  'Private, in-browser tools that remove what a file is carrying. Redact a PDF for good, or strip the location and camera data out of a photo. Nothing is uploaded.';
 ---
 
-<Base
-  title="Redact PDFs Privately, Right in Your Browser · blakstrip"
-  description="Free, private PDF redaction in your browser. blakstrip removes text and metadata for good instead of hiding it behind a black box. Nothing is uploaded."
->
+<Base title="blakstrip · private tools that remove what files carry" {description}>
   <div class="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-4">
     <header class="pt-10 pb-6">
       <Header />
     </header>
 
-    <main id="main" class="flex flex-1 flex-col justify-center py-16">
+    <main id="main" class="flex flex-1 flex-col justify-center py-12">
       <div class="max-w-3xl">
-        <p class="mb-4 font-mono text-xs tracking-widest text-neutral-600 uppercase">
+        <p class="text-faint mb-5 font-mono text-xs tracking-[0.2em] uppercase">
           Fully private · free · works offline
         </p>
-        <h1 class="text-4xl font-bold tracking-tight text-neutral-900 sm:text-6xl">
-          Redact a PDF.<br />Leave <span class="bg-black px-2 text-white">nothing</span> behind.
+        <h1 class="text-5xl font-bold tracking-tight sm:text-7xl">
+          Nothing leaves<br />your <span class="bg-redact text-surface px-2">device</span>.
         </h1>
-        <p class="mt-6 max-w-2xl text-lg text-neutral-600">
-          Remove sensitive text and hidden details from any PDF, permanently. blakstrip runs
-          entirely on your device, so your file is never uploaded, shared, or seen by anyone.
-          <strong class="mt-3 inline-block bg-black px-2 py-1 font-semibold text-white"
-            >No upload. No account. No tracking.</strong
-          >
+        <p class="text-muted mt-6 max-w-2xl text-lg">
+          Files carry more than you put in them. blakstrip finds it, removes it, and then re-reads
+          the finished file to show you it is gone. All of it happens on your machine.
         </p>
-        <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-          <a
-            href="/pdf-redact"
-            class="rounded-lg bg-neutral-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-neutral-700"
-            >Redact a PDF</a
-          >
-        </div>
       </div>
 
-      <section id="how" class="mt-24 scroll-mt-16">
-        <h2 class="text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">How it works</h2>
-        <div class="mt-6 grid gap-6 sm:grid-cols-2">
+      <section class="mt-16" aria-label="Tools">
+        <div class="grid gap-5 lg:grid-cols-2">
           {
-            features.map((f) => (
-              <article class="rounded-2xl border border-neutral-200 bg-white p-6">
-                <h3 class="text-base font-semibold text-neutral-900">{f.title}</h3>
-                <p class="mt-2 text-sm text-neutral-600">{f.body}</p>
-              </article>
+            TOOLS.map((tool) => (
+              <a
+                href={tool.href}
+                class="border-line bg-raised hover:border-line-strong group flex flex-col rounded-2xl border p-6 no-underline transition-colors"
+              >
+                <h2 class="text-2xl font-bold tracking-tight">{tool.name}</h2>
+                <p class="text-muted mt-2 text-sm">{tool.pitch}</p>
+
+                <div class="mt-5 flex-1">
+                  <p class="text-faint font-mono text-xs">
+                    {sampleName[tool.href]} · {findings[tool.href].length} found
+                  </p>
+                  <ul class="mt-3 space-y-2">
+                    {findings[tool.href].slice(0, 5).map((finding) => (
+                      <li class="flex items-baseline gap-3 text-sm">
+                        <span
+                          class:list={[
+                            'mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full',
+                            finding.severity === 'high' ? 'bg-danger' : 'bg-warning',
+                          ]}
+                          aria-hidden="true"
+                        />
+                        <span class="text-ink font-medium">{finding.title}</span>
+                        <span class="text-faint ml-auto truncate text-xs">{finding.detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <p class="text-ink mt-6 text-sm font-semibold">
+                  {tool.name}
+                  <span class="ml-1 inline-block transition-transform group-hover:translate-x-1">
+                    →
+                  </span>
+                </p>
+              </a>
             ))
           }
         </div>
+        <p class="text-faint mt-4 text-xs">
+          Those are real findings, produced by these tools against sample files when this page was
+          built. Not a screenshot.
+        </p>
+      </section>
+
+      <section class="mt-24 max-w-3xl" aria-labelledby="verify">
+        <h2 id="verify" class="text-2xl font-bold tracking-tight sm:text-3xl">
+          <span class="bg-redact text-surface px-2">Verify it yourself</span>
+        </h2>
+        <p class="text-muted mt-5">
+          Every promise here is one you can check without trusting us. Open your browser's developer
+          tools, watch the network panel, and use either tool on a real file. Nothing is sent,
+          because the page is served under a policy that forbids it outright. Turn off your wifi and
+          it still works.
+        </p>
+        <p class="text-muted mt-4">
+          Both tools also re-read the file they just produced and report what is still in it,
+          including anything they could not remove. A tool that says "done" and expects to be
+          believed is worth less than one that shows its work.
+        </p>
       </section>
     </main>
 
-    <footer
-      class="flex flex-col gap-2 border-t border-neutral-200 py-6 text-xs text-neutral-600 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <p>No accounts, no uploads, no tracking. Turn off your wifi and it still works.</p>
-      <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
-        <a
-          href="https://github.com/sixra/blakstrip"
-          class="inline-flex items-center gap-1.5 text-neutral-600 underline-offset-4 transition hover:text-neutral-900 hover:underline"
-        >
-          <svg
-            viewBox="0 0 16 16"
-            width="14"
-            height="14"
-            fill="currentColor"
-            aria-hidden="true"
-            class="shrink-0"
-          >
-            <path
-              d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"
-            ></path>
-          </svg>
-          Source on GitHub
-        </a>
-        <p>
-          Built by <a
-            href="https://sixra.dev"
-            class="text-[#c73a1a] underline underline-offset-4 transition hover:opacity-80"
-            >sixra.dev</a
-          >
-        </p>
-      </div>
-    </footer>
+    <Footer />
   </div>
 
   <script type="application/ld+json" is:inline set:html={jsonLd} />

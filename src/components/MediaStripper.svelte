@@ -137,19 +137,17 @@
     />
   {:else}
     <div class="mb-4 flex flex-wrap items-center gap-3">
-      <span class="max-w-56 truncate text-sm text-neutral-700">{fileName}</span>
-      <span class="rounded bg-neutral-200 px-2 py-0.5 text-xs text-neutral-700 uppercase"
-        >{format}</span
-      >
+      <span class="text-muted max-w-56 truncate text-sm">{fileName}</span>
+      <span class="bg-line text-muted rounded px-2 py-0.5 text-xs uppercase">{format}</span>
       <button
         type="button"
-        class="ml-auto rounded-lg border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-100"
+        class="border-line hover:bg-line ml-auto rounded-lg border px-3 py-1.5 text-sm"
         onclick={reset}>Open another</button
       >
     </div>
 
     <section
-      class={`mb-4 rounded-xl border p-4 ${findings.length > 0 && status !== 'done' ? 'border-amber-300 bg-amber-50' : 'border-neutral-200 bg-white'}`}
+      class={`mb-4 rounded-xl border p-4 ${findings.length > 0 && status !== 'done' ? 'border-warning bg-warning-surface' : 'border-line bg-raised'}`}
       aria-label="File audit"
     >
       <FindingsList
@@ -172,7 +170,7 @@
           alt={status === 'done' ? 'The cleaned file' : 'The file you opened'}
           class="max-h-96 w-full rounded-xl object-contain"
         />
-        <figcaption class="mt-2 text-center text-xs text-neutral-600">
+        <figcaption class="text-muted mt-2 text-center text-xs">
           {status === 'done' ? 'After cleaning' : 'Before cleaning'} · never uploaded
         </figcaption>
       </figure>
@@ -181,18 +179,18 @@
     {#if status === 'loaded'}
       <button
         type="button"
-        class="w-full rounded-xl bg-neutral-900 px-4 py-3 font-medium text-white hover:bg-neutral-800"
+        class="bg-redact text-surface hover:bg-ink w-full rounded-xl px-4 py-3 font-medium"
         onclick={clean}
       >
         {findings.length > 0 ? 'Remove all of it' : 'Clean it anyway'}
       </button>
     {:else if status === 'done'}
       <section
-        class={`mb-4 rounded-xl border p-4 ${remaining.length === 0 ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'}`}
+        class={`mb-4 rounded-xl border p-4 ${remaining.length === 0 ? 'border-positive bg-positive-surface' : 'border-danger bg-danger-surface'}`}
         aria-label="Verification"
       >
         {#if remaining.length === 0}
-          <h2 class="text-sm font-semibold text-green-800">
+          <h2 class="text-positive text-sm font-semibold">
             Verified clean. We re-read the finished file and found nothing.
           </h2>
         {:else}
@@ -203,7 +201,7 @@
           />
         {/if}
         {#each notes as note (note.id)}
-          <p class="mt-2 text-xs text-neutral-700">
+          <p class="text-muted mt-2 text-xs">
             <span class="font-medium">{note.title}:</span>
             {note.detail}
           </p>
@@ -212,7 +210,7 @@
 
       <button
         type="button"
-        class="w-full rounded-xl bg-neutral-900 px-4 py-3 font-medium text-white hover:bg-neutral-800"
+        class="bg-redact text-surface hover:bg-ink w-full rounded-xl px-4 py-3 font-medium"
         onclick={save}>Download the clean file</button
       >
 

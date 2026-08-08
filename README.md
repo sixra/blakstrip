@@ -3,10 +3,17 @@
 [![CI](https://github.com/sixra/blakstrip/actions/workflows/ci.yml/badge.svg)](https://github.com/sixra/blakstrip/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-A fully in-browser PDF redactor that removes content instead of covering it. The file is opened,
-redacted, and saved entirely on your device; nothing is uploaded.
+Two in-browser privacy tools that remove what a file is carrying instead of hiding it. Files are
+opened, cleaned and saved entirely on your device; nothing is uploaded.
 
-## How it works
+- **[Redact a PDF](https://blakstrip.com/pdf-redact)** — black out text and it is erased from the
+  page, not covered by a rectangle.
+- **[Strip a photo](https://blakstrip.com/media-strip)** — remove GPS, camera serial, timestamps and
+  hidden thumbnails without touching a pixel, then optionally re-compress.
+
+Both audit the file on load, act on it, then re-read the _output_ and report what is still in it.
+
+## How PDF redaction works
 
 1. **Load.** The file is read into memory and rendered with pdf.js. No network; the original bytes
    are kept for pdf-lib.
@@ -28,8 +35,22 @@ a response header on the pdf.js worker, which is where your file is actually par
 requests the app ever makes are same-origin loads of its own assets; your document is never among
 them, which you can confirm in devtools. It works offline as a PWA.
 
+## How photo stripping works
+
+1. **Detect.** The format comes from the bytes, never the filename or the declared MIME type.
+2. **Audit.** The container is walked (JPEG marker segments, PNG chunks, WebP RIFF chunks) and each
+   one classified. EXIF is parsed far enough to show the values, so "GPS present" becomes the actual
+   coordinates.
+3. **Strip.** An allowlist decides what stays, so an unrecognised vendor segment is dropped rather
+   than preserved. The image bitstream is copied byte for byte: nothing is re-encoded, so no quality
+   is lost. Orientation is the one tag kept, because dropping it turns photos sideways.
+4. **Compress (optional).** MozJPEG, libwebp and OxiPNG run in a worker, with their wasm inlined as
+   base64 so no codec is ever fetched and `connect-src 'none'` stands.
+5. **Verify.** The output is re-read from scratch and anything still in it is listed.
+
 **Stack:** Astro 7 (static, `<meta>` CSP), Svelte 5 (runes) islands, pdf-lib (write/strip),
-pdfjs-dist (render/text), Tailwind v4, `@vite-pwa/astro`, TypeScript strict.
+pdfjs-dist (render/text), jSquash codecs (wasm, inlined), Tailwind v4, `@vite-pwa/astro`,
+TypeScript strict.
 
 ## Deploying
 
@@ -64,8 +85,10 @@ offline.
 Redaction is only as good as what you tell it to remove, and blakstrip would rather say so than
 imply more than it does. See [SECURITY.md](./SECURITY.md) for the full threat model.
 
-- **EXIF/GPS inside a photo is detected, not stripped.** Removing it means re-encoding the image;
-  drawing a box anywhere on that page rasterizes it and takes the EXIF with it.
+- **EXIF/GPS inside a PDF's embedded photo is detected, not stripped.** Removing it there would
+  mean rewriting the embedded image stream; drawing a box anywhere on that page rasterizes it and
+  takes the EXIF with it. (Standalone photos are a different matter: the media tool strips them
+  losslessly, without re-encoding.)
 - **Optional-content (layer) PDFs are not fully cleaned** on pages copied verbatim, and the export
   loses the layer visibility settings, so a hidden layer may become visible. blakstrip detects this
   and refuses a clean verdict.
@@ -116,13 +139,27 @@ src/lib/pdf/        framework-free redaction engine (security-critical)
   export.ts         orchestrate build, strip, save
   download.ts       save bytes to disk (kept clear of pdf-lib so it loads eagerly)
   verify.ts         verify-on-export
+src/lib/media/      framework-free image engine (security-critical)
+  types.ts          shared contracts (strip results, keep options)
+  bytes.ts          bounds-checked readers; refuses malformed input
+  jpeg.ts           marker-segment parse, classify, strip
+  png.ts            chunk parse, classify, strip (keeps APNG animation)
+  webp.ts           RIFF chunk parse, strip, VP8X flag rewrite
+  exif.ts           TIFF/IFD parse: turns "GPS present" into coordinates
+  compress.ts       presets, resize maths, worker protocol
+  compressor.ts     worker lifecycle, supersede, teardown
+  compress.worker.ts  decode, resize, encode with the inlined codecs
+  index.ts          detect / inspect / strip / verify
 src/lib/history.ts  undo/redo over immutable snapshots
-src/components/     Redactor.svelte (the app), with AuditPanel, DropZone,
-                    PageThumbs and VerifyDialog split out of it; InstallButton,
-                    Header.astro
-src/pages/          index.astro (landing), pdf-redact.astro (the tool)
+src/config/tools.ts single source of truth for the tool list (nav, hub, sitemap,
+                    structured data)
+src/components/     Redactor.svelte and MediaStripper.svelte (the apps), with
+                    AuditPanel, DropZone, PageThumbs, VerifyDialog, FindingsList
+                    and CompressPanel split out; InstallButton, Header.astro,
+                    Footer.astro
+src/pages/          index.astro (hub), pdf-redact.astro, media-strip.astro
 tests/              Vitest (node + real-Chromium browser projects) + Playwright e2e + axe
-scripts/            gen-icons, gen-fixtures
+scripts/            gen-icons, gen-fixtures, size-budget
 ```
 
 ## Contributing
