@@ -4,20 +4,15 @@
  * on-screen selectable text layer (drag-select) is wired in the UI step.
  */
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
+import {
+  matchExtentX,
+  measurementFamily,
+  safetyMargin,
+  verticalCover,
+  type GlyphItem,
+  type TextStyleMetrics,
+} from './glyph-geometry';
 import type { RedactionRect } from './types';
-
-/** The subset of a pdf.js text item we rely on (avoids importing internals). */
-interface GlyphItem {
-  str: string;
-  transform: number[];
-  width: number;
-  height: number;
-  hasEOL: boolean;
-  /** pdf.js's internal name for the run's font; keys into `TextContent.styles`. */
-  fontName: string;
-  /** pdf.js reading direction of the run: 'ltr' | 'rtl' | 'ttb'. Always present. */
-  dir: string;
-}
 
 function isGlyph(item: unknown): item is GlyphItem {
   return typeof (item as { str?: unknown }).str === 'string';
@@ -136,57 +131,6 @@ function indicesOf(haystack: string, needle: string): number[] {
   return out;
 }
 
-// Vertical cover, as fractions of the run's font height so it scales with the
-// type: how far below the baseline to reach (descenders like g/j/p/y) and how far
-// above it to top out (caps, accents, ascenders). Font-relative, because a
-// page-absolute pad that's fine at 12pt leaves tails of a 40pt glyph exposed.
-// Deliberately generous: for ordinary fonts these exceed the true metrics (a
-// typical ascent is ~0.72 em against the 1.15 here), and over-covering is the
-// only safe direction to be wrong in.
-const DESCENT_FRAC = 0.3;
-const ASCENT_FRAC = 1.15;
-
-/** The subset of a pdf.js TextStyle we use, keyed by `item.fontName`. */
-interface TextStyleMetrics {
-  fontFamily?: string;
-  ascent?: number;
-  descent?: number;
-}
-
-/**
- * The CSS family to measure glyph advances with. Exported for test: substituting
- * a different family changes the measured distribution and therefore where the
- * box lands, so the fallback should not be an untested default.
- */
-export function measurementFamily(style: TextStyleMetrics | undefined): string {
-  return style?.fontFamily ?? 'sans-serif';
-}
-
-/**
- * How far above and below the baseline to cover, in fractions of the font height.
- * pdf.js reports each font's real ascent and descent as em fractions (descent
- * negative); the padded defaults above normally reach further, so this only binds
- * for the unusual font whose descenders or accents run past them. Taking the max
- * can only grow the box, never shrink it. Exported for test: the fallbacks matter
- * (a missing style must not shrink the box to nothing) and are not otherwise
- * reachable, since pdf.js supplies metrics for every font it reports.
- */
-export function verticalCover(style: TextStyleMetrics | undefined): {
-  above: number;
-  below: number;
-} {
-  return {
-    above: Math.max(ASCENT_FRAC, style?.ascent ?? 0),
-    below: Math.max(DESCENT_FRAC, Math.abs(style?.descent ?? 0)),
-  };
-}
-
-// Horizontal safety margin: the larger of a hairline page fraction and a small
-// fraction of the font height, so bigger type gets a proportionally wider margin
-// where per-glyph measurement is least reliable.
-const SAFETY_X = 0.0015;
-const SAFETY_X_FRAC = 0.08;
-
 // One reused 2D context for measuring glyph advances. pdf.js gives a run's exact
 // total width but not where each glyph sits inside it; the browser's own font
 // metrics supply the realistic *distribution* of that width across characters
@@ -247,36 +191,6 @@ export async function pageRunBoxes(page: PDFPageProxy): Promise<RunBox[]> {
   return boxes;
 }
 
-/**
- * The user-space horizontal extent [left, right] a match occupies within a run.
- * pdf.js reorders RTL runs (item.str is logical order while the transform/width
- * describe visual layout), so measuring the substring left-to-right lands the
- * box on the wrong side; for an RTL run cover the whole run instead, an
- * over-cover that is always safe. LTR runs use the measured sub-extent, but when
- * the match reaches a run boundary the extent is snapped to that boundary rather
- * than trusting the per-glyph measurement (unreliable for condensed/substituted
- * fonts), so a leading/trailing glyph can't slip out. Interior edges use the
- * measurement, padded and clamped inside the run. Exported for test.
- */
-export function matchExtentX(
-  item: GlyphItem,
-  preW: number,
-  matchW: number,
-  safetyX: number,
-  atRunStart = false,
-  atRunEnd = false
-): [number, number] {
-  const originX = item.transform[4];
-  const runRight = originX + item.width;
-  // Anything but plain left-to-right gets the whole run. pdf.js also emits 'ttb'
-  // for vertical text, where a left-to-right sub-extent is just as meaningless as
-  // it is for the bidi-reordered 'rtl' case. Over-covering is always safe.
-  if (item.dir !== 'ltr') return [originX, runRight];
-  const left = atRunStart ? originX : Math.max(originX, originX + preW - safetyX);
-  const right = atRunEnd ? runRight : Math.min(runRight, originX + preW + matchW + safetyX);
-  return [left, right];
-}
-
 /** Do two axis-aligned top-left boxes overlap at all? Exported for direct test. */
 export function overlaps(a: Box, b: Box): boolean {
   const apart = a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y;
@@ -332,7 +246,7 @@ export async function searchPageRects(page: PDFPageProxy, term: string): Promise
       const atRunStart = localStart === 0;
       const atRunEnd = localEnd === item.str.length;
       // Wider safety margin for larger type, where measurement drifts most.
-      const safetyX = Math.max(SAFETY_X * uw, fontH * SAFETY_X_FRAC);
+      const safetyX = safetyMargin(uw, fontH);
 
       // Measure where the match actually sits inside the run. Font size is
       // arbitrary (100) since we rescale to the run's true advance; that scale
