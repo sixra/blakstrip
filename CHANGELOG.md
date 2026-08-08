@@ -20,8 +20,10 @@ its own page at `/pdf-redact`.
   output and shows you the result. Same audit, strip, verify shape the redactor uses.
 - **Photos**: optional compression, in the browser, through MozJPEG, libwebp, OxiPNG and AVIF. Three
   presets, an effort dial, a dimension cap, and a full-size before-and-after view you can pan to
-  look for artefacts. Every codec is inlined into the worker as wasm, so nothing is ever fetched
-  and `connect-src 'none'` still holds while they run.
+  look for artefacts. Codecs are inlined as wasm rather than fetched at runtime, so the
+  `connect-src 'none'` guarantee still holds while they run. AVIF is the exception: its chunk is
+  large enough to be loaded on demand and left out of the precache, so offline AVIF works only
+  after one online use. Every other format is offline from install.
 - **Site**: `/` is a hub for both tools, each tool has a page that explains it, and a tools registry
   feeds the nav, the hub, the sitemap and the structured data from one list.
 - **Security headers**: HSTS, `Cross-Origin-Opener-Policy`, a deny-by-default `Permissions-Policy`,
@@ -55,8 +57,8 @@ its own page at `/pdf-redact`.
 - `_headers` now sets caching as well as security: a year on the content-hashed `/_astro/*` assets
   (which is where the ~1.3 MB pdf.js worker lives) and always-revalidate on `/sw.js`, whose precache
   manifest would otherwise pin an entire stale build offline.
-- Tooling configs are inlined into the repo and the `@sixra/devkit` dependency is gone, so the build
-  depends on nothing outside this repository.
+- Tooling configs are inlined into the repo and the `@sixra/devkit` dependency is gone, so auditing
+  how this site is built no longer means trusting a separate shared-config package.
 - The toolchain moved to Node 24.
 
 ### Fixed
