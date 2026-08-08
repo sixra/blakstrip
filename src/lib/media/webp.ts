@@ -238,6 +238,7 @@ export function stripWebp(bytes: Uint8Array, options: KeepOptions = {}): StripRe
   // Cheap invariant, checked rather than assumed: a wrong size field is the one
   // corruption this rebuild can introduce, and it would only show up in another
   // decoder much later.
+  /* v8 ignore next 3 -- an invariant on the line above; unreachable without a bug there */
   if (u32le(out, SIZE_AT) !== out.length - SIZE_COUNTS_FROM) {
     throw new MalformedFileError('internal: rebuilt RIFF size does not match output length');
   }

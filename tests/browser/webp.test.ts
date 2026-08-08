@@ -7,6 +7,7 @@ import {
   parseWebpChunks,
   stripWebp,
 } from '../../src/lib/media/webp';
+import type { Finding } from '../../src/lib/types';
 import { decodeToPixels } from '../support/decode';
 import { makeWebp, vp8xFlags, webpChunk } from '../support/testwebp';
 
@@ -42,6 +43,26 @@ describe('webp audit', () => {
     const [lat, lon] = (gps?.detail ?? '').split(', ').map(Number);
     expect(lat).toBeCloseTo(44.8125, 3);
     expect(lon).toBeCloseTo(20.4612, 3);
+  });
+
+  it("reads GPS from an EXIF chunk that keeps JPEG's Exif\\0\\0 prefix", async () => {
+    // Both shapes are in the wild and the parser has a branch for each, but only
+    // the raw-TIFF one had ever run. If the prefixed path were wrong every offset
+    // would be six bytes out, and the likely result is not an error: it is a photo
+    // whose location is quietly not found, reported to the user as clean.
+    const raw = await makeWebp({ exif: { gps: { lat: 51.5, lon: -0.12 } } });
+    const prefixed = await makeWebp({
+      exif: { gps: { lat: 51.5, lon: -0.12 } },
+      exifPrefixed: true,
+    });
+
+    // The two files differ by six bytes, so this is not comparing a file to itself.
+    expect(prefixed.length).toBe(raw.length + 6);
+
+    const gpsFinding = (bytes: Uint8Array): Finding | undefined =>
+      inspectWebp(bytes).find((f) => f.id === 'exif-gps');
+    expect(gpsFinding(prefixed)).toBeDefined();
+    expect(gpsFinding(prefixed)?.detail).toBe(gpsFinding(raw)?.detail);
   });
 
   it('reports unreadable EXIF instead of refusing to audit the file', async () => {
@@ -212,6 +233,33 @@ describe('webp parser hostility', () => {
     expect(() => parseWebpChunks(bytes.subarray(0, last.start))).toThrow(
       /truncated WebP: header declares/
     );
+  });
+
+  it('rejects an absurd chunk size rather than trying to honour it', async () => {
+    const bytes = await makeWebp({ exif: { make: 'ACME' } });
+    const chunk = parseWebpChunks(bytes).find((c) => c.fourcc === 'EXIF');
+    expect(chunk).toBeDefined();
+    // A size with the top bit set. Left unchecked this is an arithmetic hazard
+    // before it is ever a bounds problem.
+    const view = new DataView(bytes.buffer, bytes.byteOffset);
+    view.setUint32(chunk!.dataAt - 4, 0x80000000, true);
+
+    // Asserting the message, not the class. Both this guard and the bounds check
+    // below it throw MalformedFileError, so `toThrow(MalformedFileError)` passed
+    // with the guard deleted and proved nothing.
+    expect(() => parseWebpChunks(bytes)).toThrow(/chunk size 2147483648/);
+  });
+
+  it('stops cleanly on a trailing byte too short to be a chunk header', async () => {
+    const clean = await makeWebp({ exif: { make: 'ACME' } });
+    // Two stray bytes inside the declared RIFF size: not a chunk, not enough to
+    // read one. Stopping is right; throwing would reject a file over padding.
+    const padded = new Uint8Array(clean.length + 2);
+    padded.set(clean);
+    new DataView(padded.buffer).setUint32(4, padded.length - 8, true);
+
+    const chunks = parseWebpChunks(padded);
+    expect(chunks.map((c) => c.fourcc)).toEqual(parseWebpChunks(clean).map((c) => c.fourcc));
   });
 
   it('ignores anything appended past the declared RIFF size', async () => {

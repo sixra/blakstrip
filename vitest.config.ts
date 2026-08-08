@@ -47,11 +47,11 @@ export default getViteConfig({
         lines: 90,
         // The redaction engine is at 100% today and this is what keeps it there.
         'src/lib/pdf/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
-        // Raised after covering the EXIF parser's little-endian path and its Exif
-        // sub-IFD, which took the module from 69% to 88% branch and the directory
-        // from 88.2% to 93.5%. Pinned just under the real figures so the gain
-        // cannot quietly erode.
-        'src/lib/media/**': { statements: 98, branches: 93, functions: 98, lines: 99 },
+        // Raised twice as the two weakest parsers were covered: the EXIF reader's
+        // little-endian path and Exif sub-IFD, then WebP's prefixed-EXIF branch
+        // and its hostile-input guards. Pinned just under the real figures so the
+        // gains cannot quietly erode.
+        'src/lib/media/**': { statements: 98, branches: 94, functions: 98, lines: 99 },
       },
     },
     projects: [

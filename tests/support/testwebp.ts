@@ -92,6 +92,14 @@ export interface WebpFixtureOptions {
   exif?: ExifOptions;
   xmp?: boolean;
   icc?: boolean;
+  /**
+   * Keep JPEG's `Exif\0\0` prefix in front of the TIFF header.
+   *
+   * Both shapes are real: most writers store raw TIFF from the byte-order mark,
+   * some prepend the prefix. The parser accepts either, and getting it wrong
+   * shifts every offset by six bytes, so the fixtures have to cover both.
+   */
+  exifPrefixed?: boolean;
   /** A chunk type this tool has no name for, to prove the allowlist drops it. */
   unknownChunk?: boolean;
   /** Emit the VP8X extended header. Forced on when any optional chunk is added. */
@@ -116,8 +124,10 @@ export async function makeWebp(options: WebpFixtureOptions = {}): Promise<Uint8A
   }
   if (options.exif) {
     flags |= FLAG_EXIF;
-    // Raw TIFF, so drop the `Exif\0\0` prefix the JPEG builder adds.
-    optional.push(webpChunk('EXIF', buildExifPayload(options.exif).subarray(6)));
+    // The JPEG builder always emits the `Exif\0\0` prefix; drop it unless this
+    // fixture is deliberately exercising the prefixed form.
+    const payload = buildExifPayload(options.exif);
+    optional.push(webpChunk('EXIF', options.exifPrefixed ? payload : payload.subarray(6)));
   }
   if (options.xmp) {
     flags |= FLAG_XMP;
