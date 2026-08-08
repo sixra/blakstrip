@@ -111,6 +111,52 @@ html {
   }
 }
 
+/* The service-worker update notice, built in JS by lib/update-toast.ts. Real CSS
+   rather than Tailwind utilities because the markup is created at runtime, so
+   there is no source for the class scanner to find the utilities in. */
+.sw-toast {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 50;
+  max-width: min(24rem, calc(100vw - 2rem));
+  border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
+  background: var(--color-raised);
+  padding: 1rem;
+  box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.15);
+}
+
+.sw-toast-message {
+  font-size: 0.875rem;
+  color: var(--color-ink);
+}
+
+.sw-toast-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sw-toast-accept,
+.sw-toast-dismiss {
+  cursor: pointer;
+  border-radius: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.sw-toast-accept {
+  background: var(--color-redact);
+  color: var(--color-surface);
+}
+
+.sw-toast-dismiss {
+  border: 1px solid var(--color-line);
+  color: var(--color-muted);
+}
+
 /* File-picker prompt: say "click" on a mouse, "tap" on a touch screen. */
 .pp-tap {
   display: none;

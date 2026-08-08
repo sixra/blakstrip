@@ -68,7 +68,7 @@ export default defineConfig({
       },
     }),
     AstroPWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       // We register the SW from a bundled <script> in Base.astro so Astro hashes it
       // under the strict CSP (an injected inline script would be blocked).
       injectRegister: false,
@@ -93,22 +93,19 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Set explicitly because `registerType: 'autoUpdate'` did not do it, despite
-        // the vite-pwa docs saying it forces both. Measured on the generated sw.js:
-        // the only mention of skipWaiting was a `message` listener waiting to be
-        // told, and clientsClaim was absent entirely. The consequence is not subtle.
-        // A returning visitor installed the new worker and it sat in `waiting`
-        // forever while the old one kept serving: no reload, no cache eviction, and
-        // for an installed PWA no way out until every window of it is closed. So the
-        // site could not push an update to anyone who already had it.
+        // No skipWaiting or clientsClaim, on purpose, and this is the half that was
+        // previously wrong rather than merely absent. The old config paired a
+        // worker that waits to be messaged with `registerType: 'autoUpdate'`,
+        // whose client auto-reloads on activation: neither mode, and the result
+        // was that no existing user ever received an update at all. The new worker
+        // sat in `waiting` behind the old one indefinitely.
         //
-        // skipWaiting lets the new worker activate instead of queueing behind the
-        // old one; clientsClaim hands it the already-open pages. Together with
-        // cleanupOutdatedCaches (which vite-pwa does enable) that evicts the stale
-        // precache, and the registration's `activated` handler reloads the page onto
-        // the new build. Verified end to end with a two-build upgrade simulation.
-        clientsClaim: true,
-        skipWaiting: true,
+        // In prompt mode the waiting worker is correct. `updateSW(true)` posts
+        // SKIP_WAITING when the visitor accepts, so the old build stays whole and
+        // consistent until then: no version skew between a page running old code
+        // and a precache holding new chunks, which matters because this app lazy
+        // loads pdf.js and the codecs. Base.astro applies it silently when the
+        // page is idle, so nobody is left on a stale build either.
         // pdf.js ships its worker as .mjs; without that extension the app installs
         // but cannot open a PDF offline, which is the whole point of installing it.
         globPatterns: ['**/*.{js,mjs,css,html,ico,png,svg,woff2,wasm}'],

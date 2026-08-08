@@ -10,34 +10,39 @@ test('the service worker precaches the pdf.js worker', async ({ request }) => {
   expect(sw).toContain('pdf.worker');
 });
 
-// The update path, asserted on the generated worker because the failure is silent
-// and slow. `registerType: 'autoUpdate'` is documented as forcing skipWaiting and
-// clientsClaim, and did not: the worker shipped with a `message` listener waiting
-// to be told to skip, and no clientsClaim at all. A returning visitor installed
-// the new worker, it sat in `waiting` behind the old one indefinitely, and they
-// kept the previous build. For an installed PWA there was no way out short of
-// closing every window of it.
+// How an update reaches someone who already has the site installed. This is the
+// path that shipped broken: the worker waited to be told to activate while the
+// registration expected it to activate on its own, so it sat in `waiting` behind
+// the old worker indefinitely and no existing user ever received an update.
 //
-// Nothing else can catch this. Every other test loads one build, so the second
-// build is exactly the case never exercised. These two lines are cheap and they
-// fail the moment the generated worker loses its ability to take over.
-test('the service worker can take over from a previous version', async ({ request }) => {
+// The site now uses prompt mode deliberately, because nothing here is persisted
+// and an unannounced reload discards the document someone is redacting. The two
+// halves have to agree: the worker waits, and the page decides when to tell it.
+//
+// Note what this cannot check. A broken autoUpdate build and a correct prompt
+// build produce nearly identical bundles, both containing SKIP_WAITING and
+// messageSkipWaiting. What separates them is whether the page supplies a handler
+// that actually applies the update, so that is what is asserted.
+test('the worker waits to be told, and the page is able to tell it', async ({ request }) => {
   const sw = await (await request.get('/sw.js')).text();
 
-  // The broken build *did* contain `self.skipWaiting()` — inside a `message`
-  // listener, waiting to be told. So matching that call proves nothing, and an
-  // earlier version of this test asserted it while claiming otherwise.
-  //
-  // What separates the two builds is the listener itself: waiting to be messaged
-  // is the shape prompt-mode uses, and an auto-updating worker should activate on
-  // its own instead. Its absence, plus clientsClaim (missing entirely before), is
-  // what the broken output could not satisfy.
-  expect(sw).not.toContain('SKIP_WAITING');
-  expect(sw).toContain('self.skipWaiting()');
-  expect(sw).toContain('clientsClaim()');
+  // Waiting is correct here: it keeps the old build whole and consistent until the
+  // visitor accepts, which also avoids serving new chunks to a page running old
+  // code. A top-level self.skipWaiting() would mean the other mode.
+  expect(sw).toContain('SKIP_WAITING');
+  expect(sw).not.toMatch(/"use strict";\s*self\.skipWaiting\(\)/);
 
-  // Without this the previous version's precache survives alongside the new one.
+  // Still evicts the previous version's precache once activation does happen.
   expect(sw).toContain('cleanupOutdatedCaches');
+
+  const html = await (await request.get('/')).text();
+  const src = html.match(/src="(\/_astro\/Base\.astro[^"]*\.js)"/)?.[1];
+  expect(src, 'the registration script should be a hashed module').toBeTruthy();
+  const client = await (await request.get(src!)).text();
+
+  // The page's own update handler. Its absence is what made the old pairing inert.
+  expect(client).toContain('messageSkipWaiting');
+  expect(client).toContain('A new version of blakstrip is ready');
 });
 
 test('the precached HTML is revisioned so a new build replaces it', async ({ request }) => {

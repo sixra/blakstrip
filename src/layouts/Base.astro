@@ -72,8 +72,28 @@ const ogImage = new URL('/og-image.png', Astro.site);
     <script>
       // Registered from a bundled module so Astro hashes it under the strict CSP.
       import { registerSW } from 'virtual:pwa-register';
+      import { hasUnsavedWork } from '../lib/unsaved';
+      import { showUpdateToast } from '../lib/update-toast';
 
-      registerSW({ immediate: true });
+      // `prompt`, not `autoUpdate`, and the difference matters here more than on
+      // most sites. autoUpdate reloads the moment a new worker activates, and
+      // nothing in this app is persisted: that reload discards the document
+      // someone is redacting, on a file that exists nowhere else. So the update is
+      // applied silently when the page is idle and offered when it is not.
+      // Declared before assignment because the callbacks below close over it, which
+      // a `const` initialised by the same call cannot do without circularity.
+      let updateSW: (reloadPage?: boolean) => Promise<void>;
+      updateSW = registerSW({
+        immediate: true,
+        onNeedRefresh() {
+          if (!hasUnsavedWork()) {
+            // Nothing to lose: behave exactly as autoUpdate did.
+            void updateSW(true);
+            return;
+          }
+          showUpdateToast(() => void updateSW(true));
+        },
+      });
     </script>
   </body>
 </html>

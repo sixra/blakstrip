@@ -3,6 +3,7 @@
   import { inspectMedia, mimeTypeFor, stripMedia, verifyMedia, type MediaFormat } from '@lib/media';
   import type { StripNote } from '@lib/media/types';
   import type { Finding } from '@lib/types';
+  import { clearUnsaved, markUnsaved } from '@lib/unsaved';
   import CompressPanel from './CompressPanel.svelte';
   import DropZone from './DropZone.svelte';
   import FindingsList from './FindingsList.svelte';
@@ -49,6 +50,7 @@
     fileName = '';
     status = 'idle';
     errorMsg = '';
+    clearUnsaved('media-strip');
   }
 
   function describe(error: unknown): string {
@@ -69,6 +71,8 @@
       findings = audit.findings;
       originalUrl = URL.createObjectURL(new Blob([bytes], { type: mimeTypeFor(audit.format) }));
       status = 'loaded';
+      // See Redactor: a reload from here loses the photo and anything done to it.
+      markUnsaved('media-strip');
     } catch (error) {
       status = 'error';
       errorMsg = describe(error);

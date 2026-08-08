@@ -7,6 +7,7 @@
   import { loadPdf, renderPageToCanvas, renderPageToImageCanvas } from '@lib/pdf/render';
   import { collectRedactedText, searchDocumentRects } from '@lib/pdf/textlayer';
   import type { AuditReport, RedactionRect, VerifyReport } from '@lib/pdf/types';
+  import { clearUnsaved, markUnsaved } from '@lib/unsaved';
   import AuditPanel from './AuditPanel.svelte';
   import DropZone from './DropZone.svelte';
   import PageThumbs from './PageThumbs.svelte';
@@ -144,6 +145,9 @@
       fileName = file.name;
       currentPage = 1;
       status = 'ready';
+      // A document is open, so a reload would lose it along with any boxes drawn
+      // on it. Holds off a service-worker update until this page is idle again.
+      markUnsaved('pdf-redact');
       void buildThumbs(doc);
       void runAudit();
     } catch (e) {
@@ -422,6 +426,7 @@
     fileName = '';
     pageCount = 0;
     currentPage = 1;
+    clearUnsaved('pdf-redact');
   }
 
   const btn =
