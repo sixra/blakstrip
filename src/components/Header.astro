@@ -14,16 +14,24 @@ const here = Astro.url.pathname.replace(/\.html$/, '');
 <div class="flex items-center gap-4">
   <a href="/" aria-label="blakstrip home">
     {
-      /* Through astro:assets rather than public/, so the LCP image on the hub
-        ships at the size it renders instead of 8x it. The link's aria-label is
-        the accessible name, so the alt text stays out of the way. */
-    }
-    {
-      /* PNG, not the default WebP. The wordmark is two-tone with hard edges, and
-        it is downscaled roughly 8x from the 791px source to the 96px it renders
-        at. Lossy WebP smears exactly that kind of edge, which showed up as a
-        visibly soft logo. PNG is lossless, and at these sizes it costs a couple
-        of KB more. 288w is there so a 3x screen has something to use. */
+      /* Through astro:assets rather than public/, so the wordmark ships at the
+        size it renders instead of the 791px source. The link's aria-label is the
+        accessible name, so the alt text stays out of the way.
+
+        PNG, not the default WebP: this is two-tone artwork with hard edges,
+        downscaled about 8x, and lossy compression smears exactly that. Measured
+        against an ideal downscale, WebP came out at 1.51 mean pixel error and
+        looked visibly soft; PNG is 0.00. It costs about 10 KB more across the
+        three variants. Lossless WebP would be half PNG's size at the same
+        fidelity, but <Image> exposes format and quality and no lossless flag.
+
+        `width` pins the fallback `src` to the rendered size. Without it Astro
+        also emits a 791px variant, which was 17 KB nobody needed. `widths` then
+        covers 1x, 2x and 3x.
+
+        Left lazy on purpose. The header sits above the fold, but the LCP element
+        on all three pages is the h1, not this (measured: text, ~90ms), so eager
+        loading it would only compete with the thing that actually paints. */
     }
     <Image
       src={logo}
