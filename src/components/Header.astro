@@ -18,7 +18,22 @@ const here = Astro.url.pathname.replace(/\.html$/, '');
         ships at the size it renders instead of 8x it. The link's aria-label is
         the accessible name, so the alt text stays out of the way. */
     }
-    <Image src={logo} alt="" widths={[96, 192]} sizes="96px" class="h-12 w-auto" />
+    {
+      /* PNG, not the default WebP. The wordmark is two-tone with hard edges, and
+        it is downscaled roughly 8x from the 791px source to the 96px it renders
+        at. Lossy WebP smears exactly that kind of edge, which showed up as a
+        visibly soft logo. PNG is lossless, and at these sizes it costs a couple
+        of KB more. 288w is there so a 3x screen has something to use. */
+    }
+    <Image
+      src={logo}
+      alt=""
+      format="png"
+      width={96}
+      widths={[96, 192, 288]}
+      sizes="96px"
+      class="h-12 w-auto"
+    />
   </a>
   <nav aria-label="Tools" class="ml-auto">
     <ul class="flex items-center gap-1">
