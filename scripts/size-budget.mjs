@@ -72,7 +72,7 @@ function categoryFor(file) {
   // 1.5 MB into the number that is supposed to mean "what a visitor fetches",
   // and raising `js` to cover it would let the eager bundle grow unnoticed
   // behind it. Its own line keeps both numbers honest.
-  if (/^avif-.*\.js$/.test(file)) return 'avif';
+  if (/^avif.*\.js$/.test(file)) return 'avif';
 
   const ext = extname(file).toLowerCase();
   for (const [category, exts] of Object.entries(CATEGORIES)) {

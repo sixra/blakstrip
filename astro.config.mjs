@@ -116,7 +116,12 @@ export default defineConfig({
         //
         // The cost is stated in the UI rather than hidden: AVIF is the one format
         // that needs one online use before it works offline.
-        globIgnores: ['**/avif-*.js'],
+        //
+        // `avif*` rather than `avif-*`: the pattern has to cover the codec glue
+        // (avif_enc-*) and the multithreaded variant (avif_enc_mt-*) too. Those
+        // are only 74 KB, but 55 KB of it is for a threads branch this site can
+        // never take, and all of it belongs to the lazy path either way.
+        globIgnores: ['**/avif*.js'],
         // The worker is ~1.3 MB and grows each release; workbox silently skips
         // anything over its 2 MiB default, so pin the ceiling rather than drift into it.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,

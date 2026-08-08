@@ -169,7 +169,21 @@ export interface CompressFailure {
 
 export type CompressResponse = CompressSuccess | CompressFailure;
 
-/** The MIME type for an output format, including the one the engine cannot read. */
+const OUTPUT_MIME_TYPES: Record<OutputFormat, string> = {
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  avif: 'image/avif',
+};
+
+/**
+ * The MIME type for an output format, including the one the engine cannot read.
+ *
+ * Spelled out rather than templated, for the reason `mimeTypeFor` in `index.ts`
+ * already records: `image/${format}` is right for every format here and silently
+ * wrong for the first one that is not an image. A map cannot be wrong quietly,
+ * because a new format will not compile until it is listed.
+ */
 export function outputMimeType(format: OutputFormat): string {
-  return format === 'avif' ? 'image/avif' : `image/${format}`;
+  return OUTPUT_MIME_TYPES[format];
 }
