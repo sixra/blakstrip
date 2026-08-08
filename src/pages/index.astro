@@ -2,7 +2,7 @@
 import samplePhoto from '../assets/samples/sample-photo.jpg?bytes';
 import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
-import { TOOLS } from '../config/tools';
+import { TOOLS, type ToolHref } from '../config/tools';
 import Base from '../layouts/Base.astro';
 import { inspectMedia } from '../lib/media';
 import samplePdf from '../lib/pdf/__fixtures__/text-secrets.pdf?bytes';
@@ -20,12 +20,12 @@ import type { Finding } from '../lib/types';
 // is bundled into `dist/.prerender`, where `import.meta.url` points at a chunk in
 // the output directory and a relative path to the source tree resolves to
 // nothing. That bundle is thrown away after the build, so none of it ships.
-const findings: Record<string, Finding[]> = {
+const findings: Record<ToolHref, Finding[]> = {
   '/pdf-redact': await inspectStructure(new Uint8Array(samplePdf())),
   '/media-strip': inspectMedia(new Uint8Array(samplePhoto())).findings,
 };
 
-const sampleName: Record<string, string> = {
+const sampleName: Record<ToolHref, string> = {
   '/pdf-redact': 'quarterly-report.pdf',
   '/media-strip': 'holiday.jpg',
 };

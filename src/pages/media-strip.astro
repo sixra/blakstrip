@@ -2,10 +2,12 @@
 import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
 import MediaStripper from '../components/MediaStripper.svelte';
-import { TOOLS, toolSchema } from '../config/tools';
+import { toolFor, toolSchema } from '../config/tools';
 import Base from '../layouts/Base.astro';
 
-const tool = TOOLS[1];
+// Resolved from this page's own route, so reordering TOOLS cannot quietly
+// swap this page's metadata for the other tool's.
+const tool = toolFor(Astro.url.pathname);
 const jsonLd = JSON.stringify(toolSchema(tool)).replace(/</g, '\\u003c');
 
 // This page had no copy at all: it dropped you straight onto a drop zone with

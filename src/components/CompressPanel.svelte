@@ -317,7 +317,19 @@
       {/if}
 
       <figure class="mt-3">
-        <div class="border-line bg-line max-h-96 overflow-auto rounded-xl border">
+        <!-- tabindex and role are here because this scrolls. Judging compression
+             artefacts means panning around a full-size image, and without a
+             focusable container that is mouse-only: axe flags it as
+             scrollable-region-focusable, and a keyboard user simply cannot see
+             most of the picture they are being asked to evaluate. -->
+        <div
+          class="border-line bg-line focus-visible:ring-redact max-h-96 overflow-auto rounded-xl border focus-visible:ring-2 focus-visible:outline-none"
+          tabindex="0"
+          role="group"
+          aria-label={showOriginal
+            ? 'The picture before compressing, at full size. Scroll to pan.'
+            : 'The compressed picture, at full size. Scroll to pan.'}
+        >
           <img
             src={showOriginal ? sourceUrl : compressedUrl}
             alt={showOriginal ? 'The picture before compressing' : 'The compressed picture'}

@@ -27,7 +27,11 @@ export interface Tool {
   title: string;
 }
 
-export const TOOLS: readonly Tool[] = [
+// `as const satisfies` rather than a plain annotation: it keeps the literal
+// `href` types, which lets a caller build a map keyed by tool and have the
+// compiler notice a tool it forgot. `satisfies` still type-checks each entry
+// against Tool, so nothing is lost.
+export const TOOLS = [
   {
     href: '/pdf-redact',
     nav: 'PDF',
@@ -48,12 +52,34 @@ export const TOOLS: readonly Tool[] = [
     entityId: 'https://blakstrip.com/#media-strip',
     title: 'Remove Photo Metadata Online, Free and Private · blakstrip',
   },
-];
+] as const satisfies readonly Tool[];
 
-/** The tool serving a given path, for `aria-current` and per-page metadata. */
-export function toolFor(pathname: string): Tool | undefined {
+/** Every route a tool lives at, as a union, so maps over them can be exhaustive. */
+export type ToolHref = (typeof TOOLS)[number]['href'];
+
+/**
+ * The tool serving a given path.
+ *
+ * Pages resolve their own entry through this rather than indexing `TOOLS[0]`.
+ * Positional access looks harmless and is not: reordering the array to change
+ * the nav order would hand a page another tool's title, description and `@id`,
+ * and nothing would fail. Matching on the route cannot do that.
+ *
+ * Throws rather than returning undefined. This runs during the build, so a page
+ * whose route is missing from the registry stops the build instead of shipping
+ * with an empty title. It also means every tool page is guaranteed to be in the
+ * nav, because the nav is built from the same list.
+ */
+export function toolFor(pathname: string): Tool {
   const path = pathname.replace(/\.html$/, '');
-  return TOOLS.find((tool) => tool.href === path);
+  const tool = TOOLS.find((candidate) => candidate.href === path);
+  if (!tool) {
+    throw new Error(
+      `no tool registered for "${path}". Add it to TOOLS in src/config/tools.ts, ` +
+        `or the page will have no title, description or structured data.`
+    );
+  }
+  return tool;
 }
 
 const SITE = 'https://blakstrip.com';
