@@ -1,8 +1,6 @@
 version: 2
 updates:
   # npm dependencies (pdf.js, pdf-lib, Astro, Svelte, Tailwind, tooling, ...).
-  # Note: @sixra/devkit is a `github:` git dependency and is not bumped by the
-  # npm updater; that is expected.
   - package-ecosystem: npm
     directory: /
     schedule:

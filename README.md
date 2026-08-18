@@ -167,8 +167,8 @@ scripts/            gen-icons, gen-fixtures, size-budget
 - **No network egress.** Nothing in `src/` may fetch, upload, or send the user's file anywhere; the
   strict CSP enforces it. Keep it that way.
 - The 100% coverage gate on `src/lib/**` is enforced; new engine code needs matching tests.
-- Tooling (ESLint, Prettier, lefthook, commitlint) comes from `@sixra/devkit`. Commits follow
-  Conventional Commits.
+- Tooling (ESLint, Prettier, lefthook, commitlint) is configured in this repo, one file each at the
+  root. Commits follow Conventional Commits.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup, tests, and the full workflow.
 
