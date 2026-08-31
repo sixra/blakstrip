@@ -155,7 +155,7 @@ export default defineConfig([
 
   // Config files and Node build scripts.
   {
-    files: ['*.config.{js,mjs,ts}', '.*rc.{js,mjs}', 'scripts/**/*.{js,mjs}'],
+    files: ['*.config.{js,mjs,ts}', 'scripts/**/*.{js,mjs}'],
     languageOptions: { globals: globals.node },
   },
   // Build scripts are CLI reporters; printing to stdout is their whole job.
