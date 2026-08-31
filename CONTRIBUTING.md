@@ -8,8 +8,9 @@ By taking part you agree to the [Code of Conduct](./CODE_OF_CONDUCT.md).
 
 ## Development setup
 
-Requires Node 24+ (see `.nvmrc`) and pnpm (the repo pins a version via `packageManager`; Corepack
-picks it up automatically).
+Requires Node 26+ (see `.nvmrc`) and pnpm (the repo pins a version via `packageManager`).
+Node 26 no longer bundles Corepack, so install pnpm yourself: `npm i -g pnpm`, or via a
+version manager such as mise.
 
 ```sh
 pnpm install

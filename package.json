@@ -32,7 +32,7 @@
   ],
   "packageManager": "pnpm@11.24.0",
   "engines": {
-    "node": ">=24"
+    "node": ">=26"
   },
   "scripts": {
     "dev": "astro dev",
@@ -66,10 +66,10 @@
     "@jsquash/oxipng": "^2.3.0",
     "@jsquash/webp": "^1.5.0",
     "@tailwindcss/vite": "^4.3.3",
-    "astro": "^7.2.6",
+    "astro": "^7.2.9",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^6.2.108",
-    "svelte": "^5.56.10",
+    "pdfjs-dist": "^6.3.289",
+    "svelte": "^5.57.0",
     "wasm-feature-detect": "^1.9.0"
   },
   "devDependencies": {
@@ -80,7 +80,7 @@
     "@eslint/js": "^10.0.1",
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "@playwright/test": "^1.62.1",
-    "@types/node": "^24.13.3",
+    "@types/node": "^26.4.0",
     "@vite-pwa/astro": "^1.2.0",
     "@vitest/browser": "^4.1.11",
     "@vitest/browser-playwright": "^4.1.11",
@@ -90,12 +90,12 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-svelte": "^3.23.0",
     "globals": "^17.11.0",
-    "lefthook": "^2.1.10",
+    "lefthook": "^2.1.12",
     "prettier": "^3.9.6",
     "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-svelte": "^4.1.1",
     "prettier-plugin-tailwindcss": "^0.8.1",
-    "sharp": "^0.35.3",
+    "sharp": "^0.35.4",
     "svelte-eslint-parser": "^1.8.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
