@@ -142,7 +142,11 @@ const description =
       <Header />
     </header>
 
-    <main id="main" class="flex flex-1 flex-col py-12">
+    {
+      /* No bottom padding: the footer brings its own `mt-24`, and the two stacked
+        left the page trailing off into 144px of nothing. */
+    }
+    <main id="main" class="flex flex-1 flex-col pt-12">
       <div class="max-w-3xl">
         {
           /* The jobs before the promise. The page used to open on the guarantee, so
@@ -271,11 +275,14 @@ const description =
         <h2 id="verify" class="text-2xl font-bold tracking-tight sm:text-3xl">
           <span class="bg-redact text-surface px-2">Verify it yourself</span>
         </h2>
+        {
+          /* The hero already tells you to watch the network panel, so this says the
+            part the hero cannot: why it stays empty, and what else to try. */
+        }
         <p class="text-muted mt-5">
-          Every promise here is one you can check without trusting us. Open your browser's developer
-          tools, watch the network panel, and use any of them on a real file. Nothing is sent,
-          because the page is served under a policy that forbids it outright. Turn off your wifi and
-          it still works.
+          The panel stays empty because the page is served under a Content-Security-Policy that
+          forbids the request outright, so it is not a promise the code has to keep. Then turn off
+          your wifi and put a file through again.
         </p>
         <p class="text-muted mt-4">
           Every tool also re-reads the file it just produced and reports what is still in it,
