@@ -121,11 +121,13 @@ const siteSchema = {
 };
 const jsonLd = JSON.stringify(siteSchema).replace(/</g, '\\u003c');
 
+// Kept short enough to survive a search result, and quote-free: the head assertions
+// in tests/e2e/seo.spec.ts match on content="..." and cannot survive one.
 const description =
-  'Private, in-browser tools for the files you are about to send someone. Redact a PDF for good, strip the location and camera data out of a photo, or compress an image. Nothing is uploaded.';
+  'Redact a PDF for good, strip the location and camera data out of a photo, or compress an image. It happens in your browser, and nothing is uploaded.';
 ---
 
-<Base title="blakstrip · private tools that remove what files carry" {description}>
+<Base title="Redact, Strip and Compress Files Online, Free and Private · blakstrip" {description}>
   <div class="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-4">
     <header class="pt-10 pb-6">
       <Header />
@@ -133,16 +135,30 @@ const description =
 
     <main id="main" class="flex flex-1 flex-col py-12">
       <div class="max-w-3xl">
-        <p class="text-faint mb-5 font-mono text-xs tracking-[0.2em] uppercase">
-          Fully private · free · works offline
+        {
+          /* The jobs before the promise. The page used to open on the guarantee, so
+            someone arriving from a search had to reach the cards to find out what
+            the site was for. */
+        }
+        <p class="text-ink mb-4 text-lg font-semibold tracking-tight text-balance sm:text-xl">
+          Redact PDFs. Strip photo metadata. Compress images.
         </p>
         {/* -ml-2 cancels the strip's padding so "Nothing" aligns with "your" below. */}
         <h1 class="text-5xl font-bold tracking-tight sm:text-7xl">
           <span class="bg-redact text-surface -ml-2 px-2">Nothing</span> leaves<br />your device.
         </h1>
-        <p class="text-muted mt-6 max-w-2xl text-lg">
-          Files carry more than you put in them. blakstrip finds it, removes it, and then re-reads
-          the finished file to show you it is gone. All of it happens on your machine.
+        {
+          /* "Most", not "every". Some other tools do run client-side, and one
+            counterexample would make an absolute claim false on the page whose whole
+            argument is that you can check what it says. */
+        }
+        <p class="text-muted mt-6 max-w-2xl text-lg text-pretty">
+          Most tools for this upload your file to a server and ask you to trust what happens next.
+          blakstrip does the work in your browser. Open the network panel before you start, and
+          watch it stay empty.
+        </p>
+        <p class="text-faint mt-6 font-mono text-xs tracking-[0.2em] uppercase">
+          Fully private · free · works offline
         </p>
       </div>
 
@@ -153,7 +169,7 @@ const description =
       }
       <section class="mt-16" aria-labelledby="tools">
         <h2 id="tools" class="text-2xl font-bold tracking-tight sm:text-3xl">
-          What each one found in a real file
+          What each one did to a real file
         </h2>
         {
           /* One column, then three. Two columns would always leave one of three
