@@ -155,28 +155,50 @@ const description =
         <h2 id="tools" class="text-2xl font-bold tracking-tight sm:text-3xl">
           What each one found in a real file
         </h2>
-        <div class="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {
+          /* One column, then three. Two columns would always leave one of three
+            cards alone on a row, at every width where two columns applied. Revisit
+            if the registry ever holds four. */
+        }
+        <div class="mt-6 grid gap-5 lg:grid-cols-3">
+          {
+            /* The whole card is the link, and `aria-labelledby` names it after the
+              heading alone. Without that the accessible name is the heading plus the
+              pitch plus the meta line plus five rows of evidence, read out as one
+              string. Narrowing the anchor to the heading and stretching it back over
+              the card with a pseudo-element would name it just as well, but it puts an
+              overlay between the reader and the evidence to buy back a hit area this
+              already has. */
+          }
           {
             TOOLS.map((tool) => (
               <a
                 href={tool.href}
-                class="border-line bg-raised hover:border-line-strong group flex flex-col rounded-2xl border p-6 no-underline transition-colors"
+                aria-labelledby={`card-${tool.href.slice(1)}`}
+                class="border-line bg-raised hover:border-line-strong focus-visible:border-redact focus-visible:ring-redact group flex flex-col rounded-2xl border p-6 transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
-                <h3 class="text-2xl font-bold tracking-tight">{tool.name}</h3>
+                <h3 id={`card-${tool.href.slice(1)}`} class="text-2xl font-bold tracking-tight">
+                  {tool.name}
+                  <span
+                    class="ml-1 inline-block transition-transform group-hover:translate-x-1"
+                    aria-hidden="true"
+                  >
+                    →
+                  </span>
+                </h3>
                 <p class="text-muted mt-2 text-sm">{tool.pitch}</p>
 
                 <div class="mt-5 flex-1">
                   <p class="text-faint font-mono text-xs">{cards[tool.href].meta}</p>
-                  {/* Both card kinds use one row shape: a dot and a label that stack
-                      on a phone and share a line from `sm` up. Sharing a row at 390px
-                      squeezed the right-hand column until it truncated, and that
-                      column is the persuasive half: "51.50897, -0...." makes the
-                      point far less well than the coordinate does, and so does a
-                      clipped saving. Only the wide layout truncates, where there is
-                      room not to. */}
+                  {/* Label and value share a line only while the card is full width,
+                      which is below `lg`. In the three-column layout the card interior
+                      is about 310px and the widest row wants nearer 390px, so the two
+                      go back to stacking rather than clipping the value. The value is
+                      the persuasive half: "51.50897, -0...." makes the point far less
+                      well than the coordinate does. */}
                   <ul class="mt-3 space-y-2">
                     {cards[tool.href].rows.map((row) => (
-                      <li class="flex flex-col text-sm sm:flex-row sm:items-baseline sm:gap-3">
+                      <li class="flex flex-col text-sm sm:flex-row sm:items-baseline sm:gap-3 lg:flex-col lg:gap-0">
                         <span class="flex items-baseline gap-3">
                           <span
                             class:list={['mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full', row.dot]}
@@ -188,20 +210,17 @@ const description =
                             plus the gap after it. Written as the sum rather than the
                             total so it stays correct if either changes; a hardcoded
                             0.875rem was 4px short. */}
-                        <span class="text-faint pl-[calc(0.375rem+0.75rem)] text-xs tabular-nums sm:ml-auto sm:truncate sm:pl-0">
+                        {/* Mono, because every one of these is a value read out of the
+                            user's file, which is what the meta line above already uses
+                            the face for. A monospaced face makes `tabular-nums` a
+                            no-op, so it is gone with the truncation. */}
+                        <span class="text-muted pl-[calc(0.375rem+0.75rem)] font-mono text-xs sm:ml-auto sm:pl-0 lg:ml-0 lg:pl-[calc(0.375rem+0.75rem)]">
                           {row.detail}
                         </span>
                       </li>
                     ))}
                   </ul>
                 </div>
-
-                <p class="text-ink mt-6 text-sm font-semibold">
-                  {tool.name}
-                  <span class="ml-1 inline-block transition-transform group-hover:translate-x-1">
-                    →
-                  </span>
-                </p>
               </a>
             ))
           }
