@@ -58,10 +58,38 @@ test('the card shows its evidence in full', async ({ page }) => {
   const value = page.locator('main a[href="/media-strip"] li').first();
   await expect(value).toContainText('51.50897, -0.12879');
 
+  // Visible spans only. An `sr-only` span is 1px by design, so it is clipped by
+  // definition and would report as a truncated value.
   const clipped = await value.evaluate((el) =>
-    [...el.querySelectorAll('span')].some((s) => s.scrollWidth > s.clientWidth + 1)
+    [...el.querySelectorAll('span')]
+      .filter((s) => !s.classList.contains('sr-only'))
+      .some((s) => s.scrollWidth > s.clientWidth + 1)
   );
   expect(clipped, 'a value is cut off by its own box').toBe(false);
+});
+
+test('a card that says it found eight does not quietly show five', async ({ page }) => {
+  await page.goto('/');
+  const card = page.locator('main a[href="/pdf-redact"]');
+
+  const meta = await card.locator('p', { hasText: /· \d+ found/ }).innerText();
+  const claimed = Number(/· (\d+) found/.exec(meta)?.[1]);
+  expect(claimed, 'the card states no count').toBeGreaterThan(0);
+
+  const shown = await card.locator('li').count();
+  const overflow = (await card.getByText(/^and \d+ more$/).count())
+    ? Number(/and (\d+) more/.exec(await card.getByText(/^and \d+ more$/).innerText())![1])
+    : 0;
+
+  expect(shown + overflow, 'the list and the count disagree').toBe(claimed);
+});
+
+test('severity reaches a screen reader, not only the eye', async ({ page }) => {
+  // The dot is aria-hidden, so without the text beside it a screen reader hears
+  // "Location where this photo was taken" with no indication it is the high one.
+  await page.goto('/');
+  const first = page.locator('main a[href="/media-strip"] li').first();
+  await expect(first).toContainText(/(High|Medium) severity:/);
 });
 
 test('the heading outline is one h1, then sections, then cards', async ({ page }) => {

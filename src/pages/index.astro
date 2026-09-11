@@ -57,32 +57,41 @@ const photoFindings = inspectMedia(new Uint8Array(samplePhoto())).findings;
  */
 interface Card {
   meta: string;
-  rows: { dot: string; label: string; detail: string }[];
+  /** `note` is read out before the label where the dot means something. */
+  rows: { dot: string; note?: string; label: string; detail: string }[];
+  /** Findings past the rows shown, so the count in `meta` is not contradicted. */
+  more: number;
 }
 
-const findingRows = (findings: Finding[]): Card['rows'] =>
-  findings.slice(0, 5).map((finding) => ({
+/** What fits before a card turns into a report. */
+const MAX_ROWS = 5;
+
+const findingCard = (sample: string, findings: Finding[]): Card => ({
+  meta: `${sample} · ${findings.length} found`,
+  rows: findings.slice(0, MAX_ROWS).map((finding) => ({
     dot: finding.severity === 'high' ? 'bg-danger' : 'bg-warning',
+    // The dot carries severity to the eye and nothing carried it otherwise. Same
+    // wording FindingsList.svelte uses for the same data on the tool pages.
+    note: finding.severity === 'high' ? 'High severity: ' : 'Medium severity: ',
     label: finding.title,
     detail: finding.detail,
-  }));
+  })),
+  more: Math.max(0, findings.length - MAX_ROWS),
+});
 
 /**
  * Exhaustive over `ToolHref`, so adding a tool to the registry fails the build
  * here until it has a card.
  */
 const cards: Record<ToolHref, Card> = {
-  '/pdf-redact': {
-    meta: `quarterly-report.pdf · ${pdfFindings.length} found`,
-    rows: findingRows(pdfFindings),
-  },
-  '/media-strip': {
-    meta: `holiday.jpg · ${photoFindings.length} found`,
-    rows: findingRows(photoFindings),
-  },
+  '/pdf-redact': findingCard('quarterly-report.pdf', pdfFindings),
+  '/media-strip': findingCard('holiday.jpg', photoFindings),
   '/image-compress': {
     meta: `holiday.jpg · ${compressed.source.width} × ${compressed.source.height} · ${formatBytes(compressed.source.bytes)}`,
+    // No `note`: the green dot here only says a saving is good news, which the
+    // detail beside it already says in words, so it is decoration.
     rows: sizes,
+    more: 0,
   },
 };
 
@@ -220,7 +229,10 @@ const description =
                             class:list={['mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full', row.dot]}
                             aria-hidden="true"
                           />
-                          <span class="text-ink font-medium">{row.label}</span>
+                          <span class="text-ink font-medium">
+                            {row.note && <span class="sr-only">{row.note}</span>}
+                            {row.label}
+                          </span>
                         </span>
                         {/* Indented to line up under the label: the dot's own width
                             plus the gap after it. Written as the sum rather than the
@@ -236,6 +248,13 @@ const description =
                       </li>
                     ))}
                   </ul>
+                  {/* Outside the list, so a screen reader is not told there are six
+                      items when the tool found eight and the card is showing five. */}
+                  {cards[tool.href].more > 0 && (
+                    <p class="text-faint mt-2 pl-[calc(0.375rem+0.75rem)] text-xs">
+                      and {cards[tool.href].more} more
+                    </p>
+                  )}
                 </div>
               </a>
             ))
