@@ -3,9 +3,11 @@
   import { verifyMedia, type MediaFormat } from '@lib/media';
   import {
     compressedFileName,
+    formatBytes,
     optionsForPreset,
     outputMimeType,
     percentSaved,
+    PRESETS,
     type CompressOptions,
     type CompressPreset,
     type OutputFormat,
@@ -28,12 +30,6 @@
   }
 
   const { bytes, format, fileName, sourceUrl }: Props = $props();
-
-  const PRESETS: { id: CompressPreset; label: string; hint: string }[] = [
-    { id: 'smallest', label: 'Smallest', hint: 'WebP, capped at 2048px' },
-    { id: 'balanced', label: 'Balanced', hint: 'Same format, good quality' },
-    { id: 'best', label: 'Best quality', hint: 'Barely visible change' },
-  ];
 
   const FORMATS: OutputFormat[] = ['jpeg', 'png', 'webp', 'avif'];
 
@@ -82,12 +78,6 @@
 
   const saved = $derived(compressedSize > 0 ? percentSaved(bytes.length, compressedSize) : 0);
   const outputName = $derived(compressedFileName(fileName, options.format));
-
-  function formatBytes(count: number): string {
-    if (count < 1024) return `${count} B`;
-    if (count < 1024 * 1024) return `${(count / 1024).toFixed(1)} KB`;
-    return `${(count / (1024 * 1024)).toFixed(2)} MB`;
-  }
 
   function releaseCompressed(): void {
     if (compressedUrl) URL.revokeObjectURL(compressedUrl);

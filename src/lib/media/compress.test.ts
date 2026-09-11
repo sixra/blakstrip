@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   compressedFileName,
   fitWithin,
+  formatBytes,
   optionsForPreset,
   outputMimeType,
   percentSaved,
@@ -126,6 +127,24 @@ describe('percentSaved', () => {
 
   it('does not divide by zero on an empty input', () => {
     expect(percentSaved(0, 100)).toBe(0);
+  });
+});
+
+describe('formatBytes', () => {
+  it('keeps small counts in bytes', () => {
+    expect(formatBytes(512)).toBe('512 B');
+  });
+
+  it('switches to KB at a kibibyte, not at a thousand', () => {
+    // The boundary is the reason this is shared rather than written twice: the
+    // panel and the hub card must not disagree about where KB starts.
+    expect(formatBytes(1023)).toBe('1023 B');
+    expect(formatBytes(1024)).toBe('1.0 KB');
+  });
+
+  it('switches to MB at a mebibyte', () => {
+    expect(formatBytes(1024 * 1024 - 1)).toBe('1024.0 KB');
+    expect(formatBytes(1024 * 1024)).toBe('1.00 MB');
   });
 });
 

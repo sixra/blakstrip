@@ -94,6 +94,19 @@ export function optionsForPreset(preset: CompressPreset, source: MediaFormat): C
   }
 }
 
+/**
+ * The presets as a user sees them, in the order they are offered.
+ *
+ * Here rather than in the panel because the hub card labels its rows from the
+ * same list. Two surfaces naming the presets independently is how a card ends up
+ * advertising a "Balanced" that the tool calls something else.
+ */
+export const PRESETS: readonly { id: CompressPreset; label: string; hint: string }[] = [
+  { id: 'smallest', label: 'Smallest', hint: 'WebP, capped at 2048px' },
+  { id: 'balanced', label: 'Balanced', hint: 'Same format, good quality' },
+  { id: 'best', label: 'Best quality', hint: 'Barely visible change' },
+];
+
 const EXTENSIONS: Record<OutputFormat, string> = {
   jpeg: 'jpg',
   png: 'png',
@@ -125,6 +138,17 @@ export function compressedFileName(name: string, format: OutputFormat): string {
 export function percentSaved(before: number, after: number): number {
   if (before <= 0) return 0;
   return Math.round(((before - after) / before) * 100);
+}
+
+/**
+ * A byte count as a person would read it.
+ *
+ * Shared with the hub card so a size quoted in two places cannot round two ways.
+ */
+export function formatBytes(count: number): string {
+  if (count < 1024) return `${count} B`;
+  if (count < 1024 * 1024) return `${(count / 1024).toFixed(1)} KB`;
+  return `${(count / (1024 * 1024)).toFixed(2)} MB`;
 }
 
 /**
