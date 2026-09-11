@@ -6,6 +6,30 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- **Compress**: a third tool at `/image-compress`. Drop in a JPEG, PNG or WebP and make it smaller
+  without it leaving the machine: three presets or your own quality, PNG effort and cap on the
+  longest side, output as JPEG, PNG, WebP or AVIF, and both versions at full size to pan around
+  before you keep either. The input is not stripped first, because encoding from raw pixels leaves
+  metadata nowhere to survive, and the output is re-read to show that it did not.
+- **Hub**: the compressor's card shows what each preset actually did to the sample photo, before and
+  after. Those sizes cannot be produced during the build, because the encode path needs browser APIs
+  Node does not have, so they are measured by the real codecs in a browser test and committed. A
+  codec change that moves them turns that test red instead of quietly changing the card.
+
+### Changed
+
+- **Photos**: the tool is now called "Remove image metadata". It sat next to "Compress an image"
+  with a different noun and a verb that is jargon off this site. The route is unchanged.
+- **Photos**: compression is no longer embedded at the end of the strip, and the page links to the
+  compressor instead. The strip island stops shipping the codecs with it, going from 27.7 KB to
+  5.1 KB.
+- **Sample photo**: it was a flat fill at quality 82, which compresses to nothing and made the
+  best-quality preset produce a _larger_ file. It now has photographic content, so the sizes on the
+  hub mean something.
+- **Social card**: names all three tools.
+
 ## [2.0.0] - 2026-08-08
 
 blakstrip is now two tools. Photos join PDFs: see what a picture is carrying, remove it without
