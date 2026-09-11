@@ -24,7 +24,7 @@ All notable changes to this project are documented in this file. The format is b
   with a different noun and a verb that is jargon off this site. The route is unchanged.
 - **Photos**: compression is no longer embedded at the end of the strip, and the page links to the
   compressor instead. The strip island stops shipping the codecs with it, going from 27.7 KB to
-  5.1 KB.
+  4.9 KB.
 - **Sample photo**: it was a flat fill at quality 82, which compresses to nothing and made the
   best-quality preset produce a _larger_ file. It now has photographic content, so the sizes on the
   hub mean something.

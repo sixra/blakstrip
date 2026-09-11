@@ -36,10 +36,9 @@ const sizes = PRESETS.map(({ id, label }) => {
     );
   }
   return {
-    key: id,
     // Green, not the severity palette the other cards use: a saving is a good
     // outcome, and amber here would read as a warning about the file you just
-    // made smaller.
+    // made smaller. These must stay whole literals for Tailwind to find them.
     dot: 'bg-positive',
     label,
     detail: `${formatBytes(row.bytes)} ${row.format.toUpperCase()} · ${percentSaved(compressed.source.bytes, row.bytes)}% smaller`,
@@ -50,27 +49,28 @@ const pdfFindings = await inspectStructure(new Uint8Array(samplePdf()));
 const photoFindings = inspectMedia(new Uint8Array(samplePhoto())).findings;
 
 /**
- * What each tool's card shows underneath its pitch.
+ * What a tool's card shows underneath its pitch.
  *
  * The cards prove different things (two list what a tool found, one lists what
  * each preset did) but they say it in the same shape, so the difference lives
- * here rather than in the template. Keyed by route and exhaustive over
- * `ToolHref`, so adding a tool to the registry fails the build here until it has
- * a card.
+ * here rather than in the template.
  */
 interface Card {
   meta: string;
-  rows: { key: string; dot: string; label: string; detail: string }[];
+  rows: { dot: string; label: string; detail: string }[];
 }
 
 const findingRows = (findings: Finding[]): Card['rows'] =>
   findings.slice(0, 5).map((finding) => ({
-    key: finding.id,
     dot: finding.severity === 'high' ? 'bg-danger' : 'bg-warning',
     label: finding.title,
     detail: finding.detail,
   }));
 
+/**
+ * Exhaustive over `ToolHref`, so adding a tool to the registry fails the build
+ * here until it has a card.
+ */
 const cards: Record<ToolHref, Card> = {
   '/pdf-redact': {
     meta: `quarterly-report.pdf · ${pdfFindings.length} found`,

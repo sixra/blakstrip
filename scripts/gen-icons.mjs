@@ -33,9 +33,8 @@ const CANVAS = '#f4f4f4';
 const INK = '#0a0a0a';
 const MUTED = '#525252';
 
-// Narrower and higher than it was, to make room for a third line of copy: at the
-// old size the third line ran into the footer, and dropping the footer far
-// enough to clear it clipped its descenders off the bottom of the canvas.
+// 360px: three lines of copy plus the footer only clear the 630px canvas at this
+// wordmark size without the footer's descenders being cut off.
 const wordmark = await sharp(trimmed).resize({ width: 360 }).toBuffer({ resolveWithObject: true });
 
 const escape = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;');

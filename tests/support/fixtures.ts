@@ -1,11 +1,10 @@
 /**
  * On-disk fixtures the end-to-end tests upload.
  *
- * The photo is the same file the hub card is built from, so a test that drops it
- * in is exercising the picture the site advertises rather than a synthetic fill
- * invented beside each test. Three specs used to build their own with sharp, and
- * an encoder that produced a flat colour made "the output got smaller" mean
- * something quite different from what it means for a photograph.
+ * The photo is the file the hub card is built from, so a test that drops it in
+ * measures the picture the site advertises. A synthetic flat fill makes "the
+ * output got smaller" mean something quite different from what it means for a
+ * photograph.
  */
 import { fileURLToPath } from 'node:url';
 

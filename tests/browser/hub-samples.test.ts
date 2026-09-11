@@ -53,10 +53,15 @@ it('records what each preset does to the hub sample photo', async () => {
     expect(entry.bytes, `${entry.preset} did not shrink the file`).toBeLessThan(source.length);
   }
 
+  // Decoded, not taken from an output: a compressed result reports the size it
+  // was encoded at, and "smallest" caps the longest side, so a sample above that
+  // cap would have the hub quote the capped size as the original's.
+  const bitmap = await createImageBitmap(new Blob([source], { type: 'image/jpeg' }));
   const record = {
-    source: { bytes: source.length, width: presets[0].width, height: presets[0].height },
+    source: { bytes: source.length, width: bitmap.width, height: bitmap.height },
     presets,
   };
+  bitmap.close();
   await expect(`${JSON.stringify(record, null, 2)}\n`).toMatchFileSnapshot(
     '../../src/assets/samples/sample-photo.compressed.json'
   );

@@ -1,10 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { expect, type Locator, type Page } from '@playwright/test';
-
-const TEXT_FIXTURE = fileURLToPath(
-  new URL('../../../src/lib/pdf/__fixtures__/text-secrets.pdf', import.meta.url)
-);
+import { SECRETS_PDF } from '../../support/fixtures';
 
 /** Page Object for /pdf-redact. */
 export class RedactorPage {
@@ -22,7 +18,7 @@ export class RedactorPage {
 
   /** Load the text-secrets fixture and wait for the viewer to settle. */
   async uploadTextFixture(): Promise<void> {
-    await this.page.locator('input[type=file]').setInputFiles(TEXT_FIXTURE);
+    await this.page.locator('input[type=file]').setInputFiles(SECRETS_PDF);
     await expect(this.overlay).toHaveAttribute('data-page-ready', 'true');
     // Thumbnails are appended one at a time and re-lay-out the viewer, so waiting
     // on the page render alone leaves a later append free to shift the overlay

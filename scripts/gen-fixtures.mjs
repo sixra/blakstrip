@@ -87,11 +87,9 @@ console.log(`wrote src/lib/pdf/__fixtures__/annotated.pdf (${annBytes.length} by
 // an opaque blob so anyone can see exactly what was planted and check that the
 // cards are not just a picture of some results.
 //
-// Textured rather than a flat fill, and encoded the way a camera would. A flat
-// fill compresses to nothing, so every preset would report the same implausible
-// saving; and at the quality the fill used to carry (82) the "best quality"
-// preset re-encodes at 92 and comes out *larger*, which is a true number that
-// tells the reader nothing about what this tool does for a photograph.
+// Textured, because a flat fill compresses to nothing and every preset would
+// then report the same implausible saving. Quality 95 because the "best quality"
+// preset re-encodes at 92: a source below that grows rather than shrinks.
 //
 // Noise and background are mutually exclusive in sharp's `create`, so the colour
 // arrives as a composited gradient rather than as a background.

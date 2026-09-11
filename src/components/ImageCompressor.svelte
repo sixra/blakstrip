@@ -24,7 +24,14 @@
     originalUrl = undefined;
   }
 
+  // The drop zone stays mounted while a file is being read, so a second file can
+  // start loading before the first finishes. Only the newest may write state:
+  // the panel compresses once on mount and is not re-run by a changed prop, so a
+  // late writer would leave one file's name and size beside another's bytes.
+  let generation = 0;
+
   function reset(): void {
+    generation += 1;
     releaseUrl();
     original = undefined;
     format = undefined;
@@ -44,8 +51,10 @@
 
   async function openFile(file: File): Promise<void> {
     reset();
+    const mine = generation;
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
+      if (mine !== generation) return;
 
       // Identified, not audited. `inspectMedia` walks the whole container and
       // refuses anything malformed, which would turn away files the browser's

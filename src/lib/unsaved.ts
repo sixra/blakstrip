@@ -11,9 +11,10 @@
  * The service worker registration asks this before applying an update, so a
  * deploy landing mid-task offers a reload instead of performing one.
  *
- * Keyed by owner rather than a single boolean. More than one island is mounted
- * on every page (the header's install button is one), and with a shared flag
- * whichever one finished last would clear it for all of them.
+ * Keyed by owner rather than a single boolean, so clearing is scoped: an island
+ * can only retract its own mark. Exactly one island marks per page today, so the
+ * key is not yet carrying weight; it is what stops a second one on a page from
+ * declaring the first one's work safe to discard.
  */
 const owners = new Set<string>();
 

@@ -76,8 +76,10 @@ test('the compressed result is genuinely smaller, produced under the real CSP', 
   });
 
   // Scoped to the panel: the island has its own live region on the same page.
+  // A file that grew renders as "-12 percent smaller", which a bare
+  // /percent smaller/ would accept as a saving.
   const compression = page.locator('section[aria-label="Compression"]');
-  await expect(compression.getByRole('status')).toContainText(/percent smaller/, {
+  await expect(compression.getByRole('status')).toContainText(/, [1-9]\d* percent smaller/, {
     timeout: 60_000,
   });
   await expect(page.getByText('Re-read the compressed file')).toBeVisible();
