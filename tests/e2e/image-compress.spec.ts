@@ -41,6 +41,19 @@ test('compresses a dropped photo and downloads something smaller', async ({ page
   expect([bytes[0], bytes[1]]).toEqual([0xff, 0xd8]);
 });
 
+test('is reachable from the metadata tool once a photo is clean', async ({ page }) => {
+  // Compression used to be a panel on that page. Removing it left this link as
+  // the only route between the two, so a broken link silently strands anyone who
+  // wanted both things done.
+  await page.goto('/media-strip');
+  await page.locator('input[type=file]').setInputFiles(SAMPLE_PHOTO);
+  await page.getByRole('button', { name: /Remove all of it|Clean it anyway/ }).click();
+
+  await page.getByRole('link', { name: 'Compress an image' }).click();
+  await expect(page).toHaveURL(/\/image-compress$/);
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Make it smaller');
+});
+
 test('refuses a file that is not an image it can decode', async ({ page }) => {
   await page.goto('/image-compress');
   await page.locator('input[type=file]').setInputFiles({

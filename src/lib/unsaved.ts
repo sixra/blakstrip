@@ -11,9 +11,9 @@
  * The service worker registration asks this before applying an update, so a
  * deploy landing mid-task offers a reload instead of performing one.
  *
- * Keyed by owner rather than a single boolean. Two islands can be mounted at
- * once (the compression panel lives inside the media tool), and with a shared
- * flag whichever one finished last would clear it for both.
+ * Keyed by owner rather than a single boolean. More than one island is mounted
+ * on every page (the header's install button is one), and with a shared flag
+ * whichever one finished last would clear it for all of them.
  */
 const owners = new Set<string>();
 

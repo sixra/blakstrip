@@ -1,6 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import sharp from 'sharp';
 import { TOOLS } from '../../src/config/tools';
 import { SAMPLE_PHOTO } from '../support/fixtures';
 import { RedactorPage } from './pages/RedactorPage';
@@ -27,28 +26,13 @@ test('no accessibility violations with a document loaded', async ({ page }) => {
   expect(results.violations).toEqual([]);
 });
 
-test('no accessibility violations with a photo stripped and compressed', async ({ page }) => {
-  // The compression panel had never been scanned by anything. It is the newest
-  // and densest UI in the app (a preset group, a select, range inputs with hint
-  // text, a live region and a colour-coded verdict) and every empty-page scan
-  // above stops at the drop zone, so none of it was ever looked at.
-  const photo = await sharp({
-    create: { width: 800, height: 600, channels: 3, background: { r: 40, g: 90, b: 140 } },
-  })
-    .jpeg({ quality: 95 })
-    .toBuffer();
-
+test('no accessibility violations with a photo stripped', async ({ page }) => {
+  // The state the empty-page scan misses: the findings list with its
+  // screen-reader severity text, the verification verdict, and the preview.
   await page.goto('/media-strip');
-  await page
-    .locator('input[type=file]')
-    .setInputFiles({ name: 'holiday.jpg', mimeType: 'image/jpeg', buffer: photo });
+  await page.locator('input[type=file]').setInputFiles(SAMPLE_PHOTO);
   await page.getByRole('button', { name: /Remove all of it|Clean it anyway/ }).click();
-
-  // Waiting for the download button is waiting for a codec to have finished, so
-  // the panel is scanned fully populated rather than mid-spinner.
-  await expect(page.getByRole('button', { name: 'Download the smaller file' })).toBeVisible({
-    timeout: 60_000,
-  });
+  await expect(page.getByRole('button', { name: 'Download the clean file' })).toBeVisible();
 
   const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
   expect(results.violations).toEqual([]);

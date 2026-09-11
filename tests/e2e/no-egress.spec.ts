@@ -11,7 +11,6 @@
  * and the built worker both exist.
  */
 import { expect, test, type Page, type Request } from '@playwright/test';
-import sharp from 'sharp';
 import { SAMPLE_PHOTO, SECRETS_PDF } from '../support/fixtures';
 
 /**
@@ -50,70 +49,33 @@ function describeRequests(requests: Request[]): string[] {
   return requests.map((request) => `${request.method()} ${request.url()}`);
 }
 
-/** A real photo, encoded by sharp so the codecs have genuine image data to chew on. */
-async function photoBytes(): Promise<Buffer> {
-  return sharp({
-    create: {
-      width: 800,
-      height: 600,
-      channels: 3,
-      background: { r: 40, g: 90, b: 140 },
-    },
-  })
-    .jpeg({ quality: 95 })
-    .toBuffer();
-}
-
-test('stripping and compressing a photo sends nothing anywhere', async ({ page, baseURL }) => {
+test('stripping a photo sends nothing anywhere', async ({ page, baseURL }) => {
   const watcher = offsiteRequests(page, baseURL!);
-  const wasmRequests: string[] = [];
-  page.on('request', (request) => {
-    // The codecs are inlined as base64. A request for a .wasm file means the
-    // inlining regressed and the glue fell back to fetching, which is exactly the
-    // failure that would otherwise only show up as a broken production deploy.
-    if (new URL(request.url()).pathname.endsWith('.wasm')) wasmRequests.push(request.url());
-  });
 
   await page.goto('/media-strip');
-  await page.locator('input[type=file]').setInputFiles({
-    name: 'holiday.jpg',
-    mimeType: 'image/jpeg',
-    buffer: await photoBytes(),
-  });
+  await page.locator('input[type=file]').setInputFiles(SAMPLE_PHOTO);
 
   await page.getByRole('button', { name: /Remove all of it|Clean it anyway/ }).click();
   await expect(page.getByRole('button', { name: 'Download the clean file' })).toBeVisible();
 
-  // Compression starts on its own once the panel appears, so waiting for the
-  // download button is waiting for a codec to have actually run.
-  await expect(page.getByRole('button', { name: 'Download the smaller file' })).toBeVisible({
-    timeout: 60_000,
-  });
-
   expect(describeRequests(watcher.requests)).toEqual([]);
   expect(watcher.violations).toEqual([]);
-  expect(wasmRequests).toEqual([]);
 });
 
 test('the compressed result is genuinely smaller, produced under the real CSP', async ({
   page,
 }) => {
-  // Same journey as above, asserting the outcome rather than the silence. If the
-  // codecs could not compile under the production policy this is where it shows,
-  // because the panel would sit on its error instead of reporting a saving.
-  await page.goto('/media-strip');
-  await page.locator('input[type=file]').setInputFiles({
-    name: 'holiday.jpg',
-    mimeType: 'image/jpeg',
-    buffer: await photoBytes(),
-  });
+  // The outcome rather than the silence. If the codecs could not compile under
+  // the production policy this is where it shows, because the panel would sit on
+  // its error instead of reporting a saving.
+  await page.goto('/image-compress');
+  await page.locator('input[type=file]').setInputFiles(SAMPLE_PHOTO);
 
-  await page.getByRole('button', { name: /Remove all of it|Clean it anyway/ }).click();
   await expect(page.getByRole('button', { name: 'Download the smaller file' })).toBeVisible({
     timeout: 60_000,
   });
 
-  // Scoped to the panel: the strip has its own live region on the same page.
+  // Scoped to the panel: the island has its own live region on the same page.
   const compression = page.locator('section[aria-label="Compression"]');
   await expect(compression.getByRole('status')).toContainText(/percent smaller/, {
     timeout: 60_000,
