@@ -102,7 +102,11 @@ export default defineConfig([
   // rather than disabled globally: a new `set:html` anywhere else is a genuine
   // finding and should have to be added here first.
   {
-    files: ['src/pages/index.astro', 'src/pages/pdf-redact.astro'],
+    files: [
+      'src/pages/index.astro',
+      'src/pages/pdf-redact.astro',
+      'src/pages/image-compress.astro',
+    ],
     rules: { 'astro/no-set-html-directive': 'off' },
   },
 

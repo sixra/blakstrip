@@ -52,6 +52,17 @@ export const TOOLS = [
     entityId: 'https://blakstrip.com/#media-strip',
     title: 'Remove Photo Metadata Online, Free and Private · blakstrip',
   },
+  {
+    href: '/image-compress',
+    nav: 'Compress',
+    name: 'Compress an image',
+    pitch:
+      'Make a picture smaller in your browser, and judge the result at full size before you keep it',
+    description:
+      'Drop in a JPEG, PNG or WebP and make it smaller in your browser. Pick a preset or set the quality and size yourself, compare before and after at full size, and download a file that carries no metadata.',
+    entityId: 'https://blakstrip.com/#image-compress',
+    title: 'Compress an Image Online, Free and Private · blakstrip',
+  },
 ] as const satisfies readonly Tool[];
 
 /** Every route a tool lives at, as a union, so maps over them can be exhaustive. */

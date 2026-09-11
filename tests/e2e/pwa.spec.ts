@@ -51,7 +51,7 @@ test('the precached HTML is revisioned so a new build replaces it', async ({ req
   // Hashed assets carry `revision: null` because the filename is the revision.
   // The HTML routes are not hashed, so they need a content revision or workbox
   // would serve the first version it ever cached, forever.
-  for (const route of ['/', 'pdf-redact', 'media-strip']) {
+  for (const route of ['/', 'pdf-redact', 'media-strip', 'image-compress']) {
     expect(sw).toMatch(new RegExp(`url:"${route}",revision:"[0-9a-f]{32}"`));
   }
 });

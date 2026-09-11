@@ -10,13 +10,9 @@
  * They run against the production build, which is the only place the strict CSP
  * and the built worker both exist.
  */
-import { fileURLToPath } from 'node:url';
 import { expect, test, type Page, type Request } from '@playwright/test';
 import sharp from 'sharp';
-
-const PDF_FIXTURE = fileURLToPath(
-  new URL('../../src/lib/pdf/__fixtures__/text-secrets.pdf', import.meta.url)
-);
+import { SAMPLE_PHOTO, SECRETS_PDF } from '../support/fixtures';
 
 /**
  * Requests to anywhere other than the site itself.
@@ -125,11 +121,36 @@ test('the compressed result is genuinely smaller, produced under the real CSP', 
   await expect(page.getByText('Re-read the compressed file')).toBeVisible();
 });
 
+test('compressing an image sends nothing anywhere and fetches no codec', async ({
+  page,
+  baseURL,
+}) => {
+  const watcher = offsiteRequests(page, baseURL!);
+  const wasmRequests: string[] = [];
+  page.on('request', (request) => {
+    // The codecs are inlined as base64. A request for a .wasm file means the
+    // inlining regressed and the glue fell back to fetching, which is exactly the
+    // failure that would otherwise only show up as a broken production deploy.
+    if (new URL(request.url()).pathname.endsWith('.wasm')) wasmRequests.push(request.url());
+  });
+
+  await page.goto('/image-compress');
+  await page.locator('input[type=file]').setInputFiles(SAMPLE_PHOTO);
+
+  await expect(page.getByRole('button', { name: 'Download the smaller file' })).toBeVisible({
+    timeout: 60_000,
+  });
+
+  expect(describeRequests(watcher.requests)).toEqual([]);
+  expect(watcher.violations).toEqual([]);
+  expect(wasmRequests).toEqual([]);
+});
+
 test('redacting a PDF sends nothing anywhere', async ({ page, baseURL }) => {
   const watcher = offsiteRequests(page, baseURL!);
 
   await page.goto('/pdf-redact');
-  await page.locator('input[type=file]').setInputFiles(PDF_FIXTURE);
+  await page.locator('input[type=file]').setInputFiles(SECRETS_PDF);
   await expect(page.getByRole('img', { name: /^Page \d+$/ })).toHaveCount(2);
 
   expect(describeRequests(watcher.requests)).toEqual([]);
