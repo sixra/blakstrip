@@ -44,11 +44,11 @@ export const TOOLS = [
   },
   {
     href: '/media-strip',
-    nav: 'Photos',
-    name: 'Strip a photo',
+    nav: 'Metadata',
+    name: 'Remove image metadata',
     pitch: 'See what a picture is carrying about you, then remove it without touching the image',
     description:
-      'Drop in a photo and see what it is carrying: GPS location, camera serial, timestamps, hidden preview images. Remove it all in your browser without touching the picture itself, then optionally shrink the file.',
+      'Drop in a photo and see what it is carrying: GPS location, camera serial, timestamps, hidden preview images. Remove it all in your browser without touching the picture itself, and check the result.',
     entityId: 'https://blakstrip.com/#media-strip',
     title: 'Remove Photo Metadata Online, Free and Private · blakstrip',
   },
