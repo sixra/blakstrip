@@ -6,6 +6,23 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- **Releasing**: cutting a release is now `node scripts/release-prepare.mjs X.Y.Z`, then merging the
+  pull request it leads to. Landing a new version on `main` tags the commit and publishes the
+  GitHub Release, using that version's `CHANGELOG.md` section as the notes. v2.1.0 shipped with its
+  tag forgotten, then tagged by hand three minutes later at a commit carrying a change its entry did
+  not describe. The tag is no longer a step anyone can skip: it follows from the version, and the
+  notes are no longer retyped from the changelog.
+
+### Changed
+
+- **Releasing**: the version comes from a person rather than from commit subjects. Nothing in this
+  repository's history has ever carried a `!` or a `BREAKING CHANGE:` footer, including the commits
+  that shipped 2.0.0's breaking change, so a tool reading them would have called it a minor.
+- Bumped Astro, `@astrojs/sitemap`, `@types/node`, `globals` and `typescript-eslint` within their
+  existing minor and patch ranges.
+
 ## [2.1.0] - 2026-09-12
 
 Compression becomes a tool of its own instead of a panel nobody could find, and the home page leads
