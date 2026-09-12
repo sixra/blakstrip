@@ -1,0 +1,112 @@
+# Tags and publishes a release when the version in package.json changes.
+#
+# The version is the trigger, not a tag: a tag you have to remember is a tag you
+# can forget, and v2.1.0 was. Merging the release PR is now the whole act.
+#
+# This does not deploy. Cloudflare Pages builds from main on its own, and has
+# usually finished before this job starts.
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Never cancel a release: a run killed between pushing the tag and creating the
+# release leaves a tag with nothing behind it, which is the shape v2.1.0 was in.
+# Queue instead, and the second run finds the version tagged and stops.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      # Only this job writes, and only to push the tag and create the release.
+      contents: write
+    steps:
+      # Actions are pinned to commit SHAs, not tags: a git tag can be moved to
+      # point at different code under the same version. Dependabot bumps these.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The tag check below asks the remote, so the shallow default is fine,
+          # but the tag has to be created on a real commit object.
+          fetch-depth: 0
+
+      - name: Decide whether this push is a release
+        id: decide
+        run: |
+          version=$(node -p "require('./package.json').version")
+          # Anything else would become a tag name, and this value reaches a shell.
+          if ! printf '%s' "$version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "package.json version '$version' is not a plain semver number" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1; then
+            echo "Version $version is already tagged. Nothing to release."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Version $version has no tag yet. Releasing."
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up pnpm
+        if: steps.decide.outputs.release == 'true'
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - name: Set up Node
+        if: steps.decide.outputs.release == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.decide.outputs.release == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        if: steps.decide.outputs.release == 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Before the tag, not after: a version number is the one thing that cannot
+      # be taken back once people have it.
+      - name: Verify
+        if: steps.decide.outputs.release == 'true'
+        run: pnpm verify
+
+      # Read first so a missing or empty section fails here, while nothing has
+      # been published and the only cost is a red run.
+      - name: Read the release notes
+        if: steps.decide.outputs.release == 'true'
+        env:
+          VERSION: ${{ steps.decide.outputs.version }}
+        run: node scripts/release-notes.mjs "$VERSION" > /tmp/notes.md
+
+      - name: Tag
+        if: steps.decide.outputs.release == 'true'
+        env:
+          VERSION: ${{ steps.decide.outputs.version }}
+        run: |
+          # Unsigned, unlike the tags made by hand from a machine holding the
+          # signing key. RELEASING.md says so rather than leaving it a surprise.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "v$VERSION"
+          git push origin "v$VERSION"
+
+      - name: Create the GitHub Release
+        if: steps.decide.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.decide.outputs.version }}
+        run: |
+          gh release create "v$VERSION" \
+            --title "blakstrip v$VERSION" \
+            --verify-tag \
+            --notes-file /tmp/notes.md
