@@ -59,7 +59,14 @@ export function mimeTypeFor(format: MediaFormat): string {
 /** Every format this engine handles, for the file picker and the refusal message. */
 export const SUPPORTED_FORMATS: readonly MediaFormat[] = ['jpeg', 'png', 'webp'];
 
-function requireFormat(bytes: Uint8Array): MediaFormat {
+/**
+ * The format these bytes are, or a refusal.
+ *
+ * Exported for the compressor, which needs to know what it is decoding but has
+ * no use for an audit: it re-encodes from raw pixels, so what the container was
+ * carrying does not survive to be reported on.
+ */
+export function requireFormat(bytes: Uint8Array): MediaFormat {
   const format = detectFormat(bytes);
   if (!format) {
     throw new UnsupportedFormatError(

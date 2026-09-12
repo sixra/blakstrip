@@ -1,0 +1,30 @@
+{
+  "source": {
+    "bytes": 518803,
+    "width": 1200,
+    "height": 900
+  },
+  "presets": [
+    {
+      "preset": "smallest",
+      "bytes": 54328,
+      "format": "webp",
+      "width": 1200,
+      "height": 900
+    },
+    {
+      "preset": "balanced",
+      "bytes": 119654,
+      "format": "jpeg",
+      "width": 1200,
+      "height": 900
+    },
+    {
+      "preset": "best",
+      "bytes": 395422,
+      "format": "jpeg",
+      "width": 1200,
+      "height": 900
+    }
+  ]
+}

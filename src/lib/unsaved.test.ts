@@ -25,9 +25,8 @@ describe('unsaved work', () => {
   });
 
   it('does not let one owner clear another owner’s work', () => {
-    // The reason this is a set and not a boolean: the compression panel is
-    // mounted inside the media tool, so two owners are live at once and the one
-    // that finishes first would otherwise declare the page safe to reload.
+    // The reason this is a set and not a boolean: one owner finishing must not
+    // declare the page safe while another still holds work.
     markUnsaved('photo');
     markUnsaved('other');
     clearUnsaved('other');

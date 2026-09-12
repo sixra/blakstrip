@@ -80,23 +80,47 @@ const annBytes = await annotated.save();
 await writeFile(`${outDir}/annotated.pdf`, annBytes);
 console.log(`wrote src/lib/pdf/__fixtures__/annotated.pdf (${annBytes.length} bytes)`);
 
-// A photo carrying the things a phone actually records, for the hub card.
+// A photo carrying the things a phone actually records, for the hub cards.
 //
-// The card shows real findings from the real engine, so it needs a real file to
-// find them in. Written here rather than committed as an opaque blob so anyone
-// can see exactly what was planted and check that the card is not just a picture
-// of some findings.
+// The cards show real findings and real compressed sizes from the real engines,
+// so it needs a real file to find them in. Written here rather than committed as
+// an opaque blob so anyone can see exactly what was planted and check that the
+// cards are not just a picture of some results.
+//
+// Textured, because a flat fill compresses to nothing and every preset would
+// then report the same implausible saving. Quality 95 because the "best quality"
+// preset re-encodes at 92: a source below that grows rather than shrinks.
+//
+// Noise and background are mutually exclusive in sharp's `create`, so the colour
+// arrives as a composited gradient rather than as a background.
 //
 // GPS lives in IFD3 and is written as rationals: 51°30'32.30"N, 0°07'43.66"W.
+const gradient = Buffer.from(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900">
+     <defs>
+       <linearGradient id="g" x1="0" y1="0" x2="0.3" y2="1">
+         <stop offset="0" stop-color="#9ec5e8" />
+         <stop offset="0.55" stop-color="#c7a46b" />
+         <stop offset="1" stop-color="#243a2e" />
+       </linearGradient>
+     </defs>
+     <rect width="1200" height="900" fill="url(#g)" />
+   </svg>`
+);
+
 const photo = await sharp({
   create: {
     width: 1200,
     height: 900,
     channels: 3,
-    background: { r: 34, g: 58, b: 84 },
+    noise: { type: 'gaussian', mean: 128, sigma: 40 },
   },
 })
-  .jpeg({ quality: 82 })
+  // Blurring the noise is what sets the file size: grain at this scale is
+  // incompressible, and un-blurred it lands near a megabyte.
+  .blur(1.5)
+  .composite([{ input: gradient, blend: 'soft-light' }])
+  .jpeg({ quality: 95, chromaSubsampling: '4:4:4' })
   .withExif({
     IFD0: {
       Make: 'ACME',

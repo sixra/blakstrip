@@ -3,15 +3,17 @@
 [![CI](https://github.com/sixra/blakstrip/actions/workflows/ci.yml/badge.svg)](https://github.com/sixra/blakstrip/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-Two in-browser privacy tools that remove what a file is carrying instead of hiding it. Files are
-opened, cleaned and saved entirely on your device; nothing is uploaded.
+Three in-browser tools for the files you are about to send someone. Files are opened, worked on and
+saved entirely on your device; nothing is uploaded.
 
-- **[Redact a PDF](https://blakstrip.com/pdf-redact)** — black out text and it is erased from the
+- **[Redact a PDF](https://blakstrip.com/pdf-redact)**: black out text and it is erased from the
   page, not covered by a rectangle.
-- **[Strip a photo](https://blakstrip.com/media-strip)** — remove GPS, camera serial, timestamps and
-  hidden thumbnails without touching a pixel, then optionally re-compress.
+- **[Remove image metadata](https://blakstrip.com/media-strip)**: remove GPS, camera serial,
+  timestamps and hidden thumbnails without touching a pixel.
+- **[Compress an image](https://blakstrip.com/image-compress)**: re-encode a picture smaller, and
+  compare it with the original at full size before you keep it.
 
-Both audit the file on load, act on it, then re-read the _output_ and report what is still in it.
+Each one acts on the file, then re-reads the _output_ and reports what is still in it.
 
 ## How PDF redaction works
 
@@ -44,9 +46,19 @@ them, which you can confirm in devtools. It works offline as a PWA.
 3. **Strip.** An allowlist decides what stays, so an unrecognised vendor segment is dropped rather
    than preserved. The image bitstream is copied byte for byte: nothing is re-encoded, so no quality
    is lost. Orientation is the one tag kept, because dropping it turns photos sideways.
-4. **Compress (optional).** MozJPEG, libwebp and OxiPNG run in a worker, with their wasm inlined as
-   base64 so no codec is ever fetched and `connect-src 'none'` stands.
-5. **Verify.** The output is re-read from scratch and anything still in it is listed.
+4. **Verify.** The output is re-read from scratch and anything still in it is listed.
+
+## How image compression works
+
+1. **Decode.** The browser decodes the picture to raw pixels, with orientation applied, so what the
+   encoder sees is what you saw.
+2. **Resize.** Optional, and never upwards: a cap on the longest side scales the canvas down.
+3. **Encode.** MozJPEG, libwebp, OxiPNG or AVIF run in a worker, with their wasm inlined as base64,
+   so no codec is ever fetched and `connect-src 'none'` stands. AVIF is the exception: its chunk is
+   large enough to be loaded on demand and left out of the precache.
+4. **Verify.** Encoding from raw pixels leaves no room for metadata to survive, and the output is
+   re-read to confirm it. AVIF cannot be read back by this engine, and the page says so rather than
+   claiming a clean result it did not check.
 
 **Stack:** Astro 7 (static, `<meta>` CSP), Svelte 5 (runes) islands, pdf-lib (write/strip),
 pdfjs-dist (render/text), jSquash codecs (wasm, inlined), Tailwind v4, `@vite-pwa/astro`,
@@ -123,7 +135,14 @@ production build (`pnpm build && pnpm preview`), not in `pnpm dev`.
 | `pnpm type-check`                        | `astro check`                                                         |
 | `pnpm validate`                          | format:check + lint + type-check + build                              |
 | `pnpm verify`                            | test:coverage + build + test:e2e (run by the pre-push hook on `main`) |
-| `pnpm gen:icons` / `pnpm gen:fixtures`   | regenerate the logo asset / test PDFs                                 |
+| `pnpm gen:icons` / `pnpm gen:fixtures`   | regenerate the social card / the test PDFs and the sample photo       |
+
+Regenerating the sample photo changes what the hub's compress card quotes, so follow
+`pnpm gen:fixtures` with:
+
+```sh
+pnpm exec vitest run --project browser -u tests/browser/hub-samples.test.ts
+```
 
 ## Project layout
 
@@ -154,11 +173,12 @@ src/lib/media/      framework-free image engine (security-critical)
 src/lib/history.ts  undo/redo over immutable snapshots
 src/config/tools.ts single source of truth for the tool list (nav, hub, sitemap,
                     structured data)
-src/components/     Redactor.svelte and MediaStripper.svelte (the apps), with
+src/components/     Redactor, MediaStripper and ImageCompressor (the apps), with
                     AuditPanel, DropZone, PageThumbs, VerifyDialog, FindingsList
                     and CompressPanel split out; InstallButton, Header.astro,
                     Footer.astro
-src/pages/          index.astro (hub), pdf-redact.astro, media-strip.astro
+src/pages/          index.astro (hub), pdf-redact.astro, media-strip.astro,
+                    image-compress.astro
 tests/              Vitest (node + real-Chromium browser projects) + Playwright e2e + axe
 scripts/            gen-icons, gen-fixtures, size-budget
 ```

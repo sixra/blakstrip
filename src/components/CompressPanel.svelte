@@ -3,9 +3,11 @@
   import { verifyMedia, type MediaFormat } from '@lib/media';
   import {
     compressedFileName,
+    formatBytes,
     optionsForPreset,
     outputMimeType,
     percentSaved,
+    PRESETS,
     type CompressOptions,
     type CompressPreset,
     type OutputFormat,
@@ -14,26 +16,18 @@
   import type { Finding } from '@lib/types';
 
   interface Props {
-    /** The bytes to compress, already stripped. */
+    /** The bytes to compress, exactly as the file was opened. */
     bytes: Uint8Array;
     format: MediaFormat;
     fileName: string;
     /**
-     * An object URL for `bytes`, owned by the parent. Passed in rather than made
-     * here: the parent already holds one to show the cleaned file, and a second
-     * URL for identical bytes would pin the same blob in memory twice and need
-     * its own release.
+     * An object URL for `bytes`. Owned by the parent, which is where the file is
+     * opened and released, so this panel never has one of its own to revoke.
      */
     sourceUrl: string | undefined;
   }
 
   const { bytes, format, fileName, sourceUrl }: Props = $props();
-
-  const PRESETS: { id: CompressPreset; label: string; hint: string }[] = [
-    { id: 'smallest', label: 'Smallest', hint: 'WebP, capped at 2048px' },
-    { id: 'balanced', label: 'Balanced', hint: 'Same format, good quality' },
-    { id: 'best', label: 'Best quality', hint: 'Barely visible change' },
-  ];
 
   const FORMATS: OutputFormat[] = ['jpeg', 'png', 'webp', 'avif'];
 
@@ -82,12 +76,6 @@
 
   const saved = $derived(compressedSize > 0 ? percentSaved(bytes.length, compressedSize) : 0);
   const outputName = $derived(compressedFileName(fileName, options.format));
-
-  function formatBytes(count: number): string {
-    if (count < 1024) return `${count} B`;
-    if (count < 1024 * 1024) return `${(count / 1024).toFixed(1)} KB`;
-    return `${(count / (1024 * 1024)).toFixed(2)} MB`;
-  }
 
   function releaseCompressed(): void {
     if (compressedUrl) URL.revokeObjectURL(compressedUrl);

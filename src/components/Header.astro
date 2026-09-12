@@ -55,7 +55,7 @@ const here = Astro.url.pathname.replace(/\.html$/, '');
             <a
               href={tool.href}
               aria-current={here === tool.href ? 'page' : undefined}
-              class="text-muted hover:bg-raised hover:text-ink aria-[current=page]:bg-redact aria-[current=page]:text-surface rounded-lg px-3 py-1.5 text-sm no-underline transition-colors"
+              class="text-muted hover:bg-raised hover:text-ink aria-[current=page]:bg-redact aria-[current=page]:text-surface rounded-lg px-3 py-1.5 text-sm transition-colors"
             >
               {tool.nav}
             </a>

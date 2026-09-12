@@ -98,11 +98,24 @@ export default defineConfig([
     },
   },
 
+  // Turned on here because the plugin ships it `recommended: false`, so
+  // `astro.configs.recommended` leaves it off and the allowlist below would
+  // otherwise permit what nothing was forbidding.
+  {
+    files: ['**/*.astro'],
+    rules: { 'astro/no-set-html-directive': 'error' },
+  },
+
   // Escaped JSON-LD injected via `set:html` by design. Listed file by file
   // rather than disabled globally: a new `set:html` anywhere else is a genuine
   // finding and should have to be added here first.
   {
-    files: ['src/pages/index.astro', 'src/pages/pdf-redact.astro'],
+    files: [
+      'src/pages/index.astro',
+      'src/pages/pdf-redact.astro',
+      'src/pages/media-strip.astro',
+      'src/pages/image-compress.astro',
+    ],
     rules: { 'astro/no-set-html-directive': 'off' },
   },
 

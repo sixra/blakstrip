@@ -76,7 +76,7 @@ export default defineConfig({
         name: 'blakstrip · private file tools',
         short_name: 'blakstrip',
         description:
-          'Redact PDFs and strip photo metadata entirely in your browser. Nothing is uploaded.',
+          'Redact PDFs, strip photo metadata and compress images entirely in your browser. Nothing is uploaded.',
         theme_color: '#f4f4f4',
         background_color: '#f4f4f4',
         display: 'standalone',

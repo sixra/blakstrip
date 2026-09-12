@@ -10,13 +10,8 @@
  * They run against the production build, which is the only place the strict CSP
  * and the built worker both exist.
  */
-import { fileURLToPath } from 'node:url';
 import { expect, test, type Page, type Request } from '@playwright/test';
-import sharp from 'sharp';
-
-const PDF_FIXTURE = fileURLToPath(
-  new URL('../../src/lib/pdf/__fixtures__/text-secrets.pdf', import.meta.url)
-);
+import { SAMPLE_PHOTO, SECRETS_PDF } from '../support/fixtures';
 
 /**
  * Requests to anywhere other than the site itself.
@@ -54,21 +49,46 @@ function describeRequests(requests: Request[]): string[] {
   return requests.map((request) => `${request.method()} ${request.url()}`);
 }
 
-/** A real photo, encoded by sharp so the codecs have genuine image data to chew on. */
-async function photoBytes(): Promise<Buffer> {
-  return sharp({
-    create: {
-      width: 800,
-      height: 600,
-      channels: 3,
-      background: { r: 40, g: 90, b: 140 },
-    },
-  })
-    .jpeg({ quality: 95 })
-    .toBuffer();
-}
+test('stripping a photo sends nothing anywhere', async ({ page, baseURL }) => {
+  const watcher = offsiteRequests(page, baseURL!);
 
-test('stripping and compressing a photo sends nothing anywhere', async ({ page, baseURL }) => {
+  await page.goto('/media-strip');
+  await page.locator('input[type=file]').setInputFiles(SAMPLE_PHOTO);
+
+  await page.getByRole('button', { name: /Remove all of it|Clean it anyway/ }).click();
+  await expect(page.getByRole('button', { name: 'Download the clean file' })).toBeVisible();
+
+  expect(describeRequests(watcher.requests)).toEqual([]);
+  expect(watcher.violations).toEqual([]);
+});
+
+test('the compressed result is genuinely smaller, produced under the real CSP', async ({
+  page,
+}) => {
+  // The outcome rather than the silence. If the codecs could not compile under
+  // the production policy this is where it shows, because the panel would sit on
+  // its error instead of reporting a saving.
+  await page.goto('/image-compress');
+  await page.locator('input[type=file]').setInputFiles(SAMPLE_PHOTO);
+
+  await expect(page.getByRole('button', { name: 'Download the smaller file' })).toBeVisible({
+    timeout: 60_000,
+  });
+
+  // Scoped to the panel: the island has its own live region on the same page.
+  // A file that grew renders as "-12 percent smaller", which a bare
+  // /percent smaller/ would accept as a saving.
+  const compression = page.locator('section[aria-label="Compression"]');
+  await expect(compression.getByRole('status')).toContainText(/, [1-9]\d* percent smaller/, {
+    timeout: 60_000,
+  });
+  await expect(page.getByText('Re-read the compressed file')).toBeVisible();
+});
+
+test('compressing an image sends nothing anywhere and fetches no codec', async ({
+  page,
+  baseURL,
+}) => {
   const watcher = offsiteRequests(page, baseURL!);
   const wasmRequests: string[] = [];
   page.on('request', (request) => {
@@ -78,18 +98,9 @@ test('stripping and compressing a photo sends nothing anywhere', async ({ page, 
     if (new URL(request.url()).pathname.endsWith('.wasm')) wasmRequests.push(request.url());
   });
 
-  await page.goto('/media-strip');
-  await page.locator('input[type=file]').setInputFiles({
-    name: 'holiday.jpg',
-    mimeType: 'image/jpeg',
-    buffer: await photoBytes(),
-  });
+  await page.goto('/image-compress');
+  await page.locator('input[type=file]').setInputFiles(SAMPLE_PHOTO);
 
-  await page.getByRole('button', { name: /Remove all of it|Clean it anyway/ }).click();
-  await expect(page.getByRole('button', { name: 'Download the clean file' })).toBeVisible();
-
-  // Compression starts on its own once the panel appears, so waiting for the
-  // download button is waiting for a codec to have actually run.
   await expect(page.getByRole('button', { name: 'Download the smaller file' })).toBeVisible({
     timeout: 60_000,
   });
@@ -99,37 +110,11 @@ test('stripping and compressing a photo sends nothing anywhere', async ({ page, 
   expect(wasmRequests).toEqual([]);
 });
 
-test('the compressed result is genuinely smaller, produced under the real CSP', async ({
-  page,
-}) => {
-  // Same journey as above, asserting the outcome rather than the silence. If the
-  // codecs could not compile under the production policy this is where it shows,
-  // because the panel would sit on its error instead of reporting a saving.
-  await page.goto('/media-strip');
-  await page.locator('input[type=file]').setInputFiles({
-    name: 'holiday.jpg',
-    mimeType: 'image/jpeg',
-    buffer: await photoBytes(),
-  });
-
-  await page.getByRole('button', { name: /Remove all of it|Clean it anyway/ }).click();
-  await expect(page.getByRole('button', { name: 'Download the smaller file' })).toBeVisible({
-    timeout: 60_000,
-  });
-
-  // Scoped to the panel: the strip has its own live region on the same page.
-  const compression = page.locator('section[aria-label="Compression"]');
-  await expect(compression.getByRole('status')).toContainText(/percent smaller/, {
-    timeout: 60_000,
-  });
-  await expect(page.getByText('Re-read the compressed file')).toBeVisible();
-});
-
 test('redacting a PDF sends nothing anywhere', async ({ page, baseURL }) => {
   const watcher = offsiteRequests(page, baseURL!);
 
   await page.goto('/pdf-redact');
-  await page.locator('input[type=file]').setInputFiles(PDF_FIXTURE);
+  await page.locator('input[type=file]').setInputFiles(SECRETS_PDF);
   await expect(page.getByRole('img', { name: /^Page \d+$/ })).toHaveCount(2);
 
   expect(describeRequests(watcher.requests)).toEqual([]);

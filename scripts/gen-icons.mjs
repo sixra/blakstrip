@@ -33,19 +33,23 @@ const CANVAS = '#f4f4f4';
 const INK = '#0a0a0a';
 const MUTED = '#525252';
 
-const wordmark = await sharp(trimmed).resize({ width: 420 }).toBuffer({ resolveWithObject: true });
+// 360px: three lines of copy plus the footer only clear the 630px canvas at this
+// wordmark size without the footer's descenders being cut off.
+const wordmark = await sharp(trimmed).resize({ width: 360 }).toBuffer({ resolveWithObject: true });
 
 const escape = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
 // Positions derive from the wordmark's rendered height rather than being typed in.
 // Guessed values put the first line of copy straight through the logo.
 const MARGIN = 90;
-const LOGO_TOP = 120;
+const LOGO_TOP = 100;
 const logoBottom = LOGO_TOP + wordmark.info.height;
-const leadAt = logoBottom + 96;
+const leadAt = logoBottom + 72;
+const LINE_PITCH = 56;
 const lines = [
   { text: 'Redact a PDF for good.', y: leadAt },
-  { text: 'Strip a photo of where you were.', y: leadAt + 60 },
+  { text: 'Strip a photo of where you were.', y: leadAt + LINE_PITCH },
+  { text: 'Shrink an image without uploading it.', y: leadAt + LINE_PITCH * 2 },
 ];
 
 const overlay = Buffer.from(
@@ -55,7 +59,7 @@ const overlay = Buffer.from(
        .foot { font: 400 28px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: ${MUTED}; }
      </style>
      ${lines.map((l) => `<text x="${MARGIN}" y="${l.y}" class="lead">${escape(l.text)}</text>`).join('\n')}
-     <text x="${MARGIN}" y="${leadAt + 138}" class="foot">${escape('In your browser. Nothing is uploaded.')}</text>
+     <text x="${MARGIN}" y="${leadAt + LINE_PITCH * 2 + 82}" class="foot">${escape('In your browser. Nothing is uploaded.')}</text>
    </svg>`
 );
 
