@@ -13,9 +13,6 @@
 const RELEASE_HEADING = /^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$/;
 const UNRELEASED_HEADING = '## [Unreleased]';
 
-/** The compare links at the foot of the file, newest first. */
-const linkRef = (version) => `[${version}]:`;
-
 /**
  * Where a section stops. The next heading, or the foot of the file: the oldest
  * release has no heading after it, and without this its notes would carry the
@@ -80,14 +77,23 @@ export function cutRelease(changelog, version, date, repoUrl) {
     `## [${version}] - ${date}`,
     '',
     carried,
+    // From one line before the terminator, so the blank line that separated
+    // [Unreleased] from what followed it is kept. `end` is at least 1 here: at
+    // 0 there would be nothing to carry, and the guard above has already thrown.
     ...(end === -1 ? [] : rest.slice(end - 1)),
   ].join('\n');
 
-  return withSection
-    .replace(
-      `[Unreleased]: ${repoUrl}/compare/v${previous}...HEAD`,
-      `[Unreleased]: ${repoUrl}/compare/v${version}...HEAD\n` +
-        `${linkRef(version)} ${repoUrl}/compare/v${previous}...v${version}`
-    )
-    .replace(/\n{3,}/g, '\n\n');
+  const oldRef = `[Unreleased]: ${repoUrl}/compare/v${previous}...HEAD`;
+  // Checked rather than assumed. `replace` on a string that is not there is a
+  // no-op, which would leave a release whose compare link was never added and
+  // whose [Unreleased] still points at the previous tag, silently.
+  if (!withSection.includes(oldRef)) {
+    throw new Error(`CHANGELOG.md has no "${oldRef}" line to update`);
+  }
+
+  return withSection.replace(
+    oldRef,
+    `[Unreleased]: ${repoUrl}/compare/v${version}...HEAD\n` +
+      `[${version}]: ${repoUrl}/compare/v${previous}...v${version}`
+  );
 }

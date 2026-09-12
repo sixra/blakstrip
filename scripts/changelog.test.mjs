@@ -100,4 +100,14 @@ describe('cutRelease', () => {
   it('refuses to cut a version that already exists', () => {
     expect(() => cutRelease(changelog, '2.1.0', '2026-10-01', REPO)).toThrow(/already has/);
   });
+
+  it('refuses when the Unreleased link reference is not where it expects', () => {
+    // A silent no-op here would ship a release with no compare link and an
+    // [Unreleased] still pointing at the previous tag.
+    const moved = changelog.replace(
+      `[Unreleased]: ${REPO}/compare/v2.1.0...HEAD`,
+      '[Unreleased]: elsewhere'
+    );
+    expect(() => cutRelease(moved, '2.2.0', '2026-10-01', REPO)).toThrow(/no .* line to update/);
+  });
 });

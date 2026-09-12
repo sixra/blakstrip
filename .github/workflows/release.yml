@@ -14,6 +14,13 @@ on:
 permissions:
   contents: read
 
+# Never cancel a release: a run killed between pushing the tag and creating the
+# release leaves a tag with nothing behind it, which is the shape v2.1.0 was in.
+# Queue instead, and the second run finds the version tagged and stops.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
