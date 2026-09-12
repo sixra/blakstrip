@@ -175,21 +175,19 @@ const description =
         </p>
       </div>
 
-      {
-        /* Labelled by its own heading rather than aria-label="Tools", which collided
-          with the header's nav: a screen reader's landmark list read "Tools
-          navigation, Tools region" and neither said which was which. */
-      }
       <section class="mt-16" aria-labelledby="tools">
-        <h2 id="tools" class="text-2xl font-bold tracking-tight sm:text-3xl">
-          What each one did to a real file
-        </h2>
+        {
+          /* Hidden, not deleted: the cards say what they are, but the heading still
+            gives them a level to sit under, and names this region so it stops
+            reading as a second "Tools" beside the header nav. */
+        }
+        <h2 id="tools" class="sr-only">The tools</h2>
         {
           /* One column, then three. Two columns would always leave one of three
             cards alone on a row, at every width where two columns applied. Revisit
             if the registry ever holds four. */
         }
-        <div class="mt-6 grid gap-5 lg:grid-cols-3">
+        <div class="grid gap-5 lg:grid-cols-3">
           {
             /* The whole card is the link, and `aria-labelledby` names it after the
               heading alone. Without that the accessible name is the heading plus the
