@@ -46,6 +46,8 @@ with what the tools do rather than what they promise not to.
 - **Home page**: the card rows shared a line at widths where the card was never wide enough, so the
   coordinates and savings were being truncated. They share a line only while the card is full
   width, and the grid goes from one column to three so no card is ever left alone on a row.
+- **Home page**: the heading over the cards is no longer shown. It repeated what the cards say, and
+  stays in the markup only to give them a level to sit under and to name the region.
 
 ## [2.0.0] - 2026-08-08
 

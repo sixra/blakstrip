@@ -2,34 +2,53 @@
 
 blakstrip follows [Semantic Versioning](https://semver.org) and keeps a
 [Keep a Changelog](https://keepachangelog.com)-style `CHANGELOG.md`. Changes accumulate under the
-`[Unreleased]` heading as they land, so cutting a release is mostly bookkeeping.
+`[Unreleased]` heading as they land, so cutting a release is mostly bookkeeping, and the bookkeeping
+is automated.
+
+A release is not a deploy. Cloudflare Pages builds from `main` on its own, so the site is usually
+live before the release exists. Releasing records what shipped; it does not ship it.
 
 ## Cutting a release
 
 Pick the new version `X.Y.Z` per SemVer (MAJOR = breaking, MINOR = features, PATCH = fixes), then:
 
-1. **Changelog.** In `CHANGELOG.md`:
-   - Rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and add a one-line summary under it.
-   - Add a fresh, empty `## [Unreleased]` above it.
-   - Update the link references at the bottom (easy to forget):
-     ```markdown
-     [Unreleased]: https://github.com/sixra/blakstrip/compare/vX.Y.Z...HEAD
-     [X.Y.Z]: https://github.com/sixra/blakstrip/compare/vPREV...vX.Y.Z
-     ```
-     The very first entry points at `releases/tag/v1.0.0` instead of a compare range.
-2. **Version.** Bump `"version"` in `package.json` to `X.Y.Z`.
-3. **Commit.** `chore: release vX.Y.Z` (subject line only).
-4. **Tag.** `git tag -a vX.Y.Z -m "vX.Y.Z"`.
-5. **Push.** `git push --follow-tags`. The pre-push hook runs `pnpm verify` (coverage, build, e2e).
-6. **GitHub Release.** Create it from the tag, mirroring the changelog highlights:
+1. **Prepare.** On a branch:
+
    ```sh
-   gh release create vX.Y.Z --verify-tag --title "blakstrip vX.Y.Z" --notes "..."
+   node scripts/release-prepare.mjs X.Y.Z
    ```
-   Keep the notes to a short summary, a **Highlights** section, and a **Try it** block, then link
-   back to `CHANGELOG.md`.
+
+   It moves everything under `## [Unreleased]` into `## [X.Y.Z] - YYYY-MM-DD`, leaves a fresh empty
+   `[Unreleased]`, adds the compare link, and sets the version in `package.json`. Write the summary
+   paragraph under the new heading yourself: it is the one part of a release that has to be read by
+   a person before it is written by one.
+
+2. **Merge.** Open a PR and merge it. That is the whole release.
+
+When the version lands on `main`, `.github/workflows/release.yml` runs `pnpm verify`, tags the
+commit `vX.Y.Z`, and publishes the GitHub Release with that version's changelog section as its
+notes. Nothing to remember, and the tag cannot end up on the wrong commit.
+
+Merge the release PR promptly. If another PR lands on `main` first, the tag will contain a change
+the changelog does not describe, which is what happened to v2.1.0.
+
+## What the automation refuses to do
+
+Each of these fails the run rather than publishing something wrong:
+
+- the version in `package.json` is already tagged, in which case it does nothing at all, which is
+  what every ordinary push to `main` looks like
+- the version is not a plain `major.minor.patch`
+- `CHANGELOG.md` has no section for it, or the section is empty
+- `pnpm verify` fails
+
+`node scripts/release-notes.mjs X.Y.Z` prints exactly what the release body will be, so you can read
+it before merging.
 
 ## Conventions
 
 - Changelog bullets lead with a bold label: `- **Feature name**: what it does.`
 - Commits are [Conventional Commits](https://www.conventionalcommits.org), subject line only, with
   no attribution trailers.
+- Tags created by the workflow are unsigned. The tags for 1.0.0, 2.0.0 and 2.1.0 were made by hand
+  from a machine holding the signing key and are SSH-signed; later ones are not.
