@@ -204,9 +204,9 @@ const description =
               <a
                 href={tool.href}
                 aria-labelledby={`card-${tool.href.slice(1)}`}
-                class="border-line bg-raised hover:border-line-strong focus-visible:border-redact focus-visible:ring-redact group flex flex-col rounded-2xl border p-6 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                class="border-line bg-raised hover:border-line-strong focus-visible:ring-redact group flex flex-col rounded-2xl border p-6 transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
-                <h3 id={`card-${tool.href.slice(1)}`} class="text-2xl font-bold tracking-tight">
+                <h3 id={`card-${tool.href.slice(1)}`} class="text-xl font-semibold tracking-tight">
                   {tool.name}
                   <span
                     class="ml-1 inline-block transition-transform group-hover:translate-x-1"
@@ -217,7 +217,7 @@ const description =
                 </h3>
                 <p class="text-muted mt-2 text-sm">{tool.pitch}</p>
 
-                <div class="mt-5 flex-1">
+                <div class="mt-5">
                   <p class="text-faint font-mono text-xs">{cards[tool.href].meta}</p>
                   {/* Label and value share a line only while the card is full width,
                       which is below `lg`. In the three-column layout the card interior
@@ -230,7 +230,7 @@ const description =
                       <li class="flex flex-col text-sm sm:flex-row sm:items-baseline sm:gap-3 lg:flex-col lg:gap-0">
                         <span class="flex items-baseline gap-3">
                           <span
-                            class:list={['mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full', row.dot]}
+                            class:list={['h-1.5 w-1.5 shrink-0 rounded-full', row.dot]}
                             aria-hidden="true"
                           />
                           <span class="text-ink font-medium">
@@ -264,7 +264,7 @@ const description =
             ))
           }
         </div>
-        <p class="text-faint mt-4 text-xs">
+        <p class="text-faint mt-4 text-sm text-pretty">
           Those are real results. The findings come from these tools reading sample files while this
           page was built, and the sizes from the same encoders the compressor ships, run in a
           browser and checked in with the tests. Not a screenshot.

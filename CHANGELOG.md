@@ -29,6 +29,18 @@ All notable changes to this project are documented in this file. The format is b
   best-quality preset produce a _larger_ file. It now has photographic content, so the sizes on the
   hub mean something.
 - **Social card**: names all three tools.
+- **Home page**: it opened on the guarantee, so someone arriving from a search read a privacy
+  slogan and had to reach the cards to learn what the site was for. The three jobs are now the
+  first line, the headline stays, and the contrast with the hosted alternatives follows it. The
+  page title follows the pattern the tool pages use instead of leading with the brand.
+- **Home page**: the cards were one unlabelled link each, so a screen reader announced the heading,
+  the pitch, the meta line and five rows of evidence as a single link name. Each is now named after
+  its tool. Severity was carried by dot colour alone and now has text, the PDF card admits the
+  three findings it is not showing, and the section holding the cards has a heading of its own
+  rather than a landmark name that collided with the navigation's.
+- **Home page**: the card rows shared a line at widths where the card was never wide enough, so the
+  coordinates and savings were being truncated. They share a line only while the card is full
+  width, and the grid goes from one column to three so no card is ever left alone on a row.
 
 ## [2.0.0] - 2026-08-08
 
