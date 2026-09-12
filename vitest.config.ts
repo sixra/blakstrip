@@ -60,7 +60,9 @@ export default getViteConfig({
         test: {
           name: 'node',
           environment: 'node',
-          include: ['src/**/*.test.ts'],
+          // `scripts/` too: the release tooling is the one place where a silent
+          // wrong answer ships a version nobody can correct afterwards.
+          include: ['src/**/*.test.ts', 'scripts/**/*.test.mjs'],
         },
       },
       {
