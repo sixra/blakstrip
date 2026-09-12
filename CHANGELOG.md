@@ -6,6 +6,11 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-09-12
+
+Compression becomes a tool of its own instead of a panel nobody could find, and the home page leads
+with what the tools do rather than what they promise not to.
+
 ### Added
 
 - **Compress**: a third tool at `/image-compress`. Drop in a JPEG, PNG or WebP and make it smaller
@@ -142,6 +147,7 @@ re-verified before you can download it. No file ever leaves your device.
 
 <!-- On release, update these refs and add the new version. See RELEASING.md. -->
 
-[Unreleased]: https://github.com/sixra/blakstrip/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/sixra/blakstrip/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/sixra/blakstrip/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/sixra/blakstrip/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/sixra/blakstrip/releases/tag/v1.0.0
