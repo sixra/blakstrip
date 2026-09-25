@@ -67,6 +67,9 @@ export default getViteConfig({
       },
       {
         extends: true,
+        // On a cold cache Vite finds these mid-run and reloads the tester, which can leave a test
+        // file that never starts. Add any dependency a "Vite unexpectedly reloaded" warning names.
+        optimizeDeps: { include: ['wasm-feature-detect', '@jsquash/avif/encode'] },
         test: {
           name: 'browser',
           include: ['tests/browser/**/*.test.ts'],
