@@ -22,6 +22,9 @@ All notable changes to this project are documented in this file. The format is b
   that shipped 2.0.0's breaking change, so a tool reading them would have called it a minor.
 - Bumped Astro, `@astrojs/sitemap`, `@types/node`, `globals` and `typescript-eslint` within their
   existing minor and patch ranges.
+- Moved to pnpm 12.6.0 and updated every dependency, crossing majors for Vitest 5 and
+  `prettier-plugin-astro` 1, which reformats the `.astro` files without changing the rendered
+  pages. TypeScript stays on 6 until `typescript-eslint` and `@astrojs/check` support 7.
 
 ## [2.1.0] - 2026-09-12
 

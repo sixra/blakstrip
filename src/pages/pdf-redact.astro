@@ -43,7 +43,9 @@ const features = [
     <main id="main" class="flex-1 py-6">
       <div class="mb-8 max-w-3xl">
         <h1 class="text-4xl font-bold tracking-tight sm:text-5xl">
-          Redact a PDF.<br />Leave <span class="bg-redact text-surface px-2">nothing</span> behind.
+          Redact a PDF.
+          <br />
+          Leave <span class="bg-redact text-surface px-2">nothing</span> behind.
         </h1>
         <p class="text-muted mt-5 text-lg">
           Remove sensitive text and hidden details from any PDF, permanently. Your file never leaves
@@ -54,16 +56,16 @@ const features = [
       <Redactor client:only="svelte" />
 
       <section class="mt-24" aria-labelledby="how">
-        <h2 id="how" class="text-2xl font-bold tracking-tight sm:text-3xl">How it works</h2>
+        <h2 id="how" class="text-2xl font-bold tracking-tight sm:text-3xl">
+          How it works
+        </h2>
         <div class="mt-6 grid gap-5 sm:grid-cols-2">
-          {
-            features.map((feature) => (
-              <article class="border-line bg-raised rounded-2xl border p-6">
-                <h3 class="text-base font-semibold">{feature.title}</h3>
-                <p class="text-muted mt-2 text-sm">{feature.body}</p>
-              </article>
-            ))
-          }
+          {features.map((feature) => (
+            <article class="border-line bg-raised rounded-2xl border p-6">
+              <h3 class="text-base font-semibold">{feature.title}</h3>
+              <p class="text-muted mt-2 text-sm">{feature.body}</p>
+            </article>
+          ))}
         </div>
       </section>
     </main>

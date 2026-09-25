@@ -22,7 +22,10 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'pnpm build && pnpm preview',
+    // ASTRO_PREVIEW_BACKGROUND=0: under an AI agent, Astro would otherwise detach the preview.
+    // Not via pnpm: pnpm 12 starts `pnpm run`/`pnpm exec` children in their own process group,
+    // so Playwright's SIGKILL of the webServer group misses astro and the run waits on it forever.
+    command: 'pnpm build && ASTRO_PREVIEW_BACKGROUND=0 ./node_modules/.bin/astro preview',
     url: 'http://localhost:4321',
     // Never silently reuse a server: anything already on 4321 (a stray `astro
     // dev`, an older preview) would let the whole suite pass against a build that

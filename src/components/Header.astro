@@ -13,8 +13,7 @@ const here = Astro.url.pathname.replace(/\.html$/, '');
 
 <div class="flex items-center gap-4">
   <a href="/" aria-label="blakstrip home">
-    {
-      /* Through astro:assets rather than public/, so the wordmark ships at the
+    {/* Through astro:assets rather than public/, so the wordmark ships at the
         size it renders instead of the 791px source. The link's aria-label is the
         accessible name, so the alt text stays out of the way.
 
@@ -31,8 +30,7 @@ const here = Astro.url.pathname.replace(/\.html$/, '');
 
         Left lazy on purpose. The header sits above the fold, but the LCP element
         on all three pages is the h1, not this (measured: text, ~90ms), so eager
-        loading it would only compete with the thing that actually paints. */
-    }
+        loading it would only compete with the thing that actually paints. */}
     <Image
       src={logo}
       alt=""
@@ -45,23 +43,21 @@ const here = Astro.url.pathname.replace(/\.html$/, '');
   </a>
   <nav aria-label="Tools" class="ml-auto">
     <ul class="flex items-center gap-1">
-      {
-        TOOLS.map((tool) => (
-          <li>
-            {/* The tool you are on is marked with a solid bar, which is the same
+      {TOOLS.map((tool) => (
+        <li>
+          {/* The tool you are on is marked with a solid bar, which is the same
                 device the rest of the site uses to mean "this is covered".
                 aria-current carries it for a screen reader, so it is announced
                 rather than offered as a link to the page already open. */}
-            <a
-              href={tool.href}
-              aria-current={here === tool.href ? 'page' : undefined}
-              class="text-muted hover:bg-raised hover:text-ink aria-[current=page]:bg-redact aria-[current=page]:text-surface rounded-lg px-3 py-1.5 text-sm transition-colors"
-            >
-              {tool.nav}
-            </a>
-          </li>
-        ))
-      }
+          <a
+            href={tool.href}
+            aria-current={here === tool.href ? 'page' : undefined}
+            class="text-muted hover:bg-raised hover:text-ink aria-[current=page]:bg-redact aria-[current=page]:text-surface rounded-lg px-3 py-1.5 text-sm transition-colors"
+          >
+            {tool.nav}
+          </a>
+        </li>
+      ))}
     </ul>
   </nav>
   <InstallButton client:only="svelte" />

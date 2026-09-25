@@ -2,6 +2,10 @@ allowBuilds:
   esbuild: true
   lefthook: false
   sharp: true
+# prettier-plugin-astro 1.0.1 re-indents CSS comments on every format and 1.1.0 fixes it, so
+# only that version skips the one-day window. Drop this after 2026-09-25T20:35Z.
+minimumReleaseAgeExclude:
+  - prettier-plugin-astro@1.1.0
 # Security patches for transitive dev dependencies (Dependabot advisories). Both
 # are patch-level bumps of packages with stable APIs, so forcing them is safe for
 # the consumers in the tree (minimatch for brace-expansion, ajv for fast-uri).

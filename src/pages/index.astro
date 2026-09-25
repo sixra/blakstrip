@@ -142,29 +142,25 @@ const description =
       <Header />
     </header>
 
-    {
-      /* No bottom padding: the footer brings its own `mt-24`, and the two stacked
-        left the page trailing off into 144px of nothing. */
-    }
+    {/* No bottom padding: the footer brings its own `mt-24`, and the two stacked
+        left the page trailing off into 144px of nothing. */}
     <main id="main" class="flex flex-1 flex-col pt-12">
       <div class="max-w-3xl">
-        {
-          /* The jobs before the promise. The page used to open on the guarantee, so
+        {/* The jobs before the promise. The page used to open on the guarantee, so
             someone arriving from a search had to reach the cards to find out what
-            the site was for. */
-        }
+            the site was for. */}
         <p class="text-ink mb-4 text-lg font-semibold tracking-tight text-balance sm:text-xl">
           Redact PDFs. Strip photo metadata. Compress images.
         </p>
         {/* -ml-2 cancels the strip's padding so "Nothing" aligns with "your" below. */}
         <h1 class="text-5xl font-bold tracking-tight sm:text-7xl">
-          <span class="bg-redact text-surface -ml-2 px-2">Nothing</span> leaves<br />your device.
+          <span class="bg-redact text-surface -ml-2 px-2">Nothing</span> leaves
+          <br />
+          your device.
         </h1>
-        {
-          /* "Most", not "every". Some other tools do run client-side, and one
+        {/* "Most", not "every". Some other tools do run client-side, and one
             counterexample would make an absolute claim false on the page whose whole
-            argument is that you can check what it says. */
-        }
+            argument is that you can check what it says. */}
         <p class="text-muted mt-6 max-w-2xl text-lg text-pretty">
           Most tools for this upload your file to a server and ask you to trust what happens next.
           blakstrip does the work in your browser. Open the network panel before you start, and
@@ -176,91 +172,85 @@ const description =
       </div>
 
       <section class="mt-16" aria-labelledby="tools">
-        {
-          /* Hidden, not deleted: the cards say what they are, but the heading still
+        {/* Hidden, not deleted: the cards say what they are, but the heading still
             gives them a level to sit under, and names this region so it stops
-            reading as a second "Tools" beside the header nav. */
-        }
-        <h2 id="tools" class="sr-only">The tools</h2>
-        {
-          /* One column, then three. Two columns would always leave one of three
+            reading as a second "Tools" beside the header nav. */}
+        <h2 id="tools" class="sr-only">
+          The tools
+        </h2>
+        {/* One column, then three. Two columns would always leave one of three
             cards alone on a row, at every width where two columns applied. Revisit
-            if the registry ever holds four. */
-        }
+            if the registry ever holds four. */}
         <div class="grid gap-5 lg:grid-cols-3">
-          {
-            /* The whole card is the link, and `aria-labelledby` names it after the
+          {/* The whole card is the link, and `aria-labelledby` names it after the
               heading alone. Without that the accessible name is the heading plus the
               pitch plus the meta line plus five rows of evidence, read out as one
               string. Narrowing the anchor to the heading and stretching it back over
               the card with a pseudo-element would name it just as well, but it puts an
               overlay between the reader and the evidence to buy back a hit area this
-              already has. */
-          }
-          {
-            TOOLS.map((tool) => (
-              <a
-                href={tool.href}
-                aria-labelledby={`card-${tool.href.slice(1)}`}
-                class="border-line bg-raised hover:border-line-strong focus-visible:border-redact focus-visible:ring-redact group flex flex-col rounded-2xl border p-6 transition-colors focus-visible:ring-2 focus-visible:outline-none"
-              >
-                <h3 id={`card-${tool.href.slice(1)}`} class="text-xl font-semibold tracking-tight">
-                  {tool.name}
-                  <span
-                    class="ml-1 inline-block transition-transform group-hover:translate-x-1"
-                    aria-hidden="true"
-                  >
-                    →
-                  </span>
-                </h3>
-                <p class="text-muted mt-2 text-sm">{tool.pitch}</p>
+              already has. */}
+          {TOOLS.map((tool) => (
+            <a
+              href={tool.href}
+              aria-labelledby={`card-${tool.href.slice(1)}`}
+              class="border-line bg-raised hover:border-line-strong focus-visible:border-redact focus-visible:ring-redact group flex flex-col rounded-2xl border p-6 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <h3 id={`card-${tool.href.slice(1)}`} class="text-xl font-semibold tracking-tight">
+                {tool.name}
+                <span
+                  class="ml-1 inline-block transition-transform group-hover:translate-x-1"
+                  aria-hidden="true"
+                >
+                  →
+                </span>
+              </h3>
+              <p class="text-muted mt-2 text-sm">{tool.pitch}</p>
 
-                <div class="mt-5">
-                  <p class="text-faint font-mono text-xs">{cards[tool.href].meta}</p>
-                  {/* Label and value share a line only while the card is full width,
+              <div class="mt-5">
+                <p class="text-faint font-mono text-xs">{cards[tool.href].meta}</p>
+                {/* Label and value share a line only while the card is full width,
                       which is below `lg`. In the three-column layout the card interior
                       is about 310px and the widest row wants nearer 390px, so the two
                       go back to stacking rather than clipping the value. The value is
                       the persuasive half: "51.50897, -0...." makes the point far less
                       well than the coordinate does. */}
-                  <ul class="mt-3 space-y-2">
-                    {cards[tool.href].rows.map((row) => (
-                      <li class="flex flex-col text-sm sm:flex-row sm:items-baseline sm:gap-3 lg:flex-col lg:gap-0">
-                        <span class="flex items-baseline gap-3">
-                          <span
-                            class:list={['h-1.5 w-1.5 shrink-0 rounded-full', row.dot]}
-                            aria-hidden="true"
-                          />
-                          <span class="text-ink font-medium">
-                            {row.note && <span class="sr-only">{row.note}</span>}
-                            {row.label}
-                          </span>
+                <ul class="mt-3 space-y-2">
+                  {cards[tool.href].rows.map((row) => (
+                    <li class="flex flex-col text-sm sm:flex-row sm:items-baseline sm:gap-3 lg:flex-col lg:gap-0">
+                      <span class="flex items-baseline gap-3">
+                        <span
+                          class:list={['h-1.5 w-1.5 shrink-0 rounded-full', row.dot]}
+                          aria-hidden="true"
+                        />
+                        <span class="text-ink font-medium">
+                          {row.note && <span class="sr-only">{row.note}</span>}
+                          {row.label}
                         </span>
-                        {/* Indented to line up under the label: the dot's own width
+                      </span>
+                      {/* Indented to line up under the label: the dot's own width
                             plus the gap after it. Written as the sum rather than the
                             total so it stays correct if either changes; a hardcoded
                             0.875rem was 4px short. */}
-                        {/* Mono, because every one of these is a value read out of the
+                      {/* Mono, because every one of these is a value read out of the
                             user's file, which is what the meta line above already uses
                             the face for. A monospaced face makes `tabular-nums` a
                             no-op, so it is gone with the truncation. */}
-                        <span class="text-muted pl-[calc(0.375rem+0.75rem)] font-mono text-xs sm:ml-auto sm:pl-0 lg:ml-0 lg:pl-[calc(0.375rem+0.75rem)]">
-                          {row.detail}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  {/* Outside the list, so a screen reader is not told there are six
+                      <span class="text-muted pl-[calc(0.375rem+0.75rem)] font-mono text-xs sm:ml-auto sm:pl-0 lg:ml-0 lg:pl-[calc(0.375rem+0.75rem)]">
+                        {row.detail}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {/* Outside the list, so a screen reader is not told there are six
                       items when the tool found eight and the card is showing five. */}
-                  {cards[tool.href].more > 0 && (
-                    <p class="text-faint mt-2 pl-[calc(0.375rem+0.75rem)] text-xs">
-                      and {cards[tool.href].more} more
-                    </p>
-                  )}
-                </div>
-              </a>
-            ))
-          }
+                {cards[tool.href].more > 0 && (
+                  <p class="text-faint mt-2 pl-[calc(0.375rem+0.75rem)] text-xs">
+                    and {cards[tool.href].more} more
+                  </p>
+                )}
+              </div>
+            </a>
+          ))}
         </div>
         <p class="text-faint mt-4 text-sm text-pretty">
           Those are real results. The findings come from these tools reading sample files while this
@@ -273,10 +263,8 @@ const description =
         <h2 id="verify" class="text-2xl font-bold tracking-tight sm:text-3xl">
           <span class="bg-redact text-surface px-2">Verify it yourself</span>
         </h2>
-        {
-          /* The hero already tells you to watch the network panel, so this says the
-            part the hero cannot: why it stays empty, and what else to try. */
-        }
+        {/* The hero already tells you to watch the network panel, so this says the
+            part the hero cannot: why it stays empty, and what else to try. */}
         <p class="text-muted mt-5">
           The panel stays empty because the page is served under a Content-Security-Policy that
           forbids the request outright, so it is not a promise the code has to keep. Then turn off
