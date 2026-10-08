@@ -200,7 +200,7 @@ export async function pageRunBoxes(page: PDFPageProxy): Promise<RunBox[]> {
   const content = await page.getTextContent();
   const boxes: RunBox[] = [];
   for (const item of content.items) {
-    /* v8 ignore next -- marked-content / empty-run items don't occur in our text PDFs */
+    /* v8 ignore next -- marked-content items (no str) only appear in tagged PDFs */
     if (!isGlyph(item) || item.str.trim().length === 0) continue;
     const [a, b] = item.transform;
     const t = vp.transform;
@@ -340,7 +340,7 @@ export async function collectRedactedText(
     const vp = page.getViewport({ scale: 1 });
     const content = await page.getTextContent();
     for (const item of content.items) {
-      /* v8 ignore next -- marked-content / empty-run items don't occur in our text PDFs */
+      /* v8 ignore next -- marked-content items (no str) only appear in tagged PDFs */
       if (!isGlyph(item) || item.str.trim().length === 0) continue;
       const box = glyphBox(item, vp);
       if (pageRects.some((r) => coversRun(box, r))) terms.add(item.str.trim());

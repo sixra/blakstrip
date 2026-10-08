@@ -185,7 +185,7 @@ describe('checkCoverage: pixel backstop', () => {
     expect(await coverageOf(doc, [sliver], bytes)).toEqual([]);
   });
 
-  it('samples only the page when a box runs past its edge', async () => {
+  it('passes a covered box that runs past the page edge', async () => {
     const pristine = await makeTextPdf();
     const doc = await loadPdf(pristine);
     const overshoot: RedactionRect = { page: 1, x: 0.6, y: 0.07, w: 0.7, h: 0.06 };

@@ -71,8 +71,8 @@ All notable changes to this project are documented in this file. The format is b
   file is closed, the same way it does when nothing is open.
 - **Install**: iPads never saw the "Add to Home Screen" hint. Since iPadOS 13 Safari reports itself
   as a Mac, so the iPad is now recognised by its touch screen as well.
-- Verify no longer reports a redacted name as leaked because it starts a longer accented word, such
-  as "Ana" inside "Anaïs".
+- **Verify**: a redacted name no longer counts as leaked because it starts a longer accented word,
+  such as "Ana" inside "Anaïs".
 - **Photos**: dropping a second picture while the first was still being read could leave the tool
   showing whichever finished reading last rather than the one dropped last. In the compressor too,
   a first picture that failed to read could replace the second one with its error.
