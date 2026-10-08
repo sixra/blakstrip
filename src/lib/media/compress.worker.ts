@@ -97,12 +97,20 @@ async function decode(bytes: Uint8Array, format: MediaFormat): Promise<ImageBitm
   });
 }
 
-/** Draw the bitmap at the target size and read the pixels back. */
-function rasterize(bitmap: ImageBitmap, width: number, height: number): ImageData {
+/**
+ * Draw the bitmap at the target size and read the pixels back. `opaque` puts it
+ * on white first: JPEG has no alpha, so a transparent pixel would otherwise
+ * encode as whatever colour it stores, which is usually black.
+ */
+function rasterize(bitmap: ImageBitmap, width: number, height: number, opaque: boolean): ImageData {
   const canvas = new OffscreenCanvas(width, height);
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) throw new Error('this browser could not provide a 2D canvas to resize with');
 
+  if (opaque) {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, width, height);
+  }
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(bitmap, 0, 0, width, height);
@@ -141,7 +149,7 @@ async function run(request: CompressRequest): Promise<CompressResponse> {
         { width: source.width, height: source.height },
         request.options.maxDimension
       );
-      pixels = rasterize(source, size.width, size.height);
+      pixels = rasterize(source, size.width, size.height, request.options.format === 'jpeg');
     } finally {
       // Frees the decoded frame now rather than at the next GC. On a 48 megapixel
       // photo that is nearly 200 MB held for no reason while the encoder runs.

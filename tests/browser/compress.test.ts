@@ -162,6 +162,25 @@ describe('compressing through the worker', () => {
     // The ISOBMFF brand is the honest check available without a parser.
     expect(String.fromCharCode(...result.bytes.subarray(4, 12))).toContain('ftyp');
   }, 120_000);
+
+  it('puts a transparent picture on white when saving as JPEG', async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#c00';
+    ctx.fillRect(16, 16, 32, 32); // the rest stays fully transparent
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+    const source = new Uint8Array(await blob!.arrayBuffer());
+
+    const result = await withCompressor((compressor) =>
+      compressor.compress(source, 'png', options({ format: 'jpeg', quality: 80 }))
+    );
+
+    const pixels = await decodeToPixels(result.bytes, 'image/jpeg');
+    const corner = (pixels[0] + pixels[1] + pixels[2]) / 3;
+    expect(corner).toBeGreaterThan(128);
+  }, 30_000);
 });
 
 describe('compression and metadata', () => {

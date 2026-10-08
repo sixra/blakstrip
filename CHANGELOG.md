@@ -44,6 +44,8 @@ All notable changes to this project are documented in this file. The format is b
   grazed the lines above and below it, so a label such as "Account holder:" repeated elsewhere was
   reported as redacted text that survived. A line now counts only when a box covers at least half
   its height.
+- **Compress**: a transparent PNG or WebP saved as JPEG came out black wherever it was clear. JPEG
+  has no transparency, so the picture is now put on white first.
 
 ## [2.1.0] - 2026-09-12
 
