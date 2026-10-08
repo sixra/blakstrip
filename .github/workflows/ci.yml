@@ -54,6 +54,12 @@ jobs:
       - name: Validate
         run: pnpm validate
 
+      # The release workflow reads this version's notes only after the merge, where
+      # a missing section can do nothing but fail the release. Here it fails the pull
+      # request instead.
+      - name: Changelog has notes for this version
+        run: node scripts/release-notes.mjs "$(node -p "require('./package.json').version")" > /dev/null
+
       # Vitest node + real-Chromium browser projects; 100% engine coverage gate
       - name: Unit and browser tests
         run: pnpm test:coverage

@@ -17,6 +17,9 @@ All notable changes to this project are documented in this file. The format is b
 - **Not found page**: an address that does not exist says so. Without a `404.html`, Cloudflare Pages
   treats the site as a single-page app and answers every path with the home page, so a mistyped
   link looked like it had worked. The page is kept out of search results and the sitemap.
+- **CI**: a pull request whose version has no notes in `CHANGELOG.md` fails its checks. The release
+  workflow only reads them after the merge, where a missing section can do nothing but fail the
+  release.
 
 ### Changed
 
