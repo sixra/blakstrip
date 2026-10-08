@@ -14,7 +14,10 @@
   const nav = navigator as Navigator & { standalone?: boolean };
   const alreadyInstalled =
     window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true;
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  // iPadOS 13 and later reports itself as a Mac; only the iPad has touch points.
+  const isIOS =
+    /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (/macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
 
   let deferred = $state<InstallEvent | null>(null);
   let showIOS = $state(isIOS && !alreadyInstalled);

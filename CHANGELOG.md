@@ -63,6 +63,8 @@ All notable changes to this project are documented in this file. The format is b
 - **Updates**: an update that arrived while a file was open was only offered, and choosing "Later"
   left the page on the old version until it was next loaded. It now applies itself as soon as the
   file is closed, the same way it does when nothing is open.
+- **Install**: iPads never saw the "Add to Home Screen" hint. Since iPadOS 13 Safari reports itself
+  as a Mac, so the iPad is now recognised by its touch screen as well.
 - Verify no longer reports a redacted name as leaked because it starts a longer accented word, such
   as "Ana" inside "Anaïs".
 - **Photos**: dropping a second picture while the first was still being read could leave the tool
