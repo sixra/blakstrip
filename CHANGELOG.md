@@ -60,6 +60,9 @@ All notable changes to this project are documented in this file. The format is b
   show the picture and identify nobody, so they are kept with the other colour chunks.
 - **Photos**: a thumbnail stored in a JPEG's JFIF header survived the strip. It holds raw pixels of
   the photo, possibly from before it was cropped. The header is kept and the thumbnail dropped.
+- **Updates**: an update that arrived while a file was open was only offered, and choosing "Later"
+  left the page on the old version until it was next loaded. It now applies itself as soon as the
+  file is closed, the same way it does when nothing is open.
 - Verify no longer reports a redacted name as leaked because it starts a longer accented word, such
   as "Ana" inside "Anaïs".
 - **Photos**: dropping a second picture while the first was still being read could leave the tool

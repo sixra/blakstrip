@@ -9,7 +9,8 @@
  * they have, and none of it survives a refresh.
  *
  * The service worker registration asks this before applying an update, so a
- * deploy landing mid-task offers a reload instead of performing one.
+ * deploy landing mid-task offers a reload instead of performing one, and waits
+ * for the work to clear to apply it unasked.
  *
  * Keyed by owner rather than a single boolean, so clearing is scoped: an island
  * can only retract its own mark. Exactly one island marks per page today, so the
@@ -17,6 +18,7 @@
  * declaring the first one's work safe to discard.
  */
 const owners = new Set<string>();
+const waiting: (() => void)[] = [];
 
 /** Declare that `owner` holds work a reload would lose. Idempotent. */
 export function markUnsaved(owner: string): void {
@@ -26,9 +28,17 @@ export function markUnsaved(owner: string): void {
 /** Declare that `owner` no longer holds anything. Idempotent. */
 export function clearUnsaved(owner: string): void {
   owners.delete(owner);
+  if (owners.size > 0) return;
+  for (const callback of waiting.splice(0)) callback();
 }
 
 /** True while any owner still holds work. */
 export function hasUnsavedWork(): boolean {
   return owners.size > 0;
+}
+
+/** Run `callback` once nothing is held: now if nothing is, else when the last owner clears. */
+export function whenWorkCleared(callback: () => void): void {
+  if (owners.size === 0) callback();
+  else waiting.push(callback);
 }
