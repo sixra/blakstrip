@@ -1,6 +1,6 @@
 <script lang="ts">
   import { downloadBytes } from '@lib/download';
-  import { verifyMedia, type MediaFormat } from '@lib/media';
+  import { isAnimated, verifyMedia, type MediaFormat } from '@lib/media';
   import {
     compressedFileName,
     formatBytes,
@@ -30,6 +30,8 @@
   const { bytes, format, fileName, sourceUrl }: Props = $props();
 
   const FORMATS: OutputFormat[] = ['jpeg', 'png', 'webp', 'avif'];
+
+  const animated = $derived(isAnimated(bytes, format));
 
   let preset = $state<CompressPreset>('balanced');
 
@@ -190,6 +192,12 @@
       </button>
     {/each}
   </div>
+
+  {#if animated}
+    <p class="text-warning mt-3 text-sm">
+      This picture is animated. Compressing keeps only its first frame.
+    </p>
+  {/if}
 
   <details class="mt-3">
     <summary class="text-muted cursor-pointer text-xs">Settings</summary>

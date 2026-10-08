@@ -9,9 +9,9 @@
  */
 import type { Finding } from '../types';
 import { inspectJpeg, isJpeg, stripJpeg } from './jpeg';
-import { inspectPng, isPng, stripPng } from './png';
+import { inspectPng, isPng, parsePngChunks, stripPng } from './png';
 import type { KeepOptions, StripResult } from './types';
-import { inspectWebp, isWebp, stripWebp } from './webp';
+import { inspectWebp, isWebp, parseWebpChunks, stripWebp } from './webp';
 
 export type MediaFormat = 'jpeg' | 'png' | 'webp';
 
@@ -74,6 +74,27 @@ export function requireFormat(bytes: Uint8Array): MediaFormat {
     );
   }
   return format;
+}
+
+/**
+ * Whether the picture moves: a PNG with an `acTL` chunk (an APNG), or a WebP with
+ * the `ANIM` chunk its format requires once the animation flag is set. A file too
+ * damaged to walk counts as still, because the compressor leaves that judgement
+ * to the browser's decoder and a warning must not be what refuses it.
+ */
+export function isAnimated(bytes: Uint8Array, format: MediaFormat): boolean {
+  try {
+    switch (format) {
+      case 'png':
+        return parsePngChunks(bytes).some((chunk) => chunk.type === 'acTL');
+      case 'webp':
+        return parseWebpChunks(bytes).some((chunk) => chunk.fourcc === 'ANIM');
+      case 'jpeg':
+        return false;
+    }
+  } catch {
+    return false;
+  }
 }
 
 export interface MediaAudit {

@@ -11,6 +11,7 @@ import { buildExifPayload, type ExifOptions } from './testjpeg';
 const FLAG_ICC = 0x20;
 const FLAG_EXIF = 0x08;
 const FLAG_XMP = 0x04;
+const FLAG_ANIMATION = 0x02;
 
 function fourcc(text: string): Uint8Array {
   const out = new Uint8Array(4);
@@ -104,6 +105,8 @@ export interface WebpFixtureOptions {
   unknownChunk?: boolean;
   /** Emit the VP8X extended header. Forced on when any optional chunk is added. */
   extended?: boolean;
+  /** The animation flag and its ANIM chunk; the image stays a single plain frame. */
+  animated?: boolean;
 }
 
 /**
@@ -136,6 +139,7 @@ export async function makeWebp(options: WebpFixtureOptions = {}): Promise<Uint8A
   if (options.unknownChunk) {
     optional.push(webpChunk('vNDr', latin1('device-fingerprint-42')));
   }
+  if (options.animated) flags |= FLAG_ANIMATION;
 
   const parts: Uint8Array[] = [];
   if (options.extended || flags !== 0 || options.unknownChunk) {
@@ -144,6 +148,8 @@ export async function makeWebp(options: WebpFixtureOptions = {}): Promise<Uint8A
   // ICCP must precede the image data; EXIF and XMP follow it.
   const icc = options.icc ? optional.shift() : undefined;
   if (icc) parts.push(icc);
+  // Background colour and loop count, all zero.
+  if (options.animated) parts.push(webpChunk('ANIM', new Uint8Array(6)));
   parts.push(image);
   parts.push(...optional);
 

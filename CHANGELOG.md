@@ -20,6 +20,8 @@ All notable changes to this project are documented in this file. The format is b
 - **CI**: a pull request whose version has no notes in `CHANGELOG.md` fails its checks. The release
   workflow only reads them after the merge, where a missing section can do nothing but fail the
   release.
+- **Compress**: an animated PNG or WebP is flagged as animated, because the compressed file keeps
+  only its first frame. It used to come out still with no word of warning.
 
 ### Changed
 

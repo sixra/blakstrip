@@ -81,6 +81,8 @@ export interface PngFixtureOptions {
   gamma?: boolean;
   /** A chunk type this tool has no name for, to prove the allowlist drops it. */
   unknownChunk?: boolean;
+  /** An acTL chunk, which makes the file an APNG; no frames follow, since detection reads none. */
+  animated?: boolean;
 }
 
 /**
@@ -108,6 +110,10 @@ export async function makePng(options: PngFixtureOptions = {}): Promise<Uint8Arr
   }
   if (options.unknownChunk) {
     inserts.push(pngChunk('vNDr', latin1('device-fingerprint-42')));
+  }
+  if (options.animated) {
+    // Two frames, looping forever.
+    inserts.push(pngChunk('acTL', new Uint8Array([0, 0, 0, 2, 0, 0, 0, 0])));
   }
 
   // IHDR is always the first chunk and is always 25 bytes (13 data + 12).

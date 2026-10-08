@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   detectFormat,
   inspectMedia,
+  isAnimated,
   mimeTypeFor,
   stripMedia,
   SUPPORTED_FORMATS,
@@ -113,5 +114,24 @@ describe('audit, strip, verify across every format', () => {
     const bytes = await makePng();
     const truncated = bytes.subarray(0, 40);
     expect(() => inspectMedia(truncated)).toThrow(MalformedFileError);
+  });
+});
+
+describe('animation detection', () => {
+  it('finds the animation in a PNG or a WebP', async () => {
+    expect(isAnimated(await makePng({ animated: true }), 'png')).toBe(true);
+    expect(isAnimated(await makeWebp({ animated: true }), 'webp')).toBe(true);
+  });
+
+  it('reports a still picture as still', async () => {
+    expect(isAnimated(await makePng(), 'png')).toBe(false);
+    expect(isAnimated(await makeWebp({ extended: true }), 'webp')).toBe(false);
+    expect(isAnimated(await makeJpeg(), 'jpeg')).toBe(false);
+  });
+
+  it('reports a file too damaged to read as still instead of throwing', async () => {
+    // Both cut inside the animation chunk's header or payload.
+    expect(isAnimated((await makePng({ animated: true })).subarray(0, 40), 'png')).toBe(false);
+    expect(isAnimated((await makeWebp({ animated: true })).subarray(0, 40), 'webp')).toBe(false);
   });
 });
