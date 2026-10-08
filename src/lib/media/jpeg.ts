@@ -301,6 +301,18 @@ export function stripJpeg(bytes: Uint8Array, options: KeepOptions = {}): StripRe
       continue;
     }
 
+    // A JFIF header may carry a thumbnail after its 14 fixed bytes: raw pixels of
+    // the photo, possibly from before it was cropped. Keep the header only.
+    if (kind === 'jfif' && segment.payloadAt !== undefined && segment.payloadLength > 14) {
+      const header = bytes.slice(segment.payloadAt - 4, segment.payloadAt + 14);
+      header[3] = 16; // segment length: 14 bytes of payload plus the length field
+      header[2] = 0;
+      header[16] = 0; // thumbnail width
+      header[17] = 0; // thumbnail height
+      chunks.push(header);
+      continue;
+    }
+
     if (isKept(kind, options)) chunks.push(bytes.subarray(segment.start, segment.end));
   }
 

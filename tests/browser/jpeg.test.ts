@@ -221,6 +221,26 @@ describe('jpeg strip', () => {
 
     expect(stripJpeg(bytes).notes.map((n) => n.id)).toContain('kept-orientation');
   });
+
+  it('drops a JFIF thumbnail and keeps the header', async () => {
+    const base = await makeJpeg();
+    // JFIF\0, version 1.2, no units, density 1x1, then a 2x2 RGB thumbnail.
+    const header = [0x4a, 0x46, 0x49, 0x46, 0, 1, 2, 0, 0, 1, 0, 1, 2, 2];
+    const jfif = appSegment(0xe0, new Uint8Array([...header, ...new Array<number>(12).fill(0x7f)]));
+    const bytes = new Uint8Array([...base.subarray(0, 2), ...jfif, ...base.subarray(2)]);
+
+    const { bytes: stripped } = stripJpeg(bytes);
+    const headers = parseJpegSegments(stripped).filter(
+      (s) => classifyJpegSegment(stripped, s) === 'jfif'
+    );
+    expect(headers).toHaveLength(kinds(bytes).filter((k) => k === 'jfif').length);
+    for (const { payloadAt, payloadLength } of headers) {
+      // Payload bytes 12 and 13 are the thumbnail's width and height.
+      const thumbnail = [stripped[payloadAt! + 12], stripped[payloadAt! + 13]];
+      expect({ payloadLength, thumbnail }).toEqual({ payloadLength: 14, thumbnail: [0, 0] });
+    }
+    expect(await decodeToPixels(stripped, 'image/jpeg')).toHaveLength(32 * 24 * 4);
+  });
 });
 
 describe('bounds-checked readers', () => {

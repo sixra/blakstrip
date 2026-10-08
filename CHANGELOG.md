@@ -49,6 +49,8 @@ All notable changes to this project are documented in this file. The format is b
 - **Photos**: one damaged field anywhere in a JPEG's EXIF block, such as a GPS coordinate of the
   wrong type, cost the photo its rotation, so it was saved sideways. The rotation is now read on its
   own.
+- **Photos**: a thumbnail stored in a JPEG's JFIF header survived the strip. It holds raw pixels of
+  the photo, possibly from before it was cropped. The header is kept and the thumbnail dropped.
 
 ## [2.1.0] - 2026-09-12
 
