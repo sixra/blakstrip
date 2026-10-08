@@ -184,6 +184,8 @@ function glyphBox(item: GlyphItem, vp: Viewport): Box {
 /** A text run's authoritative bounding box (from pdf.js metrics), plus its text. */
 export interface RunBox extends Box {
   str: string;
+  /** The baseline runs up or down the rendered page rather than across it. */
+  vertical: boolean;
 }
 
 /**
@@ -200,7 +202,10 @@ export async function pageRunBoxes(page: PDFPageProxy): Promise<RunBox[]> {
   for (const item of content.items) {
     /* v8 ignore next -- marked-content / empty-run items don't occur in our text PDFs */
     if (!isGlyph(item) || item.str.trim().length === 0) continue;
-    boxes.push({ ...glyphBox(item, vp), str: item.str });
+    const [a, b] = item.transform;
+    const t = vp.transform;
+    const vertical = Math.abs(a * t[1] + b * t[3]) > Math.abs(a * t[0] + b * t[2]);
+    boxes.push({ ...glyphBox(item, vp), str: item.str, vertical });
   }
   return boxes;
 }

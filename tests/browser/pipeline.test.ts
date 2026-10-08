@@ -274,6 +274,15 @@ describe('redact + export + verify', () => {
     expect(regionLeaks(await pixels(doc), await pixels(out), column)).toBe(false);
   });
 
+  it('does not report part of a rotated line as uncovered', async () => {
+    const pristine = await makeSidewaysTextPdf();
+    const doc = await loadPdf(pristine);
+    const rects = await searchDocumentRects(doc, 'SECRET');
+    const bytes = await exportRedactedPdf(pristine, doc, rects);
+    const report = await verifyExport(bytes, ['SECRET'], { doc, rects });
+    expect(report.uncoveredRegions).toEqual([]);
+  });
+
   it('finds a name that wraps onto the next line', async () => {
     const doc = await loadPdf(await makeWrappedNamePdf());
     const rects = await searchDocumentRects(doc, 'John Smith');

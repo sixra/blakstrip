@@ -38,7 +38,8 @@ All notable changes to this project are documented in this file. The format is b
 
 - **Rotated text is covered.** A term drawn on a rotated baseline, such as a sideways table or a
   vertical column header, got a horizontal box beside its glyphs, and verify still called the export
-  clean. Boxes now follow the run's own baseline.
+  clean. Boxes now follow the run's own baseline, and verify no longer flags a search for part of a
+  rotated line as uncovered.
 - **A name wrapped across two lines is found and checked.** Search missed "John" at the end of one
   line and "Smith" at the start of the next, and verify passed an export where the name survived
   that way. Both now read a line break as a space.

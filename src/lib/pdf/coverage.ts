@@ -96,10 +96,12 @@ export function regionLeaks(src: Rgba, out: Rgba, r: Region): boolean {
   return leaked > MAX_LEAK_PIXELS || leaked / ink > MAX_LEAK_FRACTION;
 }
 
-/** Does `rect` span the full horizontal extent of `run` (so the whole run should be gone)? */
-function spansHorizontally(rect: RedactionRect, run: RunBox): boolean {
+/** Does `rect` span `run` along its baseline (so the whole run should be gone)? */
+function spansRun(rect: RedactionRect, run: RunBox): boolean {
   const eps = 1e-4;
-  return rect.x <= run.x + eps && rect.x + rect.w >= run.x + run.w - eps;
+  return run.vertical
+    ? rect.y <= run.y + eps && rect.y + rect.h >= run.y + run.h - eps
+    : rect.x <= run.x + eps && rect.x + rect.w >= run.x + run.w - eps;
 }
 
 function readImage(canvas: HTMLCanvasElement): Rgba {
@@ -145,7 +147,7 @@ export async function checkCoverage(
       // their own coverage, so the rect region is the whole check.
       if (rect.term !== undefined) {
         for (const run of runs) {
-          if (overlaps(rect, run) && spansHorizontally(rect, run)) regions.push(run);
+          if (overlaps(rect, run) && spansRun(rect, run)) regions.push(run);
         }
       }
       if (regions.some((reg) => regionLeaks(srcImg, outImg, reg))) {
