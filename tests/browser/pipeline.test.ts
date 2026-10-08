@@ -16,6 +16,7 @@ import { verifyExport } from '../../src/lib/pdf/verify';
 import {
   makeAnnotatedPdf,
   makeEncryptedLikePdf,
+  makeLabelAboveNamePdf,
   makeLayeredPdf,
   makeMetacharPdf,
   makeRepeatedRunPdf,
@@ -282,5 +283,15 @@ describe('redact + export + verify', () => {
     const doc = await loadPdf(pristine);
     const bytes = await exportRedactedPdf(pristine, doc, [wholePage1]);
     expect((await verifyExport(bytes, ['John Smith'])).leakedTerms).toEqual(['John Smith']);
+  });
+
+  it('does not report the line above a searched term as boxed text', async () => {
+    const pristine = await makeLabelAboveNamePdf();
+    const doc = await loadPdf(pristine);
+    const rects = await searchDocumentRects(doc, 'John Smith');
+    const bytes = await exportRedactedPdf(pristine, doc, rects);
+    const boxText = await collectRedactedText(doc, rects);
+    const report = await verifyExport(bytes, ['John Smith'], { doc, rects }, boxText);
+    expect(report.survivingElsewhere).toEqual([]);
   });
 });

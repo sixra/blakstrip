@@ -40,6 +40,10 @@ All notable changes to this project are documented in this file. The format is b
 - **A box dragged past the page edge no longer fails verify.** The box ran off the page, and the
   pixel check read the columns beyond the edge from the next row of the page, ink the box was never
   over. The box now stops at the edge, and the check samples only the page.
+- **Neighbouring lines no longer count as boxed text.** A box over one line of single-spaced text
+  grazed the lines above and below it, so a label such as "Account holder:" repeated elsewhere was
+  reported as redacted text that survived. A line now counts only when a box covers at least half
+  its height.
 
 ## [2.1.0] - 2026-09-12
 

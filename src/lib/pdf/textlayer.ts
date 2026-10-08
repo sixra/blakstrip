@@ -308,9 +308,19 @@ export async function searchPageRects(page: PDFPageProxy, term: string): Promise
 }
 
 /**
+ * Does `rect` sit over `run`, rather than graze it? Run boxes are padded past the
+ * glyphs, so on single-spaced text a box over one line clips the padding of the
+ * lines above and below it; requiring half the run's height keeps those out.
+ */
+function coversRun(run: Box, rect: Box): boolean {
+  const shared = Math.min(run.y + run.h, rect.y + rect.h) - Math.max(run.y, rect.y);
+  return overlaps(run, rect) && shared >= run.h / 2;
+}
+
+/**
  * The text sitting under a set of redaction rects: the terms an export must no
- * longer expose. A run counts as covered when its box overlaps any rect on the
- * same page. Fed to verify so a redacted string that survives anywhere in the
+ * longer expose. A run counts when a rect on the same page covers it (see
+ * `coversRun`). Fed to verify so a redacted string that survives anywhere in the
  * output is flagged (the same paranoid check an attacker's extraction would do).
  */
 export async function collectRedactedText(
@@ -328,7 +338,7 @@ export async function collectRedactedText(
       /* v8 ignore next -- marked-content / empty-run items don't occur in our text PDFs */
       if (!isGlyph(item) || item.str.trim().length === 0) continue;
       const box = glyphBox(item, vp);
-      if (pageRects.some((r) => overlaps(box, r))) terms.add(item.str.trim());
+      if (pageRects.some((r) => coversRun(box, r))) terms.add(item.str.trim());
     }
   }
   return [...terms];

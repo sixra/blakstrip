@@ -241,6 +241,18 @@ export async function makeWrappedBoldNamePdf(): Promise<ArrayBuffer> {
   return toArrayBuffer(await doc.save());
 }
 
+/** "Account holder:" 17pt above "John Smith" on page 1, and above "Someone Else" on page 2. */
+export async function makeLabelAboveNamePdf(): Promise<ArrayBuffer> {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  for (const name of ['John Smith', 'Someone Else']) {
+    const page = doc.addPage([612, 792]);
+    page.drawText('Account holder:', { x: 64, y: 700, size: 14, font });
+    page.drawText(name, { x: 64, y: 683, size: 14, font });
+  }
+  return toArrayBuffer(await doc.save());
+}
+
 /** Single-page PDF with graphics but no text, so it looks like a scan. */
 export async function makeScanLikePdf(): Promise<ArrayBuffer> {
   const doc = await PDFDocument.create();
