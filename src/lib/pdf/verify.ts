@@ -29,8 +29,7 @@ function survivesAsWord(haystack: string, term: string): boolean {
 }
 
 /** Text still extractable from the output, de-duplicated and trimmed. */
-async function recoverableStrings(doc: PDFDocumentProxy): Promise<string[]> {
-  const text = await extractAllText(doc);
+function recoverableStrings(text: string): string[] {
   const lines = text
     .split('\n')
     .map((s) => s.trim())
@@ -79,12 +78,14 @@ export async function verifyExport(
   // export is another full document parsed for nothing.
   const outDoc = await loadPdf(bytes);
   try {
-    const strings = await recoverableStrings(outDoc);
+    const text = await extractAllText(outDoc);
+    const strings = recoverableStrings(text);
     const remaining = await inspectStructure(bytes);
 
-    const haystack = strings.join('\n').toLowerCase();
+    // The full text, not the de-duplicated lines: dropping a repeated line can
+    // split a name that wraps onto it.
     const leakedTerms = redactedTerms.filter(
-      (t) => t.trim().length > 0 && survivesAsWord(haystack, t.trim())
+      (t) => t.trim().length > 0 && survivesAsWord(text, t.trim())
     );
 
     const uncoveredRegions = coverage

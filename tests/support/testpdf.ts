@@ -261,6 +261,17 @@ export async function makeAccentedNamePdf(): Promise<ArrayBuffer> {
   return toArrayBuffer(await doc.save());
 }
 
+/** "Smith" alone, then "John" ending a line and "Smith" alone again below it. */
+export async function makeWrappedOntoRepeatedLinePdf(): Promise<ArrayBuffer> {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const page = doc.addPage([612, 792]);
+  page.drawText('Smith', { x: 64, y: 740, size: 14, font });
+  page.drawText('Payment approved for John', { x: 64, y: 700, size: 14, font });
+  page.drawText('Smith', { x: 64, y: 683, size: 14, font });
+  return toArrayBuffer(await doc.save());
+}
+
 /** Single-page PDF with graphics but no text, so it looks like a scan. */
 export async function makeScanLikePdf(): Promise<ArrayBuffer> {
   const doc = await PDFDocument.create();

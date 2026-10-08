@@ -26,6 +26,7 @@ import {
   makeTwoLinePdf,
   makeWrappedBoldNamePdf,
   makeWrappedNamePdf,
+  makeWrappedOntoRepeatedLinePdf,
 } from '../support/testpdf';
 
 const wholePage1: RedactionRect = { page: 1, x: 0, y: 0, w: 1, h: 1 };
@@ -301,6 +302,13 @@ describe('redact + export + verify', () => {
     const pristine = await makeWrappedNamePdf();
     const doc = await loadPdf(pristine);
     const bytes = await exportRedactedPdf(pristine, doc, [wholePage1]);
+    expect((await verifyExport(bytes, ['John Smith'])).leakedTerms).toEqual(['John Smith']);
+  });
+
+  it('reports a wrapped name whose second line repeats an earlier one', async () => {
+    const pristine = await makeWrappedOntoRepeatedLinePdf();
+    const doc = await loadPdf(pristine);
+    const bytes = await exportRedactedPdf(pristine, doc, []);
     expect((await verifyExport(bytes, ['John Smith'])).leakedTerms).toEqual(['John Smith']);
   });
 
