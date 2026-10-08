@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { clearUnsaved, hasUnsavedWork, markUnsaved, whenWorkCleared } from './unsaved';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { clearUnsaved, hasUnsavedWork, markUnsaved } from './unsaved';
 
 // Module state, so each test starts from nothing.
 beforeEach(() => {
@@ -44,29 +44,5 @@ describe('unsaved work', () => {
     // counter-based version would.
     clearUnsaved('never-marked');
     expect(hasUnsavedWork()).toBe(false);
-  });
-});
-
-describe('waiting for work to clear', () => {
-  it('runs right away when nothing is held', () => {
-    const callback = vi.fn();
-    whenWorkCleared(callback);
-    expect(callback).toHaveBeenCalledTimes(1);
-  });
-
-  it('runs once, when the last owner clears', () => {
-    const callback = vi.fn();
-    markUnsaved('pdf');
-    markUnsaved('photo');
-    whenWorkCleared(callback);
-
-    clearUnsaved('photo');
-    expect(callback).not.toHaveBeenCalled();
-    clearUnsaved('pdf');
-    expect(callback).toHaveBeenCalledTimes(1);
-
-    markUnsaved('pdf');
-    clearUnsaved('pdf');
-    expect(callback).toHaveBeenCalledTimes(1);
   });
 });

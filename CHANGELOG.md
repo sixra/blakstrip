@@ -66,9 +66,6 @@ All notable changes to this project are documented in this file. The format is b
   show the picture and identify nobody, so they are kept with the other colour chunks.
 - **Photos**: a thumbnail stored in a JPEG's JFIF header survived the strip. It holds raw pixels of
   the photo, possibly from before it was cropped. The header is kept and the thumbnail dropped.
-- **Updates**: an update that arrived while a file was open was only offered, and choosing "Later"
-  left the page on the old version until it was next loaded. It now applies itself as soon as the
-  file is closed, the same way it does when nothing is open.
 - **Install**: iPads never saw the "Add to Home Screen" hint. Since iPadOS 13 Safari reports itself
   as a Mac, so the iPad is now recognised by its touch screen as well.
 - **Verify**: a redacted name no longer counts as leaked because it starts a longer accented word,
