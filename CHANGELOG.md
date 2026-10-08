@@ -47,6 +47,9 @@ All notable changes to this project are documented in this file. The format is b
   grazed the lines above and below it, so a label such as "Account holder:" repeated elsewhere was
   reported as redacted text that survived. A line now counts only when a box covers at least half
   its height.
+- **Compress**: choosing AVIF without a connection showed the browser's raw "Failed to fetch
+  dynamically imported module" with a script address. It now says the encoder downloads on first
+  use and needs a connection, and to reload the page if you are online.
 - **Compress**: a transparent PNG or WebP saved as JPEG came out black wherever it was clear. JPEG
   has no transparency, so the picture is now put on white first.
 - **Photos**: one damaged field anywhere in a JPEG's EXIF block, such as a GPS coordinate of the

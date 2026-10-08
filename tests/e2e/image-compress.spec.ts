@@ -131,5 +131,5 @@ test('a failed re-encode keeps the previous result named for its own format', as
   expect(saved.suggestedFilename()).toBe('sample-photo-small.jpg');
   const bytes = await readFile(await saved.path());
   expect([bytes[0], bytes[1]]).toEqual([0xff, 0xd8]);
-  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.getByRole('alert')).toContainText('The AVIF encoder could not be loaded');
 });

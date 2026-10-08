@@ -129,8 +129,15 @@ async function encode(pixels: ImageData, request: CompressRequest): Promise<Arra
     case 'avif':
       // Dynamic import on purpose: this is the one codec not inlined into the
       // worker bundle, because it is larger than the other three together. The
-      // chunk is fetched the first time someone chooses AVIF and never otherwise.
-      return (await import('./avif')).encodeAvif(pixels, quality);
+      // chunk is fetched the first time someone chooses AVIF and never otherwise,
+      // which makes it the one encoder that can fail to load, offline for one.
+      return (
+        await import('./avif').catch(() => {
+          throw new Error(
+            'The AVIF encoder could not be loaded. It downloads the first time you use AVIF, so it needs a connection; if you are online, reload the page.'
+          );
+        })
+      ).encodeAvif(pixels, quality);
     case 'png':
       // No quality: PNG is lossless, so `effort` buys the only reduction there
       // is. OxiPNG takes the raw pixels directly, which skips encoding a PNG
