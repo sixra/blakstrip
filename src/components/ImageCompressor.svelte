@@ -70,6 +70,7 @@
       // A reload from here loses the picture and whatever was encoded from it.
       markUnsaved('image-compress');
     } catch (error) {
+      if (mine !== generation) return;
       status = 'error';
       errorMsg = describe(error);
     }

@@ -80,6 +80,7 @@
       // See Redactor: a reload from here loses the photo and anything done to it.
       markUnsaved('media-strip');
     } catch (error) {
+      if (mine !== generation) return;
       status = 'error';
       errorMsg = describe(error);
     }

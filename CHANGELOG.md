@@ -74,7 +74,8 @@ All notable changes to this project are documented in this file. The format is b
 - Verify no longer reports a redacted name as leaked because it starts a longer accented word, such
   as "Ana" inside "Anaïs".
 - **Photos**: dropping a second picture while the first was still being read could leave the tool
-  showing whichever finished reading last rather than the one dropped last.
+  showing whichever finished reading last rather than the one dropped last. In the compressor too,
+  a first picture that failed to read could replace the second one with its error.
 
 ## [2.1.0] - 2026-09-12
 
