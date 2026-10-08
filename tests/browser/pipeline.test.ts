@@ -14,6 +14,7 @@ import {
 import type { RedactionRect } from '../../src/lib/pdf/types';
 import { verifyExport } from '../../src/lib/pdf/verify';
 import {
+  makeAccentedNamePdf,
   makeAnnotatedPdf,
   makeEncryptedLikePdf,
   makeLabelAboveNamePdf,
@@ -162,6 +163,15 @@ describe('redact + export + verify', () => {
     // "(555)". Reporting it would be a false alarm; missing the case above would
     // be a false "clean". Both come from the same escaping.
     expect((await verifyExport(bytes, ['5.5'])).leakedTerms).toEqual([]);
+  });
+
+  it('does not count a redacted name inside a longer accented word', async () => {
+    const pristine = await makeAccentedNamePdf();
+    const doc = await loadPdf(pristine);
+    const bytes = await exportRedactedPdf(pristine, doc, []);
+
+    expect((await verifyExport(bytes, ['Anaïs'])).leakedTerms).toEqual(['Anaïs']);
+    expect((await verifyExport(bytes, ['Ana'])).leakedTerms).toEqual([]);
   });
 
   it('separates lines so the next one cannot mask a leaked term', async () => {

@@ -253,6 +253,14 @@ export async function makeLabelAboveNamePdf(): Promise<ArrayBuffer> {
   return toArrayBuffer(await doc.save());
 }
 
+/** One page reading "Signed by Anaïs Moreau", a name that starts with a shorter one. */
+export async function makeAccentedNamePdf(): Promise<ArrayBuffer> {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  doc.addPage([612, 792]).drawText('Signed by Anaïs Moreau', { x: 64, y: 700, size: 14, font });
+  return toArrayBuffer(await doc.save());
+}
+
 /** Single-page PDF with graphics but no text, so it looks like a scan. */
 export async function makeScanLikePdf(): Promise<ArrayBuffer> {
   const doc = await PDFDocument.create();

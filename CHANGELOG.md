@@ -51,6 +51,8 @@ All notable changes to this project are documented in this file. The format is b
   own.
 - **Photos**: a thumbnail stored in a JPEG's JFIF header survived the strip. It holds raw pixels of
   the photo, possibly from before it was cropped. The header is kept and the thumbnail dropped.
+- Verify no longer reports a redacted name as leaked because it starts a longer accented word, such
+  as "Ana" inside "Anaïs".
 
 ## [2.1.0] - 2026-09-12
 
