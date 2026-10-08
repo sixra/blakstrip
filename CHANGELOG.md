@@ -55,6 +55,9 @@ All notable changes to this project are documented in this file. The format is b
 - **Photos**: one damaged field anywhere in a JPEG's EXIF block, such as a GPS coordinate of the
   wrong type, cost the photo its rotation, so it was saved sideways. The rotation is now read on its
   own.
+- **Photos**: an HDR PNG lost its colour space and brightness information (`cICP`, `mDCV` and
+  `cLLI`), so it displayed with the wrong colours and contrast after the strip. They describe how to
+  show the picture and identify nobody, so they are kept with the other colour chunks.
 - **Photos**: a thumbnail stored in a JPEG's JFIF header survived the strip. It holds raw pixels of
   the photo, possibly from before it was cropped. The header is kept and the thumbnail dropped.
 - Verify no longer reports a redacted name as leaked because it starts a longer accented word, such

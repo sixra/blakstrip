@@ -130,6 +130,20 @@ describe('png strip', () => {
     expect(types(stripPng(bytes, { keepColorProfile: false }).bytes)).not.toContain('gAMA');
   });
 
+  it('keeps an HDR colour chunk by default and drops it only when asked', async () => {
+    const base = await makePng();
+    // BT.2020 primaries, PQ transfer, RGB, full range: an HDR picture's colour space.
+    const cicp = pngChunk('cICP', new Uint8Array([9, 16, 0, 1]));
+    const afterIhdr = 8 + 25;
+    const bytes = new Uint8Array([
+      ...base.subarray(0, afterIhdr),
+      ...cicp,
+      ...base.subarray(afterIhdr),
+    ]);
+    expect(types(stripPng(bytes).bytes)).toContain('cICP');
+    expect(types(stripPng(bytes, { keepColorProfile: false }).bytes)).not.toContain('cICP');
+  });
+
   it('reports no notes: this format keeps nothing the user would not expect', async () => {
     // JPEG keeps an orientation tag and says so. Nothing here has an
     // equivalent, so an empty notes list is the contract, not an oversight.
@@ -184,7 +198,7 @@ describe('png parser hostility', () => {
 
 describe('png chunk classification', () => {
   it('treats colour chunks as rendering, not identity', () => {
-    for (const type of ['gAMA', 'cHRM', 'sRGB', 'iCCP', 'pHYs']) {
+    for (const type of ['gAMA', 'cHRM', 'sRGB', 'iCCP', 'pHYs', 'cICP', 'mDCV', 'cLLI']) {
       expect(classifyPngChunk(type)).toBe('color');
     }
   });

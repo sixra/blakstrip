@@ -21,9 +21,11 @@ const SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
  * Chunks that decide how the image decodes or renders.
  *
  * The colour chunks are the PNG equivalent of JPEG's ICC and Adobe segments:
- * `gAMA`, `cHRM`, `sRGB` and `iCCP` govern how the stored values map to colour,
- * and dropping them shifts the image. `pHYs` carries intended physical size, so
- * removing it changes how large the image prints. None of them identify anyone.
+ * `gAMA`, `cHRM`, `sRGB`, `iCCP` and, for HDR, `cICP` govern how the stored
+ * values map to colour, and dropping them shifts the image. `mDCV` and `cLLI`
+ * give an HDR picture's mastering display and brightness, which a screen uses to
+ * fit it to its own range. `pHYs` carries intended physical size, so removing it
+ * changes how large the image prints. None of them identify anyone.
  */
 const STRUCTURAL = new Set([
   'IHDR',
@@ -42,7 +44,7 @@ const STRUCTURAL = new Set([
   'fcTL',
   'fdAT',
 ]);
-const COLOR = new Set(['gAMA', 'cHRM', 'sRGB', 'iCCP', 'pHYs']);
+const COLOR = new Set(['gAMA', 'cHRM', 'sRGB', 'iCCP', 'cICP', 'mDCV', 'cLLI', 'pHYs']);
 
 /** Text chunks, all of which carry free-form author-supplied content. */
 const TEXT = new Set(['tEXt', 'zTXt', 'iTXt']);
