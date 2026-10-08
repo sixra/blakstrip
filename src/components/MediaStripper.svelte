@@ -38,7 +38,12 @@
     cleanedUrl = undefined;
   }
 
+  // See ImageCompressor: the drop zone stays mounted while a file is read, so
+  // only the newest of two quick drops may write state.
+  let generation = 0;
+
   function reset(): void {
+    generation += 1;
     releaseUrls();
     original = undefined;
     cleaned = undefined;
@@ -60,8 +65,10 @@
 
   async function openFile(file: File): Promise<void> {
     reset();
+    const mine = generation;
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
+      if (mine !== generation) return;
       const audit = inspectMedia(bytes);
 
       original = bytes;

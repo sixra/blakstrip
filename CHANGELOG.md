@@ -53,6 +53,8 @@ All notable changes to this project are documented in this file. The format is b
   the photo, possibly from before it was cropped. The header is kept and the thumbnail dropped.
 - Verify no longer reports a redacted name as leaked because it starts a longer accented word, such
   as "Ana" inside "Anaïs".
+- **Photos**: dropping a second picture while the first was still being read could leave the tool
+  showing whichever finished reading last rather than the one dropped last.
 
 ## [2.1.0] - 2026-09-12
 
