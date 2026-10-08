@@ -73,10 +73,12 @@ export function regionLeaks(src: Rgba, out: Rgba, r: Region): boolean {
   // a safety check that reports "clean" precisely when it cannot see.
   if (src.width !== out.width || src.height !== out.height) return true;
 
-  const x0 = Math.floor(r.x * src.width) + 1;
-  const y0 = Math.floor(r.y * src.height) + 1;
-  const x1 = Math.ceil((r.x + r.w) * src.width) - 1;
-  const y1 = Math.ceil((r.y + r.h) * src.height) - 1;
+  // Clamped to the page: one flat index per pixel means a column past the right
+  // edge reads the start of the next row, ink the box was never over.
+  const x0 = Math.floor(Math.max(0, r.x) * src.width) + 1;
+  const y0 = Math.floor(Math.max(0, r.y) * src.height) + 1;
+  const x1 = Math.ceil(Math.min(1, r.x + r.w) * src.width) - 1;
+  const y1 = Math.ceil(Math.min(1, r.y + r.h) * src.height) - 1;
   if (x1 <= x0 || y1 <= y0) return false;
 
   let ink = 0;

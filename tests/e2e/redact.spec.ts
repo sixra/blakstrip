@@ -76,3 +76,27 @@ test('authors a redaction box with the keyboard', async ({ page }) => {
   await redactor.drawBoxByKeyboard();
   await expect(page.getByText('1 redaction')).toBeVisible();
 });
+
+test('a box dragged past the page edge stays on the page and verifies clean', async ({ page }) => {
+  // Wide enough to leave room beside the page to release the pointer over.
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  const redactor = new RedactorPage(page);
+  await redactor.goto();
+  await redactor.uploadTextFixture();
+
+  // From the blank right of the first text line to well past the page's right edge.
+  await redactor.dragAcross({ x: 0.6, y: 0.07 }, { x: 1.3, y: 0.13 });
+  await expect(page.getByText('1 redaction')).toBeVisible();
+  // The remove button sits on the box's corner, so its parent is the box itself.
+  const box = await page
+    .getByRole('button', { name: 'Remove redaction' })
+    .locator('..')
+    .boundingBox();
+  const overlay = await redactor.overlay.boundingBox();
+  expect(box!.x + box!.width).toBeLessThanOrEqual(overlay!.x + overlay!.width + 1);
+
+  await redactor.export();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).not.toContainText("didn't fully cover");
+});

@@ -259,11 +259,14 @@
   });
 
   // --- drawing rectangles on the overlay ---
+  // Clamped because the pointer is captured, so a drag keeps reporting once it
+  // leaves the page, and a box past the edge would cover nothing there.
   function fractionsFromEvent(e: PointerEvent) {
     const r = overlayEl!.getBoundingClientRect();
+    const clamp = (v: number) => Math.min(1, Math.max(0, v));
     return {
-      x: (e.clientX - r.left) / r.width,
-      y: (e.clientY - r.top) / r.height,
+      x: clamp((e.clientX - r.left) / r.width),
+      y: clamp((e.clientY - r.top) / r.height),
     };
   }
   function onPointerDown(e: PointerEvent) {

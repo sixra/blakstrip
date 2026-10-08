@@ -184,4 +184,12 @@ describe('checkCoverage: pixel backstop', () => {
     const sliver: RedactionRect = { page: 1, x: 0.1, y: 0.5, w: 0.3, h: 0.0005 };
     expect(await coverageOf(doc, [sliver], bytes)).toEqual([]);
   });
+
+  it('samples only the page when a box runs past its edge', async () => {
+    const pristine = await makeTextPdf();
+    const doc = await loadPdf(pristine);
+    const overshoot: RedactionRect = { page: 1, x: 0.6, y: 0.07, w: 0.7, h: 0.06 };
+    const bytes = await exportRedactedPdf(pristine, doc, [overshoot]);
+    expect(await coverageOf(doc, [overshoot], bytes)).toEqual([]);
+  });
 });

@@ -42,6 +42,16 @@ export class RedactorPage {
     await this.page.mouse.up();
   }
 
+  /** Drag between two points given as fractions of the page; either may lie beyond it. */
+  async dragAcross(from: { x: number; y: number }, to: { x: number; y: number }): Promise<void> {
+    await this.overlay.evaluate((el) => el.scrollIntoView({ block: 'start' }));
+    const box = await this.stableOverlayBox();
+    await this.page.mouse.move(box.x + box.width * from.x, box.y + box.height * from.y);
+    await this.page.mouse.down();
+    await this.page.mouse.move(box.x + box.width * to.x, box.y + box.height * to.y, { steps: 8 });
+    await this.page.mouse.up();
+  }
+
   /** The overlay's box, re-read until two consecutive reads agree. */
   private async stableOverlayBox(): Promise<{
     x: number;

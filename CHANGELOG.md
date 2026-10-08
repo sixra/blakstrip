@@ -37,6 +37,9 @@ All notable changes to this project are documented in this file. The format is b
 - **Compress**: a re-encode that failed left the previous result downloadable under the new
   format's name and type, so a JPEG could be saved as `.avif`. The download now takes its name from
   the file it actually holds, and the error is announced to screen readers.
+- **A box dragged past the page edge no longer fails verify.** The box ran off the page, and the
+  pixel check read the columns beyond the edge from the next row of the page, ink the box was never
+  over. The box now stops at the edge, and the check samples only the page.
 
 ## [2.1.0] - 2026-09-12
 
