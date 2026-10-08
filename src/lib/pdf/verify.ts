@@ -19,10 +19,12 @@ function escapeRegExp(s: string): string {
  * A term counts as leaked only when it survives as a whole token (bounded by a
  * non-word character or a string edge), not as an incidental substring. Without
  * this, redacting "Lee" would flag every "flee" in the output and train users to
- * dismiss the warning that matters.
+ * dismiss the warning that matters. Whitespace is compared flattened, so a name
+ * the output wraps across two lines still counts.
  */
 function survivesAsWord(haystack: string, term: string): boolean {
-  return new RegExp(`(^|\\W)${escapeRegExp(term.toLowerCase())}(\\W|$)`).test(haystack);
+  const flat = (s: string): string => s.toLowerCase().replace(/\s+/g, ' ');
+  return new RegExp(`(^|\\W)${escapeRegExp(flat(term))}(\\W|$)`).test(flat(haystack));
 }
 
 /** Text still extractable from the output, de-duplicated and trimmed. */

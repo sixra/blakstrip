@@ -217,6 +217,30 @@ export async function makeTwoLinePdf(): Promise<ArrayBuffer> {
   return toArrayBuffer(await doc.save());
 }
 
+/** Page 1 reads "Account of John Smith"; page 2 wraps "John" and "Smith" across two lines. */
+export async function makeWrappedNamePdf(): Promise<ArrayBuffer> {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  doc.addPage([612, 792]).drawText('Account of John Smith', { x: 64, y: 700, size: 14, font });
+  const p2 = doc.addPage([612, 792]);
+  p2.drawText('Payment approved for John', { x: 64, y: 700, size: 14, font });
+  p2.drawText('Smith on 3 March.', { x: 64, y: 683, size: 14, font });
+  return toArrayBuffer(await doc.save());
+}
+
+/** One page wrapping "John" onto a line that starts with "Smith" in bold, then regular text. */
+export async function makeWrappedBoldNamePdf(): Promise<ArrayBuffer> {
+  const doc = await PDFDocument.create();
+  const helv = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const page = doc.addPage([612, 792]);
+  page.drawText('Payment approved for John', { x: 64, y: 700, size: 14, font: helv });
+  page.drawText('Smith', { x: 64, y: 683, size: 14, font: bold });
+  const after = 64 + bold.widthOfTextAtSize('Smith', 14);
+  page.drawText(' on 3 March.', { x: after, y: 683, size: 14, font: helv });
+  return toArrayBuffer(await doc.save());
+}
+
 /** Single-page PDF with graphics but no text, so it looks like a scan. */
 export async function makeScanLikePdf(): Promise<ArrayBuffer> {
   const doc = await PDFDocument.create();

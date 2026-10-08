@@ -22,6 +22,8 @@ import {
   makeSidewaysTextPdf,
   makeTextPdf,
   makeTwoLinePdf,
+  makeWrappedBoldNamePdf,
+  makeWrappedNamePdf,
 } from '../support/testpdf';
 
 const wholePage1: RedactionRect = { page: 1, x: 0, y: 0, w: 1, h: 1 };
@@ -259,5 +261,26 @@ describe('redact + export + verify', () => {
     // its left, so their column is x 276..307 from the baseline to the page top.
     const column = { x: 276 / 612, y: 0, w: 31 / 612, h: (792 - 200) / 792 };
     expect(regionLeaks(await pixels(doc), await pixels(out), column)).toBe(false);
+  });
+
+  it('finds a name that wraps onto the next line', async () => {
+    const doc = await loadPdf(await makeWrappedNamePdf());
+    const rects = await searchDocumentRects(doc, 'John Smith');
+    expect(rects.filter((r) => r.page === 1)).toHaveLength(1);
+    // One box per line the wrapped name sits on.
+    expect(rects.filter((r) => r.page === 2)).toHaveLength(2);
+  });
+
+  it('finds a wrapped name when the next line starts in another font', async () => {
+    // pdf.js ends the first line with an empty run here instead of marking its last one.
+    const doc = await loadPdf(await makeWrappedBoldNamePdf());
+    expect(await searchDocumentRects(doc, 'John Smith')).toHaveLength(2);
+  });
+
+  it('reports a redacted name that survives wrapped across two lines', async () => {
+    const pristine = await makeWrappedNamePdf();
+    const doc = await loadPdf(pristine);
+    const bytes = await exportRedactedPdf(pristine, doc, [wholePage1]);
+    expect((await verifyExport(bytes, ['John Smith'])).leakedTerms).toEqual(['John Smith']);
   });
 });

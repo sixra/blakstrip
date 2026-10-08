@@ -226,7 +226,7 @@ export async function searchPageRects(page: PDFPageProxy, term: string): Promise
   // Page width in user space (pre-rotation), for the page-fraction floor on the
   // horizontal safety margin (the font-relative part is computed per run below).
   const uw = vp.viewBox[2] - vp.viewBox[0];
-  const needle = term.toLowerCase();
+  const needle = term.toLowerCase().replace(/\s+/g, ' ');
   const content = await page.getTextContent();
   const styles = content.styles as Record<string, TextStyleMetrics>;
   const ctx = textMeasurer();
@@ -235,11 +235,19 @@ export async function searchPageRects(page: PDFPageProxy, term: string): Promise
   // match's character span can be attributed back to the runs it crosses.
   let hay = '';
   const runs: { item: GlyphItem; start: number }[] = [];
+  // A line break reads as a space, so a name that wraps onto the next line still
+  // matches. pdf.js marks the break on the line's last run or on an empty run.
+  let lineEnded = false;
   for (const item of content.items) {
-    /* v8 ignore next -- marked-content / empty-run items don't occur in our text PDFs */
-    if (!isGlyph(item) || item.str.length === 0) continue;
-    runs.push({ item, start: hay.length });
-    hay += item.str.toLowerCase();
+    /* v8 ignore next -- marked-content items (no str) only appear in tagged PDFs */
+    if (!isGlyph(item)) continue;
+    if (item.str.length > 0) {
+      if (lineEnded) hay += ' ';
+      runs.push({ item, start: hay.length });
+      hay += item.str.toLowerCase();
+      lineEnded = false;
+    }
+    if (item.hasEOL) lineEnded = true;
   }
 
   const rects: RedactionRect[] = [];
