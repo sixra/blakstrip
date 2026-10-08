@@ -136,17 +136,21 @@ function readNumber(entry: Entry, r: Reader): number | undefined {
   return undefined;
 }
 
+/** Check the TIFF header at `tiffAt` and find IFD0, where every walk starts. */
+function openTiff(bytes: Uint8Array, tiffAt: number): { r: Reader; ifd0At: number } {
+  const r = readerFor(bytes, tiffAt);
+  const magic = r.u16(tiffAt + 2);
+  if (magic !== 0x2a) throw new MalformedFileError(`EXIF: bad TIFF magic ${magic}`);
+  return { r, ifd0At: tiffAt + r.u32(tiffAt + 4) };
+}
+
 /**
  * Summarize an EXIF block. `bytes` is the whole file; `tiffAt` points at the
  * TIFF header (the `II`/`MM`), which is where all internal offsets are relative
  * to.
  */
 export function summarizeExif(bytes: Uint8Array, tiffAt: number): ExifSummary {
-  const r = readerFor(bytes, tiffAt);
-  const magic = r.u16(tiffAt + 2);
-  if (magic !== 0x2a) throw new MalformedFileError(`EXIF: bad TIFF magic ${magic}`);
-
-  const ifd0At = tiffAt + r.u32(tiffAt + 4);
+  const { r, ifd0At } = openTiff(bytes, tiffAt);
   const ifd0 = readEntries(ifd0At, r);
 
   const summary: ExifSummary = {
@@ -216,6 +220,16 @@ export function summarizeExif(bytes: Uint8Array, tiffAt: number): ExifSummary {
   }
 
   return summary;
+}
+
+/**
+ * The Orientation tag alone, read without the rest of the block, so a damaged
+ * GPS or thumbnail directory cannot cost a photo its rotation.
+ */
+export function readOrientation(bytes: Uint8Array, tiffAt: number): number | undefined {
+  const { r, ifd0At } = openTiff(bytes, tiffAt);
+  const entry = findEntry(readEntries(ifd0At, r), TAG_ORIENTATION);
+  return entry ? readNumber(entry, r) : undefined;
 }
 
 /** Round to 5 decimal places: ~1 m, enough to show the leak without false precision. */

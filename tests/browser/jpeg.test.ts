@@ -209,6 +209,18 @@ describe('jpeg strip', () => {
     const { bytes: stripped } = stripJpeg(bytes);
     expect(kinds(stripped)).toEqual(kinds(bytes));
   });
+
+  it('keeps the rotation when another part of the EXIF block is damaged', async () => {
+    const bytes = await makeJpeg({ exif: { orientation: 6, gps: { lat: 52.5, lon: 13.4 } } });
+    // GPSLatitude is tag 2, RATIONAL (5), count 3. Retyped as SRATIONAL (10), which
+    // the GPS reader refuses.
+    const entry = [0x00, 0x02, 0x00, 0x05, 0x00, 0x00, 0x00, 0x03];
+    const at = bytes.findIndex((_, i) => entry.every((b, j) => bytes[i + j] === b));
+    expect(at).toBeGreaterThan(0);
+    bytes[at + 3] = 0x0a;
+
+    expect(stripJpeg(bytes).notes.map((n) => n.id)).toContain('kept-orientation');
+  });
 });
 
 describe('bounds-checked readers', () => {

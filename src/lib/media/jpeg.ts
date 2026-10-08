@@ -12,7 +12,13 @@
  */
 import type { Finding } from '../types';
 import { concat, MalformedFileError, matches, u8, u16be } from './bytes';
-import { buildOrientationExif, EXIF_PREFIX, exifFindings, summarizeExif } from './exif';
+import {
+  buildOrientationExif,
+  EXIF_PREFIX,
+  exifFindings,
+  readOrientation,
+  summarizeExif,
+} from './exif';
 import { KEPT_ORIENTATION, type KeepOptions, type StripNote, type StripResult } from './types';
 
 const SOI = 0xd8;
@@ -275,7 +281,7 @@ export function stripJpeg(bytes: Uint8Array, options: KeepOptions = {}): StripRe
     if (kind === 'exif' && segment.payloadAt !== undefined) {
       let orientation: number | undefined;
       try {
-        orientation = summarizeExif(bytes, segment.payloadAt + EXIF_PREFIX.length).orientation;
+        orientation = readOrientation(bytes, segment.payloadAt + EXIF_PREFIX.length);
       } catch {
         // An EXIF block we cannot parse is one we certainly cannot preserve a
         // tag from. Dropping it whole is the safe direction.
