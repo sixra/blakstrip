@@ -14,6 +14,9 @@ All notable changes to this project are documented in this file. The format is b
   tag forgotten, then tagged by hand three minutes later at a commit carrying a change its entry did
   not describe. The tag is no longer a step anyone can skip: it follows from the version, and the
   notes are no longer retyped from the changelog.
+- **Not found page**: an address that does not exist says so. Without a `404.html`, Cloudflare Pages
+  treats the site as a single-page app and answers every path with the home page, so a mistyped
+  link looked like it had worked. The page is kept out of search results and the sitemap.
 
 ### Changed
 

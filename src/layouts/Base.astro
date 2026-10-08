@@ -9,6 +9,8 @@ interface Props {
    * is the wordmark; override it if a page ever ships its own image.
    */
   imageAlt?: string;
+  /** Keeps the page out of search results, for one nobody should land on from a search. */
+  noindex?: boolean;
 }
 
 // Both defaults are deliberately tool-neutral. They used to describe PDF
@@ -20,6 +22,7 @@ const {
   title,
   description = 'Private, in-browser tools that remove what a file is carrying. Nothing is uploaded, and you can check that for yourself.',
   imageAlt = 'blakstrip, private in-browser file tools',
+  noindex = false,
 } = Astro.props;
 
 // build.format: 'file' means /foo.html serves at /foo, so strip the suffix for a stable canonical.
@@ -42,7 +45,7 @@ const ogImage = new URL('/og-image.png', Astro.site);
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="robots" content={noindex ? 'noindex' : 'index, follow, max-image-preview:large'} />
 
     <link rel="canonical" href={canonicalURL} />
     <meta property="og:type" content="website" />

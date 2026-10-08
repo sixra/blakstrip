@@ -8,7 +8,7 @@ const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
 // Derived from the registry, as the SEO suite already does, so a tool added
 // without a scan is impossible rather than merely unlikely.
-for (const path of ['/', ...TOOLS.map((tool) => tool.href)]) {
+for (const path of ['/', ...TOOLS.map((tool) => tool.href), '/404']) {
   test(`no accessibility violations on ${path}`, async ({ page }) => {
     await page.goto(path);
     const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();

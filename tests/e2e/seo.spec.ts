@@ -82,3 +82,11 @@ test('the hub declares the website and lists every tool as a part', async ({ req
   // Built from the registry, so a tool added without a hub entry fails here.
   expect(schema.hasPart?.map((part) => part['@id'])).toEqual(TOOLS.map((tool) => tool.entityId));
 });
+
+test('an unknown address answers 404 with a page search engines skip', async ({ request }) => {
+  const response = await request.get('/no-such-page');
+  expect(response.status()).toBe(404);
+  const html = await response.text();
+  expect(html).toContain('This page does not exist');
+  expect(attr(html, 'name="robots"')).toBe('noindex');
+});

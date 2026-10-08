@@ -1,0 +1,29 @@
+---
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="Page Not Found · blakstrip" description="This page does not exist." noindex>
+  <div class="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-4">
+    <header class="pt-10 pb-6">
+      <Header />
+    </header>
+
+    <main id="main" class="flex-1 py-6">
+      <div class="max-w-3xl">
+        <h1 class="text-4xl font-bold tracking-tight sm:text-5xl">This page does not exist.</h1>
+        <p class="text-muted mt-5 text-lg">
+          The address may be mistyped, or the page may have moved.
+        </p>
+        <p class="mt-6 text-lg">
+          <a href="/" class="text-ink underline underline-offset-4">
+            See all the tools
+          </a>
+        </p>
+      </div>
+    </main>
+
+    <Footer />
+  </div>
+</Base>
