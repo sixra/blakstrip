@@ -34,6 +34,9 @@ All notable changes to this project are documented in this file. The format is b
 - **A name wrapped across two lines is found and checked.** Search missed "John" at the end of one
   line and "Smith" at the start of the next, and verify passed an export where the name survived
   that way. Both now read a line break as a space.
+- **Compress**: a re-encode that failed left the previous result downloadable under the new
+  format's name and type, so a JPEG could be saved as `.avif`. The download now takes its name from
+  the file it actually holds, and the error is announced to screen readers.
 
 ## [2.1.0] - 2026-09-12
 

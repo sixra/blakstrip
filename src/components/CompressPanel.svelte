@@ -70,12 +70,14 @@
   // wholesale, so proxying them to watch for mutations that never happen is
   // pure overhead.
   let compressed: Uint8Array | undefined;
+  // What `compressed` is encoded as. `options.format` names the latest request,
+  // which may have failed and left an older result here.
+  let compressedFormat: OutputFormat | undefined;
   let compressedUrl = $state<string | undefined>();
 
   const compressor = new Compressor();
 
   const saved = $derived(compressedSize > 0 ? percentSaved(bytes.length, compressedSize) : 0);
-  const outputName = $derived(compressedFileName(fileName, options.format));
 
   function releaseCompressed(): void {
     if (compressedUrl) URL.revokeObjectURL(compressedUrl);
@@ -110,6 +112,7 @@
 
       releaseCompressed();
       compressed = result.bytes;
+      compressedFormat = result.format;
       compressedSize = result.bytes.length;
       compressedDims = { width: result.width, height: result.height };
       remaining = verified;
@@ -137,8 +140,12 @@
   }
 
   function save(): void {
-    if (!compressed) return;
-    downloadBytes(compressed, outputName, outputMimeType(options.format));
+    if (!compressed || !compressedFormat) return;
+    downloadBytes(
+      compressed,
+      compressedFileName(fileName, compressedFormat),
+      outputMimeType(compressedFormat)
+    );
   }
 
   $effect(() => () => {
@@ -276,7 +283,10 @@
   </p>
 
   {#if errorMsg}
-    <p class="border-danger bg-danger-surface text-danger mt-3 rounded-lg border p-3 text-sm">
+    <p
+      class="border-danger bg-danger-surface text-danger mt-3 rounded-lg border p-3 text-sm"
+      role="alert"
+    >
       {errorMsg}
     </p>
   {/if}

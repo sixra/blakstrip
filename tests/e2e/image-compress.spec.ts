@@ -111,3 +111,25 @@ test('refuses a file that is not an image it can decode', async ({ page }) => {
   // bytes to a decoder that would throw somewhere less legible.
   await expect(page.getByText(/unsupported file/i)).toBeVisible();
 });
+
+test('a failed re-encode keeps the previous result named for its own format', async ({
+  page,
+  context,
+}) => {
+  await page.goto('/image-compress');
+  await page.locator('input[type=file]').setInputFiles(SAMPLE_PHOTO);
+  const download = page.getByRole('button', { name: 'Download the smaller file' });
+  await expect(download).toBeVisible({ timeout: 60_000 });
+
+  // AVIF is the one codec fetched on demand, so going offline makes it fail.
+  await context.setOffline(true);
+  await page.getByText('Settings').click();
+  await page.getByLabel('Save as').selectOption('avif');
+  await expect(page.getByText('Compressing…')).toBeHidden({ timeout: 60_000 });
+
+  const [saved] = await Promise.all([page.waitForEvent('download'), download.click()]);
+  expect(saved.suggestedFilename()).toBe('sample-photo-small.jpg');
+  const bytes = await readFile(await saved.path());
+  expect([bytes[0], bytes[1]]).toEqual([0xff, 0xd8]);
+  await expect(page.getByRole('alert')).toBeVisible();
+});
