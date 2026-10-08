@@ -114,6 +114,16 @@ export async function makeRotatedPdf(): Promise<ArrayBuffer> {
   return toArrayBuffer(await doc.save());
 }
 
+/** An upright page with "SIDEWAYSSECRET" at 24pt on a baseline rotated 90° from (300, 200). */
+export async function makeSidewaysTextPdf(): Promise<ArrayBuffer> {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  doc
+    .addPage([612, 792])
+    .drawText('SIDEWAYSSECRET', { x: 300, y: 200, size: 24, font, rotate: degrees(90) });
+  return toArrayBuffer(await doc.save());
+}
+
 /**
  * One page with a single large-font run whose glyphs carry deep descenders
  * ("gjpqy") and tall ascenders. Exercises font-relative vertical cover: a

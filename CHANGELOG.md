@@ -26,6 +26,12 @@ All notable changes to this project are documented in this file. The format is b
   `prettier-plugin-astro` 1, which reformats the `.astro` files without changing the rendered
   pages. TypeScript stays on 6 until `typescript-eslint` and `@astrojs/check` support 7.
 
+### Fixed
+
+- **Rotated text is covered.** A term drawn on a rotated baseline, such as a sideways table or a
+  vertical column header, got a horizontal box beside its glyphs, and verify still called the export
+  clean. Boxes now follow the run's own baseline.
+
 ## [2.1.0] - 2026-09-12
 
 Compression becomes a tool of its own instead of a panel nobody could find, and the home page leads

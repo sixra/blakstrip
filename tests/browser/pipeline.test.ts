@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { downloadBytes } from '../../src/lib/download';
+import { regionLeaks } from '../../src/lib/pdf/coverage';
 import { redactedFileName } from '../../src/lib/pdf/download';
 import { exportRedactedPdf } from '../../src/lib/pdf/export';
 import { buildRedactedPdf } from '../../src/lib/pdf/redact';
-import { loadPdf } from '../../src/lib/pdf/render';
+import { loadPdf, renderPageToImageCanvas } from '../../src/lib/pdf/render';
 import {
   collectRedactedText,
   extractAllText,
@@ -18,11 +19,17 @@ import {
   makeLayeredPdf,
   makeMetacharPdf,
   makeRepeatedRunPdf,
+  makeSidewaysTextPdf,
   makeTextPdf,
   makeTwoLinePdf,
 } from '../support/testpdf';
 
 const wholePage1: RedactionRect = { page: 1, x: 0, y: 0, w: 1, h: 1 };
+
+async function pixels(doc: Awaited<ReturnType<typeof loadPdf>>): Promise<ImageData> {
+  const canvas = await renderPageToImageCanvas(await doc.getPage(1), 2);
+  return canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
+}
 
 describe('redact + export + verify', () => {
   it('rasterizes redacted pages and copies untouched pages', async () => {
@@ -241,5 +248,16 @@ describe('redact + export + verify', () => {
     // The bytes a corrupt upload would carry; loadPdf must reject, not hang, so
     // openFile's catch can surface a visible error.
     await expect(loadPdf(new Uint8Array([1, 2, 3, 4]).buffer)).rejects.toThrow();
+  });
+
+  it('covers every glyph of a term drawn on a rotated baseline', async () => {
+    const pristine = await makeSidewaysTextPdf();
+    const doc = await loadPdf(pristine);
+    const rects = await searchDocumentRects(doc, 'SIDEWAYSSECRET');
+    const out = await loadPdf(await exportRedactedPdf(pristine, doc, rects));
+    // The baseline runs up the page from (300, 200) and the 24pt glyphs stand to
+    // its left, so their column is x 276..307 from the baseline to the page top.
+    const column = { x: 276 / 612, y: 0, w: 31 / 612, h: (792 - 200) / 792 };
+    expect(regionLeaks(await pixels(doc), await pixels(out), column)).toBe(false);
   });
 });

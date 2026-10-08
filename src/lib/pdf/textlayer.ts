@@ -39,25 +39,18 @@ interface Viewport {
 }
 
 /**
- * Map an axis-aligned box given in PDF user-space points (origin bottom-left,
- * y-up) to a normalized top-left rect on the rendered page. All four corners are
- * pushed through the viewport transform and the axis-aligned bounds taken, so a
- * page's `/Rotate` (90/180/270) lands the box in the correct on-screen quadrant.
- * For an unrotated page the transform is a plain scale + y-flip, reducing this to
- * the divide-by-page-size the geometry used before.
+ * Map a box's corners, given in PDF user-space points (origin bottom-left, y-up),
+ * to a normalized top-left rect on the rendered page. The corners are pushed
+ * through the viewport transform and the axis-aligned bounds taken, so a page's
+ * `/Rotate` (90/180/270) lands the box in the correct on-screen quadrant.
  */
-function normalizeUserBox(vp: Viewport, x0: number, y0: number, x1: number, y1: number): Box {
+function normalizeUserBox(vp: Viewport, corners: number[][]): Box {
   const t = vp.transform;
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
-  for (const [ux, uy] of [
-    [x0, y0],
-    [x1, y0],
-    [x1, y1],
-    [x0, y1],
-  ]) {
+  for (const [ux, uy] of corners) {
     const nx = (ux * t[0] + uy * t[2] + t[4]) / vp.width;
     const ny = (ux * t[1] + uy * t[3] + t[5]) / vp.height;
     if (nx < minX) minX = nx;
@@ -66,6 +59,35 @@ function normalizeUserBox(vp: Viewport, x0: number, y0: number, x1: number, y1: 
     if (ny > maxY) maxY = ny;
   }
   return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+}
+
+/**
+ * A box laid out along a run's own baseline, from `along0` to `along1` points
+ * past its origin and from `across0` to `across1` points off it, as a normalized
+ * page rect. The text matrix sets the baseline's direction, so a run drawn
+ * rotated (a sideways table, a vertical column header) gets a box over its
+ * glyphs rather than a horizontal strip beside them.
+ */
+function normalizeRunBox(
+  vp: Viewport,
+  item: GlyphItem,
+  along0: number,
+  along1: number,
+  across0: number,
+  across1: number
+): Box {
+  const [a, b, c, d, e, f] = item.transform;
+  // Unit vectors along and across the baseline; MIN_VALUE keeps a zero-size
+  // matrix from dividing to NaN without a branch.
+  const la = Math.max(Math.hypot(a, b), Number.MIN_VALUE);
+  const lc = Math.max(Math.hypot(c, d), Number.MIN_VALUE);
+  const corners = [
+    [along0, across0],
+    [along1, across0],
+    [along1, across1],
+    [along0, across1],
+  ].map(([s, t]) => [e + (s * a) / la + (t * c) / lc, f + (s * b) / la + (t * d) / lc]);
+  return normalizeUserBox(vp, corners);
 }
 
 /** Concatenate a page's text as it reads, inserting newlines at EOL markers. */
@@ -145,26 +167,18 @@ function textMeasurer(): CanvasRenderingContext2D {
 }
 
 /** Baseline-relative geometry of a text run, in PDF user-space points. */
-function glyphMetrics(item: GlyphItem): {
-  originX: number;
-  baselineY: number;
-  fontH: number;
-  descent: number;
-  topPdf: number;
-} {
+function glyphMetrics(item: GlyphItem): { originX: number; fontH: number; descent: number } {
   const tr = item.transform;
-  const originX = tr[4];
-  const baselineY = tr[5];
   /* v8 ignore next -- pdf.js always provides item.height; the fallbacks are defensive */
   const fontH = item.height || Math.hypot(tr[2], tr[3]) || Math.abs(tr[3]);
   const descent = fontH * 0.28; // cover descenders below the baseline
-  return { originX, baselineY, fontH, descent, topPdf: baselineY + fontH };
+  return { originX: tr[4], fontH, descent };
 }
 
 /** The run's bounding box in normalized top-left fractions of the page. */
 function glyphBox(item: GlyphItem, vp: Viewport): Box {
-  const { originX, baselineY, descent, topPdf } = glyphMetrics(item);
-  return normalizeUserBox(vp, originX, baselineY - descent, originX + item.width, topPdf);
+  const { fontH, descent } = glyphMetrics(item);
+  return normalizeRunBox(vp, item, 0, item.width, -descent, fontH);
 }
 
 /** A text run's authoritative bounding box (from pdf.js metrics), plus its text. */
@@ -238,7 +252,7 @@ export async function searchPageRects(page: PDFPageProxy, term: string): Promise
       const to = Math.min(matchEnd, runEnd);
       if (from >= to) continue; // this run isn't part of the match
 
-      const { baselineY, fontH } = glyphMetrics(item);
+      const { originX, fontH } = glyphMetrics(item);
       const localStart = from - runStart;
       const localEnd = to - runStart;
       // Does the match reach a run boundary? If so the box snaps to that edge
@@ -264,12 +278,13 @@ export async function searchPageRects(page: PDFPageProxy, term: string): Promise
       // font-relative so tall type keeps its descenders and ascenders covered.
       const [xL, xR] = matchExtentX(item, preW, matchW, safetyX, atRunStart, atRunEnd);
       const { above, below } = verticalCover(style);
-      const box = normalizeUserBox(
+      const box = normalizeRunBox(
         vp,
-        xL,
-        baselineY - fontH * below,
-        xR,
-        baselineY + fontH * above
+        item,
+        xL - originX,
+        xR - originX,
+        -fontH * below,
+        fontH * above
       );
       rects.push({
         page: page.pageNumber,
