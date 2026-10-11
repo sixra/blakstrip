@@ -6,6 +6,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- **HSTS preload**: the `Strict-Transport-Security` header carries `preload`, so blakstrip.com can
+  join the HTTPS-only list built into browsers. Once it is on that list, even a first visit never
+  goes over plain HTTP.
+
 ## [2.2.0] - 2026-10-08
 
 Redaction now covers text it used to miss, rotated or wrapped onto the next line, and verify stops
