@@ -36,11 +36,6 @@
   --color-redact: #000000;
   --color-scrim: #000000; /* modal backdrops, used at an opacity */
 
-  /* The one non-neutral in the brand, for the sixra.dev credit. A token rather
-     than a literal because it was inlined in one place, drifted to a brighter
-     orange, and sat at 3.32:1 until axe caught it. 4.72:1 here. */
-  --color-accent: #c73a1a;
-
   --color-positive: #15803d;
   --color-positive-surface: #f0fdf4;
   --color-warning: #a45309;

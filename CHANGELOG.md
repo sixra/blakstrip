@@ -12,6 +12,10 @@ All notable changes to this project are documented in this file. The format is b
   join the HTTPS-only list built into browsers. Once it is on that list, even a first visit never
   goes over plain HTTP.
 
+### Removed
+
+- **Footer credit**: the footer no longer links to sixra.dev. Source on GitHub is its only link.
+
 ## [2.2.0] - 2026-10-08
 
 Redaction now covers text it used to miss, rotated or wrapped onto the next line, and verify stops
