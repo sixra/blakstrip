@@ -6,13 +6,27 @@ import { RedactorPage } from './pages/RedactorPage';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
+// axe reads all of a home card link's text as its label, but index.astro names the
+// link after its heading on purpose, and speech input finds the card by that
+// heading. Only the card links skip Label in Name.
+const LABEL_IN_NAME = 'label-content-name-mismatch';
+const CARD_LINKS = 'a[aria-labelledby^="card-"]';
+
 // Derived from the registry, as the SEO suite already does, so a tool added
 // without a scan is impossible rather than merely unlikely.
 for (const path of ['/', ...TOOLS.map((tool) => tool.href), '/404']) {
   test(`no accessibility violations on ${path}`, async ({ page }) => {
     await page.goto(path);
-    const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
+    const results = await new AxeBuilder({ page })
+      .withTags(WCAG)
+      .disableRules(LABEL_IN_NAME)
+      .analyze();
     expect(results.violations).toEqual([]);
+    const labelInNameResults = await new AxeBuilder({ page })
+      .withRules(LABEL_IN_NAME)
+      .exclude(CARD_LINKS)
+      .analyze();
+    expect(labelInNameResults.violations).toEqual([]);
   });
 }
 
