@@ -56,7 +56,7 @@
     "type-check": "astro check",
     "validate": "pnpm format:check && pnpm lint && pnpm type-check && pnpm build",
     "verify": "pnpm test:coverage && pnpm build && pnpm test:e2e",
-    "prepare": "lefthook install"
+    "prepare": "if gitdir=$(git rev-parse --path-format=absolute --git-dir 2>/dev/null) && [ \"$gitdir\" = \"$(git rev-parse --path-format=absolute --git-common-dir)\" ]; then lefthook install; fi"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.5",
