@@ -2,13 +2,10 @@ allowBuilds:
   esbuild: true
   lefthook: false
   sharp: true
-# Security patches for transitive dev dependencies (Dependabot advisories). Both
-# are patch-level bumps of packages with stable APIs, so forcing them is safe for
-# the consumers in the tree (minimatch for brace-expansion, ajv for fast-uri).
-#
-# Pin as a range, never an exact version: an exact pin holds the package *at* that
-# release, so when the next advisory lands (as it did for brace-expansion 5.0.8)
-# the override goes from fixing the problem to preventing the fix.
+# Security patches for transitive dev dependencies (Dependabot advisories).
+# Scoped to the affected major so no consumer is forced across a major. Each
+# target is a caret range from a patched release. An exact version would hold
+# every matched request on it, even after the next fix ships.
 overrides:
-  'brace-expansion@<5.0.9': '5.0.9'
-  'fast-uri@<3.1.5': '3.1.5'
+  'brace-expansion@>=5.0.0 <5.0.12': '^5.0.13'
+  'fast-uri@>=3.0.0 <3.1.9': '^3.1.9'
