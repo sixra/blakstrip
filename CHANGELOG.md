@@ -12,6 +12,13 @@ All notable changes to this project are documented in this file. The format is b
   join the HTTPS-only list built into browsers. Once it is on that list, even a first visit never
   goes over plain HTTP.
 
+### Changed
+
+- **Dependencies**: moved to pnpm 12.21.0 and updated every dependency. TypeScript stays on 6 until
+  `typescript-eslint` supports 7. The PWA plugins stay on 1, because `@vite-pwa/astro` 2 adds the
+  manifest icons to the precache a second time with different revisions, and Workbox throws on that
+  before the service worker installs.
+
 ### Removed
 
 - **Footer credit**: the footer no longer links to sixra.dev. Source on GitHub is its only link.
