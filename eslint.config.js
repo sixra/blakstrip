@@ -28,6 +28,7 @@ export default defineConfig([
     'playwright-report/**',
     'dev-dist/**',
     'public/**',
+    '.scratch/**',
   ]),
 
   js.configs.recommended,
