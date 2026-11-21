@@ -81,7 +81,7 @@
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "@playwright/test": "^1.65.1",
     "@types/node": "^26.6.6",
-    "@vite-pwa/astro": "^1.2.0",
+    "@vite-pwa/astro": "^2.0.3",
     "@vitest/browser": "^5.1.0",
     "@vitest/browser-playwright": "^5.1.0",
     "@vitest/coverage-v8": "^5.1.0",
